@@ -75,7 +75,10 @@ def login_required_template(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         user_id = session.get('user_id')
-        print(f"[AUTH] login_required_template - user_id from session: {user_id}")
+        print(f"[AUTH] login_required_template called for {f.__name__}")
+        print(f"[AUTH] user_id from session: {user_id}")
+        print(f"[AUTH] Session keys: {list(session.keys())}")
+        print(f"[AUTH] Session data: {dict(session)}")
         
         if not user_id:
             print("[AUTH] No user_id in session, redirecting to /")
@@ -83,17 +86,30 @@ def login_required_template(f):
         
         try:
             user = User.query.get(int(user_id))
-            print(f"[AUTH] User found: {user.username if user else 'None'}, Active: {user.is_active if user else 'N/A'}")
+            print(f"[AUTH] User found: {user.username if user else 'None'}, Active: {user.is_active if user else 'N/A'}, Admin: {user.is_admin if user else 'N/A'}")
             if not user or not user.is_active:
                 print("[AUTH] User not found or inactive, clearing session")
                 session.clear()
                 return redirect('/')
+            
+            # Pre-load groups to avoid lazy loading issues in templates
+            try:
+                # Handle both dynamic query and list
+                if hasattr(user.groups, 'all'):
+                    _ = list(user.groups.all())
+                else:
+                    _ = list(user.groups)
+                print(f"[AUTH] Pre-loaded groups for user {user.username}")
+            except Exception as e:
+                print(f"[AUTH] Warning: Could not pre-load groups: {e}")
         except (ValueError, TypeError) as e:
             print(f"[AUTH] Error getting user: {e}")
+            import traceback
+            print(traceback.format_exc())
             session.clear()
             return redirect('/')
         
-        print(f"[AUTH] Authentication successful for {user.username}")
+        print(f"[AUTH] Authentication successful for {user.username}, calling {f.__name__}")
         return f(user, *args, **kwargs)
     
     return decorated
@@ -104,13 +120,16 @@ def admin_required_template(f):
     @wraps(f)
     @login_required_template
     def decorated(user, *args, **kwargs):
+        print(f"[ADMIN CHECK] Checking admin access for user: {user.username if user else 'None'}, is_admin: {user.is_admin if user else 'N/A'}")
         if not user or not user.is_admin:
+            print(f"[ADMIN CHECK] Access denied - user is not admin")
             return render_template('error.html', message='Acesso negado. Apenas administradores podem acessar esta página.'), 403
         try:
+            print(f"[ADMIN CHECK] Access granted, calling {f.__name__}")
             return f(user, *args, **kwargs)
         except Exception as e:
             import traceback
-            print(f"Error in {f.__name__}: {str(e)}")
+            print(f"[ADMIN CHECK] Error in {f.__name__}: {str(e)}")
             print(traceback.format_exc())
             return render_template('error.html', message=f'Erro ao carregar página: {str(e)}'), 500
     

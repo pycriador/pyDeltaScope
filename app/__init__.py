@@ -66,11 +66,23 @@ def create_app(config_name='default'):
     app.register_blueprint(groups_bp, url_prefix='/api/groups')
     app.register_blueprint(setup_bp, url_prefix='/api/setup')
     
-    # Register root route (SPA for login/register)
+    # Register root route - redirect to login if not authenticated, otherwise redirect to home
     @app.route('/')
     def index():
-        from flask import render_template
-        return render_template('index.html')
+        from flask import session, redirect
+        user_id = session.get('user_id')
+        if not user_id:
+            return redirect('/login')
+        # If authenticated, redirect to home page
+        return redirect('/home')
+    
+    # Register auth template routes (login, register)
+    from app.routes.auth_template import auth_template_bp
+    app.register_blueprint(auth_template_bp)
+    
+    # Register home template route
+    from app.routes.home_template import home_template_bp
+    app.register_blueprint(home_template_bp)
     
     # Register template-based routes for all pages
     from app.routes.connections_template import connections_template_bp

@@ -12,10 +12,10 @@
         </div>
         <div class="card-body">
             {% if projects %}
-            <form method="GET" action="/dashboard">
-                <div class="mb-3">
+            <div class="row">
+                <div class="col-md-4 mb-3">
                     <label for="projectSelect" class="form-label">Projeto</label>
-                    <select class="form-select" id="projectSelect" name="project_id" onchange="this.form.submit()">
+                    <select class="form-select" id="projectSelect">
                         <option value="">Selecione um projeto...</option>
                         {% for project in projects %}
                         <option value="{{ project.id }}" {% if selected_project and selected_project.id == project.id %}selected{% endif %}>
@@ -24,52 +24,152 @@
                         {% endfor %}
                     </select>
                 </div>
-            </form>
+                <div class="col-md-4 mb-3">
+                    <label for="startDate" class="form-label">Data Início</label>
+                    <input type="datetime-local" class="form-control" id="startDate" value="{{ start_date }}">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="endDate" class="form-label">Data Fim</label>
+                    <input type="datetime-local" class="form-control" id="endDate" value="{{ end_date }}">
+                </div>
+            </div>
+            <div class="mb-3">
+                <button type="button" class="btn btn-primary" id="loadDashboardBtn">
+                    <i class="fas fa-sync me-2"></i>Carregar Dashboard
+                </button>
+                <button type="button" class="btn btn-secondary" id="setTodayBtn">
+                    <i class="fas fa-calendar-day me-2"></i>Hoje
+                </button>
+            </div>
 
-            {% if selected_project %}
-            <div class="mt-4">
-                <h5>Estatísticas do Projeto: {{ selected_project.name }}</h5>
+            <div id="dashboardContent" style="display: none;">
+                <h5 class="mt-4">Estatísticas do Projeto: <span id="projectName">-</span></h5>
                 <div class="row mt-3">
-                    <div class="col-md-3">
+                    <div class="col-md-3 mb-3">
                         <div class="card bg-primary text-white">
                             <div class="card-body">
-                                <h6>Total de Comparações</h6>
+                                <h6><i class="fas fa-exchange-alt me-2"></i>Total de Comparações</h6>
                                 <h3 id="totalComparisons">-</h3>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-3 mb-3">
                         <div class="card bg-success text-white">
                             <div class="card-body">
-                                <h6>Total de Mudanças</h6>
+                                <h6><i class="fas fa-list me-2"></i>Total de Mudanças</h6>
                                 <h3 id="totalChanges">-</h3>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-3 mb-3">
                         <div class="card bg-info text-white">
                             <div class="card-body">
-                                <h6>Campos Modificados</h6>
+                                <h6><i class="fas fa-tags me-2"></i>Campos Modificados</h6>
                                 <h3 id="modifiedFields">-</h3>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-3 mb-3">
                         <div class="card bg-warning text-white">
                             <div class="card-body">
-                                <h6>Última Comparação</h6>
-                                <small id="lastComparison">-</small>
+                                <h6><i class="fas fa-check-circle me-2"></i>Comparações Concluídas</h6>
+                                <h3 id="completedComparisons">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-6 mb-3">
+                        <div class="card bg-danger text-white">
+                            <div class="card-body">
+                                <h6><i class="fas fa-exclamation-triangle me-2"></i>Total de Diferenças</h6>
+                                <h3 id="totalDifferences">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card bg-secondary text-white">
+                            <div class="card-body">
+                                <h6><i class="fas fa-clock me-2"></i>Mudanças Não Enviadas</h6>
+                                <h3 id="unsentChanges">-</h3>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="mt-4">
                     <div id="chartsContainer">
-                        <p class="text-muted">Carregando gráficos...</p>
+                        <div class="row">
+                            <div class="col-12 mb-4">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Mudanças ao Longo do Tempo</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="changesOverTimeChart" style="height: 400px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 mb-4">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Mudanças por Campo</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="fieldChangesChart" style="height: 600px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 mb-4">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Campos Modificados no Período</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="fieldsPieChart" style="height: 500px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 mb-4">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Mudanças por Tipo</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="changesByTypeChart" style="height: 500px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 mb-4">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Comparações por Status</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="comparisonsByStatusChart" style="height: 400px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 mb-4">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0"><i class="fas fa-chart-area me-2"></i>Tendência de Mudanças</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="changesTrendChart" style="height: 400px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            {% endif %}
+            <div id="dashboardLoading" class="text-center py-4" style="display: none;">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+                <p class="text-muted">Carregando dados do dashboard...</p>
+            </div>
+            <div id="dashboardError" class="alert alert-danger" style="display: none;"></div>
             {% else %}
             <div class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle me-2"></i>
@@ -79,23 +179,625 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
-{% if selected_project %}
+{% block scripts %}
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <script>
-// Load dashboard stats via API
-fetch('/api/dashboard/project/{{ selected_project.id }}/stats')
-    .then(response => response.json())
-    .then(data => {
-        document.getElementById('totalComparisons').textContent = data.total_comparisons || 0;
-        document.getElementById('totalChanges').textContent = data.total_changes || 0;
-        document.getElementById('modifiedFields').textContent = data.modified_fields_count || 0;
-        if (data.last_comparison) {
-            document.getElementById('lastComparison').textContent = new Date(data.last_comparison).toLocaleString('pt-BR');
+    // API_BASE is already defined in app.js
+    const AUTH_TOKEN = '{{ session.token|safe }}';
+    const USER_ID = parseInt('{{ current_user.id }}');
+    const SELECTED_PROJECT_ID = {{ selected_project.id if selected_project else 'null' }};
+    
+    // Get auth headers
+    function getAuthHeaders() {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (AUTH_TOKEN) {
+            headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
         }
-    })
-    .catch(error => console.error('Error loading stats:', error));
+        
+        if (USER_ID) {
+            headers['X-User-Id'] = USER_ID;
+        }
+        
+        return headers;
+    }
+    
+    // Set today's date
+    function setTodayDate() {
+        const today = new Date();
+        const startOfDay = new Date(today);
+        startOfDay.setHours(0, 0, 0, 0);
+        
+        const endOfDay = new Date(today);
+        endOfDay.setHours(23, 59, 59, 999);
+        
+        // Format for datetime-local input (YYYY-MM-DDTHH:mm)
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        };
+        
+        $('#startDate').val(formatDate(startOfDay));
+        $('#endDate').val(formatDate(endOfDay));
+    }
+    
+    // Load dashboard data
+    async function loadDashboard() {
+        const projectId = $('#projectSelect').val();
+        
+        if (!projectId) {
+            $('#dashboardContent').hide();
+            $('#dashboardError').hide();
+            return;
+        }
+        
+        const startDate = $('#startDate').val();
+        const endDate = $('#endDate').val();
+        
+        $('#dashboardContent').hide();
+        $('#dashboardError').hide();
+        $('#dashboardLoading').show();
+        
+        try {
+            // Build URL with date filters
+            let url = `${API_BASE}/dashboard/project/${projectId}/stats`;
+            const params = [];
+            if (startDate) {
+                // Convert datetime-local format to ISO format for API
+                // datetime-local is in local time, convert to ISO string
+                const startDateObj = new Date(startDate);
+                const startDateISO = startDateObj.toISOString();
+                params.push(`start_date=${encodeURIComponent(startDateISO)}`);
+            }
+            if (endDate) {
+                // Convert datetime-local format to ISO format for API
+                const endDateObj = new Date(endDate);
+                const endDateISO = endDateObj.toISOString();
+                params.push(`end_date=${encodeURIComponent(endDateISO)}`);
+            }
+            if (params.length > 0) {
+                url += '?' + params.join('&');
+            }
+            
+            const headers = getAuthHeaders();
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: headers
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Erro ao carregar dashboard');
+            }
+            
+            // Update project name
+            const selectedOption = $('#projectSelect option:selected');
+            $('#projectName').text(selectedOption.text());
+            
+            // Update statistics
+            $('#totalComparisons').text(data.total_comparisons || 0);
+            $('#totalChanges').text(data.total_changes || 0);
+            $('#modifiedFields').text(data.modified_fields_count || 0);
+            $('#completedComparisons').text(data.completed_comparisons || 0);
+            $('#totalDifferences').text(data.total_differences || 0);
+            $('#unsentChanges').text(data.unsent_changes || 0);
+            
+            // Load charts
+            await loadCharts(projectId, startDate, endDate);
+            
+            $('#dashboardLoading').hide();
+            $('#dashboardContent').show();
+            
+        } catch (error) {
+            console.error('Error loading dashboard:', error);
+            $('#dashboardLoading').hide();
+            $('#dashboardError').html(`<i class="fas fa-exclamation-circle me-2"></i>Erro ao carregar dashboard: ${error.message}`).show();
+        }
+    }
+    
+    // Load charts
+    async function loadCharts(projectId, startDate, endDate) {
+        try {
+            // Load changes over time
+            let url1 = `${API_BASE}/dashboard/project/${projectId}/changes-over-time`;
+            const params1 = [];
+            if (startDate) {
+                // Convert datetime-local format to ISO format for API
+                const startDateObj = new Date(startDate);
+                const startDateISO = startDateObj.toISOString();
+                params1.push(`start_date=${encodeURIComponent(startDateISO)}`);
+            }
+            if (endDate) {
+                // Convert datetime-local format to ISO format for API
+                const endDateObj = new Date(endDate);
+                const endDateISO = endDateObj.toISOString();
+                params1.push(`end_date=${encodeURIComponent(endDateISO)}`);
+            }
+            if (params1.length > 0) {
+                url1 += '?' + params1.join('&');
+            }
+            
+            const headers = getAuthHeaders();
+            const response1 = await fetch(url1, {
+                method: 'GET',
+                headers: headers
+            });
+            
+            let changesOverTimeData = null;
+            if (response1.ok) {
+                changesOverTimeData = await response1.json();
+                renderChangesOverTimeChart(changesOverTimeData.data);
+            }
+            
+            // Load field changes
+            let url2 = `${API_BASE}/dashboard/project/${projectId}/field-changes`;
+            const params2 = [];
+            if (startDate) {
+                const startDateObj = new Date(startDate);
+                const startDateISO = startDateObj.toISOString();
+                params2.push(`start_date=${encodeURIComponent(startDateISO)}`);
+            }
+            if (endDate) {
+                const endDateObj = new Date(endDate);
+                const endDateISO = endDateObj.toISOString();
+                params2.push(`end_date=${encodeURIComponent(endDateISO)}`);
+            }
+            if (params2.length > 0) {
+                url2 += '?' + params2.join('&');
+            }
+            
+            const response2 = await fetch(url2, {
+                method: 'GET',
+                headers: headers
+            });
+            
+            if (response2.ok) {
+                const data2 = await response2.json();
+                renderFieldChangesChart(data2.data);
+                renderFieldsPieChart(data2.data);
+            }
+            
+            // Load changes by type
+            let url3 = `${API_BASE}/dashboard/project/${projectId}/changes-by-type`;
+            const params3 = [];
+            if (startDate) {
+                const startDateObj = new Date(startDate);
+                const startDateISO = startDateObj.toISOString();
+                params3.push(`start_date=${encodeURIComponent(startDateISO)}`);
+            }
+            if (endDate) {
+                const endDateObj = new Date(endDate);
+                const endDateISO = endDateObj.toISOString();
+                params3.push(`end_date=${encodeURIComponent(endDateISO)}`);
+            }
+            if (params3.length > 0) {
+                url3 += '?' + params3.join('&');
+            }
+            
+            const response3 = await fetch(url3, {
+                method: 'GET',
+                headers: headers
+            });
+            
+            if (response3.ok) {
+                const data3 = await response3.json();
+                renderChangesByTypeChart(data3.data);
+            }
+            
+            // Load comparisons by status
+            const response4 = await fetch(`${API_BASE}/dashboard/project/${projectId}/comparisons-by-status`, {
+                method: 'GET',
+                headers: headers
+            });
+            
+            if (response4.ok) {
+                const data4 = await response4.json();
+                renderComparisonsByStatusChart(data4.data);
+            }
+            
+            // Load changes trend (reuse changes over time data)
+            if (changesOverTimeData) {
+                renderChangesTrendChart(changesOverTimeData.data);
+            }
+            
+        } catch (error) {
+            console.error('Error loading charts:', error);
+        }
+    }
+    
+    // Render changes over time chart
+    function renderChangesOverTimeChart(chartData) {
+        const container = document.getElementById('changesOverTimeChart');
+        
+        if (!chartData || Object.keys(chartData).length === 0) {
+            container.innerHTML = '<p class="text-muted text-center py-5">Nenhum dado disponível para o período selecionado.</p>';
+            return;
+        }
+        
+        const dates = Object.keys(chartData).sort();
+        const changeTypes = ['added', 'modified', 'deleted'];
+        const colors = {
+            'added': '#10b981',
+            'modified': '#f59e0b',
+            'deleted': '#ef4444'
+        };
+        const labels = {
+            'added': 'Adicionado',
+            'modified': 'Modificado',
+            'deleted': 'Deletado'
+        };
+        
+        const traces = changeTypes.map(changeType => {
+            const values = dates.map(date => chartData[date] && chartData[date][changeType] ? chartData[date][changeType] : 0);
+            return {
+                x: dates,
+                y: values,
+                name: labels[changeType],
+                type: 'scatter',
+                mode: 'lines+markers',
+                line: { color: colors[changeType], width: 2 },
+                marker: { color: colors[changeType], size: 8 }
+            };
+        });
+        
+        const layout = {
+            title: 'Mudanças ao Longo do Tempo',
+            xaxis: { title: 'Data' },
+            yaxis: { title: 'Quantidade de Mudanças' },
+            hovermode: 'closest',
+            legend: { orientation: 'h', y: -0.2 },
+            margin: { t: 50, r: 50, b: 50, l: 50 }
+        };
+        
+        Plotly.newPlot('changesOverTimeChart', traces, layout, {responsive: true});
+    }
+    
+    // Render field changes chart
+    function renderFieldChangesChart(data) {
+        const container = document.getElementById('fieldChangesChart');
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center py-5">Nenhum dado disponível para o período selecionado.</p>';
+            return;
+        }
+        
+        const fields = data.map(item => item.field);
+        const counts = data.map(item => item.count);
+        
+        const trace = {
+            x: fields,
+            y: counts,
+            type: 'bar',
+            marker: {
+                color: '#2563eb'
+            },
+            text: counts,
+            textposition: 'outside'
+        };
+        
+        const layout = {
+            title: 'Mudanças por Campo',
+            xaxis: { title: 'Campo', tickangle: -45 },
+            yaxis: { title: 'Quantidade de Mudanças' },
+            hovermode: 'closest',
+            margin: { t: 50, r: 50, b: 150, l: 80 },
+            height: 600
+        };
+        
+        Plotly.newPlot('fieldChangesChart', [trace], layout, {responsive: true});
+    }
+    
+    // Render fields pie chart
+    function renderFieldsPieChart(data) {
+        const container = document.getElementById('fieldsPieChart');
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center py-5">Nenhum dado disponível para o período selecionado.</p>';
+            return;
+        }
+        
+        const fields = data.map(item => item.field);
+        const counts = data.map(item => item.count);
+        
+        // Generate colors for pie chart
+        const colors = [];
+        for (let i = 0; i < fields.length; i++) {
+            const hue = (i * 137.508) % 360; // Golden angle for color distribution
+            colors.push(`hsl(${hue}, 70%, 50%)`);
+        }
+        
+        const trace = {
+            labels: fields,
+            values: counts,
+            type: 'pie',
+            textinfo: 'label+percent+value',
+            textposition: 'outside',
+            marker: {
+                colors: colors,
+                line: {
+                    color: '#fff',
+                    width: 2
+                }
+            },
+            hovertemplate: '<b>%{label}</b><br>Mudanças: %{value}<br>Percentual: %{percent}<extra></extra>'
+        };
+        
+        const layout = {
+            title: 'Distribuição de Mudanças por Campo',
+            showlegend: true,
+            legend: {
+                orientation: 'v',
+                x: 1.1,
+                y: 0.5
+            },
+            margin: { t: 50, r: 150, b: 50, l: 50 }
+        };
+        
+        Plotly.newPlot('fieldsPieChart', [trace], layout, {responsive: true});
+    }
+    
+    // Render changes by type chart
+    function renderChangesByTypeChart(data) {
+        const container = document.getElementById('changesByTypeChart');
+        
+        if (!data || Object.keys(data).length === 0) {
+            container.innerHTML = '<p class="text-muted text-center py-5">Nenhum dado disponível para o período selecionado.</p>';
+            return;
+        }
+        
+        const labels = {
+            'added': 'Adicionado',
+            'modified': 'Modificado',
+            'deleted': 'Deletado'
+        };
+        
+        const colors = {
+            'added': '#10b981',
+            'modified': '#f59e0b',
+            'deleted': '#ef4444'
+        };
+        
+        const pieLabels = [];
+        const pieValues = [];
+        const pieColors = [];
+        
+        for (const [type, count] of Object.entries(data)) {
+            if (count > 0) {
+                pieLabels.push(labels[type] || type);
+                pieValues.push(count);
+                pieColors.push(colors[type] || '#6b7280');
+            }
+        }
+        
+        if (pieValues.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center py-5">Nenhum dado disponível para o período selecionado.</p>';
+            return;
+        }
+        
+        const trace = {
+            labels: pieLabels,
+            values: pieValues,
+            type: 'pie',
+            textinfo: 'label+percent+value',
+            textposition: 'outside',
+            marker: {
+                colors: pieColors,
+                line: {
+                    color: '#fff',
+                    width: 2
+                }
+            },
+            hovertemplate: '<b>%{label}</b><br>Quantidade: %{value}<br>Percentual: %{percent}<extra></extra>'
+        };
+        
+        const layout = {
+            title: 'Distribuição de Mudanças por Tipo',
+            showlegend: true,
+            legend: {
+                orientation: 'v',
+                x: 1.1,
+                y: 0.5
+            },
+            margin: { t: 50, r: 150, b: 50, l: 50 }
+        };
+        
+        Plotly.newPlot('changesByTypeChart', [trace], layout, {responsive: true});
+    }
+    
+    // Render comparisons by status chart
+    function renderComparisonsByStatusChart(data) {
+        const container = document.getElementById('comparisonsByStatusChart');
+        
+        if (!data || Object.keys(data).length === 0) {
+            container.innerHTML = '<p class="text-muted text-center py-5">Nenhum dado disponível.</p>';
+            return;
+        }
+        
+        const statusLabels = {
+            'pending': 'Pendente',
+            'running': 'Em Execução',
+            'completed': 'Concluída',
+            'failed': 'Falhou'
+        };
+        
+        const statusColors = {
+            'pending': '#6b7280',
+            'running': '#3b82f6',
+            'completed': '#10b981',
+            'failed': '#ef4444'
+        };
+        
+        const labels = [];
+        const values = [];
+        const colors = [];
+        
+        for (const [status, count] of Object.entries(data)) {
+            if (count > 0) {
+                labels.push(statusLabels[status] || status);
+                values.push(count);
+                colors.push(statusColors[status] || '#6b7280');
+            }
+        }
+        
+        if (values.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center py-5">Nenhum dado disponível.</p>';
+            return;
+        }
+        
+        const trace = {
+            x: labels,
+            y: values,
+            type: 'bar',
+            marker: {
+                color: colors
+            },
+            text: values,
+            textposition: 'outside'
+        };
+        
+        const layout = {
+            title: 'Comparações por Status',
+            xaxis: { title: 'Status' },
+            yaxis: { title: 'Quantidade' },
+            hovermode: 'closest',
+            margin: { t: 50, r: 50, b: 80, l: 50 }
+        };
+        
+        Plotly.newPlot('comparisonsByStatusChart', [trace], layout, {responsive: true});
+    }
+    
+    // Render changes trend chart
+    function renderChangesTrendChart(chartData) {
+        const container = document.getElementById('changesTrendChart');
+        
+        if (!chartData || Object.keys(chartData).length === 0) {
+            container.innerHTML = '<p class="text-muted text-center py-5">Nenhum dado disponível para o período selecionado.</p>';
+            return;
+        }
+        
+        const dates = Object.keys(chartData).sort();
+        const totalChanges = dates.map(date => {
+            const dayData = chartData[date];
+            return (dayData.added || 0) + (dayData.modified || 0) + (dayData.deleted || 0);
+        });
+        
+        const trace = {
+            x: dates,
+            y: totalChanges,
+            type: 'scatter',
+            mode: 'lines+markers',
+            fill: 'tozeroy',
+            line: { color: '#3b82f6', width: 3 },
+            marker: { color: '#3b82f6', size: 8 },
+            name: 'Total de Mudanças'
+        };
+        
+        const layout = {
+            title: 'Tendência de Mudanças',
+            xaxis: { title: 'Data' },
+            yaxis: { title: 'Total de Mudanças' },
+            hovermode: 'closest',
+            margin: { t: 50, r: 50, b: 80, l: 50 }
+        };
+        
+        Plotly.newPlot('changesTrendChart', [trace], layout, {responsive: true});
+    }
+    
+    // Update URL with current filters
+    function updateURL() {
+        const projectId = $('#projectSelect').val();
+        const startDate = $('#startDate').val();
+        const endDate = $('#endDate').val();
+        
+        const params = new URLSearchParams();
+        if (projectId) {
+            params.set('project_id', projectId);
+        }
+        if (startDate) {
+            params.set('start_date', startDate);
+        }
+        if (endDate) {
+            params.set('end_date', endDate);
+        }
+        
+        const newURL = params.toString() ? `/dashboard?${params.toString()}` : '/dashboard';
+        window.history.pushState({}, '', newURL);
+    }
+    
+    // Read URL parameters
+    function readURLParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('project_id');
+        const startDate = urlParams.get('start_date');
+        const endDate = urlParams.get('end_date');
+        
+        if (projectId) {
+            $('#projectSelect').val(projectId);
+        }
+        if (startDate) {
+            $('#startDate').val(startDate);
+        }
+        if (endDate) {
+            $('#endDate').val(endDate);
+        }
+    }
+    
+    // Initialize
+    $(document).ready(function() {
+        // Read URL parameters first
+        readURLParams();
+        
+        // Set today's date by default if no dates in URL
+        if (!$('#startDate').val() || !$('#endDate').val()) {
+            setTodayDate();
+        }
+        
+        // If project is selected (from URL or template), load dashboard
+        if (SELECTED_PROJECT_ID || $('#projectSelect').val()) {
+            const projectId = SELECTED_PROJECT_ID || $('#projectSelect').val();
+            $('#projectSelect').val(projectId);
+            loadDashboard();
+        }
+        
+        // Event listeners
+        $('#loadDashboardBtn').on('click', function() {
+            updateURL();
+            loadDashboard();
+        });
+        
+        $('#setTodayBtn').on('click', function() {
+            setTodayDate();
+            updateURL();
+            if ($('#projectSelect').val()) {
+                loadDashboard();
+            }
+        });
+        
+        $('#projectSelect').on('change', function() {
+            updateURL();
+            if ($(this).val()) {
+                loadDashboard();
+            } else {
+                $('#dashboardContent').hide();
+            }
+        });
+        
+        $('#startDate, #endDate').on('change', function() {
+            updateURL();
+            if ($('#projectSelect').val()) {
+                loadDashboard();
+            }
+        });
+    });
 </script>
-{% endif %}
 {% endblock %}
 

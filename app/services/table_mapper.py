@@ -25,7 +25,9 @@ class TableMapper:
         # Add columns
         for col in columns:
             col_name = col['name']
-            col_type = TableMapper._map_column_type(col['type'])
+            # Get type from column - handle both string and dict formats
+            col_type_str = str(col.get('type', 'String'))
+            col_type = TableMapper._map_column_type(col_type_str)
             nullable = col.get('nullable', True)
             primary_key = col.get('primary_key', False)
             

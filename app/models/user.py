@@ -26,7 +26,9 @@ class User(db.Model):
             return True
         
         # Check if any of user's groups have the permission
-        for group in self.groups:
+        # Handle both dynamic query and list
+        groups = self.groups.all() if hasattr(self.groups, 'all') else self.groups
+        for group in groups:
             if hasattr(group, permission) and getattr(group, permission):
                 return True
         
@@ -49,7 +51,9 @@ class User(db.Model):
             return {k: True for k in permissions.keys()}
         
         # Check groups
-        for group in self.groups:
+        # Handle both dynamic query and list
+        groups = self.groups.all() if hasattr(self.groups, 'all') else self.groups
+        for group in groups:
             for perm in permissions.keys():
                 if hasattr(group, perm) and getattr(group, perm):
                     permissions[perm] = True

@@ -3,6 +3,16 @@
 {% block title %}Comparação - DeltaScope{% endblock %}
 
 {% block content %}
+<style>
+    .comparison-project-card {
+        transition: all 0.3s ease;
+    }
+    
+    .comparison-project-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+</style>
 <div id="comparisonSection">
     <h2 class="mb-4"><i class="fas fa-code-branch me-2"></i>Executar Comparação</h2>
 
@@ -15,13 +25,16 @@
             <div class="row">
                 {% for project in projects %}
                 <div class="col-md-6 col-lg-4 mb-3">
-                    <div class="card comparison-project-card" onclick="selectProject({{ project.id }})" style="cursor: pointer;">
+                    <div class="card comparison-project-card h-100">
                         <div class="card-body">
                             <h5 class="card-title">{{ project.name }}</h5>
                             <p class="card-text small text-muted">
                                 <strong>Origem:</strong> {{ project.source_table }}<br>
                                 <strong>Destino:</strong> {{ project.target_table }}
                             </p>
+                            <a href="/comparacao/{{ project.id }}/execution" class="btn btn-success btn-sm w-100 mt-2">
+                                <i class="fas fa-play me-2"></i>Executar Comparação
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -29,67 +42,11 @@
             </div>
         </div>
     </div>
-
-    <div id="projectComparisonInfo" style="display: none;" class="card shadow">
-        <div class="card-header bg-success text-white">
-            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações do Projeto</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <h6>Tabela Origem</h6>
-                    <div id="sourceTableInfo">
-                        <p class="text-muted">Selecione um projeto para ver as informações</p>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <h6>Tabela Destino</h6>
-                    <div id="targetTableInfo">
-                        <p class="text-muted">Selecione um projeto para ver as informações</p>
-                    </div>
-                </div>
-            </div>
-            <div class="mt-3">
-                <button id="compareBtn" class="btn btn-success btn-lg" disabled>
-                    <i class="fas fa-play me-2"></i>Executar Comparação
-                </button>
-            </div>
-        </div>
-    </div>
     {% else %}
     <div class="alert alert-warning">
         <i class="fas fa-exclamation-triangle me-2"></i>
-        Nenhum projeto encontrado. <a href="/projetos/novo" class="alert-link">Crie um projeto</a> primeiro para executar comparações.
+        Nenhum projeto encontrado. <a href="/projetos" class="alert-link">Crie um projeto</a> primeiro para executar comparações.
     </div>
     {% endif %}
 </div>
-
-<script>
-let currentProjectId = null;
-
-function selectProject(projectId) {
-    currentProjectId = projectId;
-    document.querySelectorAll('.comparison-project-card').forEach(card => {
-        card.classList.remove('border-primary', 'border-3');
-    });
-    event.currentTarget.classList.add('border-primary', 'border-3');
-    document.getElementById('projectComparisonInfo').style.display = 'block';
-    document.getElementById('compareBtn').disabled = false;
-    // Load project info via API
-    loadProjectInfo(projectId);
-}
-
-function loadProjectInfo(projectId) {
-    // This would load via API - for now just enable the button
-    document.getElementById('sourceTableInfo').innerHTML = '<p class="text-muted">Carregando informações...</p>';
-    document.getElementById('targetTableInfo').innerHTML = '<p class="text-muted">Carregando informações...</p>';
-}
-
-document.getElementById('compareBtn').addEventListener('click', function() {
-    if (currentProjectId) {
-        window.location.href = '/api/comparisons/project/' + currentProjectId;
-    }
-});
-</script>
 {% endblock %}
-

@@ -209,8 +209,17 @@ async function checkAuth() {
     }
     
     // Only continue with normal auth if setup is not needed
-    const token = localStorage.getItem('authToken');
-    const userStr = localStorage.getItem('currentUser');
+    // Try to get token and user from localStorage, but handle errors gracefully
+    let token = null;
+    let userStr = null;
+    
+    try {
+        token = localStorage.getItem('authToken');
+        userStr = localStorage.getItem('currentUser');
+    } catch (error) {
+        // Ignore localStorage errors (may be from browser extensions)
+        console.warn('Could not access localStorage:', error);
+    }
     
     if (token && userStr) {
         try {
@@ -233,16 +242,22 @@ async function checkAuth() {
                 loadGroups();
             }
         } catch (error) {
-            // If there's an error parsing user data, clear storage and show login
+            // If there's an error parsing user data, clear storage and redirect to login
             console.error('Error parsing user data:', error);
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('currentUser');
+            try {
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('currentUser');
+            } catch (e) {
+                // Ignore errors clearing localStorage
+            }
             authToken = null;
             currentUser = null;
-            showLogin();
+            // Redirect to login page instead of showing login section
+            window.location.href = '/login';
         }
     } else {
-        showLogin();
+        // No token or user - redirect to login
+        window.location.href = '/login';
     }
 }
 
@@ -712,7 +727,33 @@ function logout() {
     }
     authToken = null;
     currentUser = null;
-    showLogin();
+    // Redirect to login page
+    window.location.href = '/login';
+}
+
+// Handle logout from template pages
+function handleLogout(e) {
+    e.preventDefault();
+    fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    }).then(() => {
+        // Clear any localStorage
+        try {
+            localStorage.clear();
+            sessionStorage.clear();
+        } catch (error) {
+            console.error('Error clearing storage:', error);
+        }
+        // Redirect to login
+        window.location.href = '/login';
+    }).catch(error => {
+        console.error('Error logging out:', error);
+        // Redirect anyway
+        window.location.href = '/login';
+    });
 }
 
 // Show section

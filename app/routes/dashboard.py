@@ -200,16 +200,131 @@ def get_field_changes(user, project_id):
     if not project:
         return jsonify({'message': 'Project not found'}), 404
     
-    # Get changes grouped by field
-    field_changes = db.session.query(
+    # Get date filters
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    
+    # Build date filter
+    date_filter = None
+    if start_date_str:
+        try:
+            start_date_str_clean = start_date_str.replace('T', ' ').split('.')[0]
+            start_date = datetime.strptime(start_date_str_clean, '%Y-%m-%d %H:%M:%S')
+            date_filter = ChangeLog.detected_at >= start_date
+        except Exception as e:
+            print(f"Error parsing start_date: {e}")
+            pass
+    
+    if end_date_str:
+        try:
+            end_date_str_clean = end_date_str.replace('T', ' ').split('.')[0]
+            end_date = datetime.strptime(end_date_str_clean, '%Y-%m-%d %H:%M:%S')
+            if date_filter is not None:
+                date_filter = and_(date_filter, ChangeLog.detected_at <= end_date)
+            else:
+                date_filter = ChangeLog.detected_at <= end_date
+        except Exception as e:
+            print(f"Error parsing end_date: {e}")
+            pass
+    
+    # Build query
+    query = db.session.query(
         ChangeLog.field_name,
         func.count(ChangeLog.id).label('count')
-    ).filter_by(project_id=project_id).group_by(ChangeLog.field_name).order_by(
+    ).filter_by(project_id=project_id)
+    
+    if date_filter is not None:
+        query = query.filter(date_filter)
+    
+    # Get changes grouped by field
+    field_changes = query.group_by(ChangeLog.field_name).order_by(
         func.count(ChangeLog.id).desc()
     ).limit(20).all()
     
     return jsonify({
         'data': [{'field': field, 'count': count} for field, count in field_changes]
+    }), 200
+
+
+@dashboard_bp.route('/project/<int:project_id>/changes-by-type', methods=['GET'])
+@token_required
+def get_changes_by_type(user, project_id):
+    """Get changes grouped by type (added, modified, deleted)"""
+    project = Project.query.filter_by(id=project_id, user_id=user.id).first()
+    
+    if not project:
+        return jsonify({'message': 'Project not found'}), 404
+    
+    # Get date filters
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+    
+    # Build date filter
+    date_filter = None
+    if start_date_str:
+        try:
+            start_date_str_clean = start_date_str.replace('T', ' ').split('.')[0]
+            start_date = datetime.strptime(start_date_str_clean, '%Y-%m-%d %H:%M:%S')
+            date_filter = ChangeLog.detected_at >= start_date
+        except Exception as e:
+            print(f"Error parsing start_date: {e}")
+            pass
+    
+    if end_date_str:
+        try:
+            end_date_str_clean = end_date_str.replace('T', ' ').split('.')[0]
+            end_date = datetime.strptime(end_date_str_clean, '%Y-%m-%d %H:%M:%S')
+            if date_filter is not None:
+                date_filter = and_(date_filter, ChangeLog.detected_at <= end_date)
+            else:
+                date_filter = ChangeLog.detected_at <= end_date
+        except Exception as e:
+            print(f"Error parsing end_date: {e}")
+            pass
+    
+    # Build query
+    query = db.session.query(
+        ChangeLog.change_type,
+        func.count(ChangeLog.id).label('count')
+    ).filter_by(project_id=project_id)
+    
+    if date_filter is not None:
+        query = query.filter(date_filter)
+    
+    changes_by_type = query.group_by(ChangeLog.change_type).all()
+    
+    # Format as dictionary
+    result = {}
+    for change_type, count in changes_by_type:
+        result[change_type] = count
+    
+    return jsonify({
+        'data': result
+    }), 200
+
+
+@dashboard_bp.route('/project/<int:project_id>/comparisons-by-status', methods=['GET'])
+@token_required
+def get_comparisons_by_status(user, project_id):
+    """Get comparisons grouped by status"""
+    project = Project.query.filter_by(id=project_id, user_id=user.id).first()
+    
+    if not project:
+        return jsonify({'message': 'Project not found'}), 404
+    
+    # Get comparisons grouped by status
+    comparisons_by_status = db.session.query(
+        Comparison.status,
+        func.count(Comparison.id).label('count')
+    ).filter_by(project_id=project_id).group_by(Comparison.status).all()
+    
+    # Format as dictionary
+    result = {}
+    for status, count in comparisons_by_status:
+        result[status] = count
+    
+    return jsonify({
+        'data': result
     }), 200
 
 

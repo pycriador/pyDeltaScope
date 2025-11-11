@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Tabela - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="editTableSection">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-edit me-2"></i>Editar Colunas da Tabela</h2>
+        <a href="/tabelas?connection_id={{ connection.id }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Voltar
+        </a>
+    </div>
+    
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-database me-2"></i>{{ connection.name }} - <code style="color: white;">{{ table_name }}</code>
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Instruções:</strong> Edite os tipos de dados, propriedades de nulidade e chaves primárias das colunas abaixo.
+            </div>
+            
+            <div id="errorMessage" class="alert alert-danger" style="display: none;"></div>
+            <div id="successMessage" class="alert alert-success" style="display: none;"></div>
+            
+            {% if columns %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nome da Coluna</th>
+                            <th>Tipo de Dado</th>
+                            <th>Nulo</th>
+                            <th>Chave Primária</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="columnsTableBody">
+                        {% for col in columns %}
+                        <tr data-column-name="{{ col.name }}">
+                            <td><strong style="color: inherit;">{{ col.name }}</strong></td>
+                            <td>
+                                <select class="form-select form-select-sm column-type-select" data-column="{{ col.name }}" data-current-type="{{ col.type }}">
+                                    <option value="VARCHAR(255)" {% if col.type and 'VARCHAR' in col.type.upper() %}selected{% endif %}>VARCHAR(255)</option>
+                                    <option value="TEXT" {% if col.type and col.type.upper() == 'TEXT' %}selected{% endif %}>TEXT</option>
+                                    <option value="INT" {% if col.type and col.type.upper() == 'INT' %}selected{% endif %}>INT</option>
+                                    <option value="BIGINT" {% if col.type and col.type.upper() == 'BIGINT' %}selected{% endif %}>BIGINT</option>
+                                    <option value="DECIMAL(10,2)" {% if col.type and 'DECIMAL' in col.type.upper() %}selected{% endif %}>DECIMAL(10,2)</option>
+                                    <option value="DATE" {% if col.type and col.type.upper() == 'DATE' %}selected{% endif %}>DATE</option>
+                                    <option value="DATETIME" {% if col.type and col.type.upper() == 'DATETIME' %}selected{% endif %}>DATETIME</option>
+                                    <option value="TIMESTAMP" {% if col.type and col.type.upper() == 'TIMESTAMP' %}selected{% endif %}>TIMESTAMP</option>
+                                    <option value="BOOLEAN" {% if col.type and ('BOOLEAN' in col.type.upper() or 'TINYINT(1)' in col.type.upper()) %}selected{% endif %}>BOOLEAN</option>
+                                    <option value="TINYINT(1)" {% if col.type and col.type.upper() == 'TINYINT(1)' %}selected{% endif %}>TINYINT(1)</option>
+                                </select>
+                            </td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input column-nullable-check" type="checkbox" data-column="{{ col.name }}" {% if col.nullable %}checked{% endif %}>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input column-primary-check" type="checkbox" data-column="{{ col.name }}" {% if col.primary_key %}checked{% endif %}>
+                                </div>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-success save-column-btn" data-column="{{ col.name }}" onclick="saveColumn('{{ col.name }}')">
+                                    <i class="fas fa-save"></i> Salvar
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Nenhuma coluna encontrada nesta tabela.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="successModalLabel">
+                    <i class="fas fa-check-circle me-2"></i>Sucesso
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="successModalMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="errorModalLabel">
+                    <i class="fas fa-exclamation-circle me-2"></i>Erro
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="errorModalMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // API_BASE is already defined in app.js
+    const AUTH_TOKEN = '{{ session.token|safe }}';
+    const USER_ID = parseInt('{{ current_user.id }}');
+    const CONNECTION_ID = parseInt('{{ connection.id }}');
+    const TABLE_NAME = '{{ table_name|safe }}';
+    
+    // Get auth headers
+    function getAuthHeaders() {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (AUTH_TOKEN) {
+            headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+        }
+        
+        if (USER_ID) {
+            headers['X-User-Id'] = USER_ID;
+        }
+        
+        return headers;
+    }
+    
+    // Show success modal
+    function showSuccessModal(message) {
+        $('#successModalMessage').text(message);
+        $('#successModal').modal('show');
+    }
+    
+    // Show error modal
+    function showErrorModal(message) {
+        $('#errorModalMessage').text(message);
+        $('#errorModal').modal('show');
+    }
+    
+    // Save column changes
+    async function saveColumn(columnName) {
+        const row = document.querySelector(`tr[data-column-name="${columnName}"]`);
+        if (!row) {
+            showErrorModal('Coluna não encontrada');
+            return;
+        }
+        
+        const typeSelect = row.querySelector('.column-type-select');
+        const nullableCheck = row.querySelector('.column-nullable-check');
+        const primaryCheck = row.querySelector('.column-primary-check');
+        const saveBtn = row.querySelector('.save-column-btn');
+        
+        const newType = typeSelect.value;
+        const nullable = nullableCheck.checked;
+        const primaryKey = primaryCheck.checked;
+        
+        // Disable button during save
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+        
+        try {
+            const response = await fetch(`${API_BASE}/tables/update-column-type`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                    connection_id: CONNECTION_ID,
+                    table_name: TABLE_NAME,
+                    column_name: columnName,
+                    new_type: newType,
+                    nullable: nullable,
+                    primary_key: primaryKey
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Erro ao salvar alterações');
+            }
+            
+            showSuccessModal(`Coluna "${columnName}" atualizada com sucesso!`);
+            
+            // Reload page after 1 second to show updated data
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Error saving column:', error);
+            showErrorModal(`Erro ao salvar alterações: ${error.message}`);
+        } finally {
+            // Re-enable button
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save"></i> Salvar';
+        }
+    }
+    
+    // Clean up modal backdrops when modals are hidden
+    $(document).ready(function() {
+        $('.modal').on('hidden.bs.modal', function() {
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open');
+            $('body').css('padding-right', '');
+        });
+    });
+</script>
+{% endblock %}
+

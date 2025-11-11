@@ -34,49 +34,83 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
-function loadReports(projectId) {
-    if (!projectId) {
-        document.getElementById('reportsListContainer').innerHTML = '<p class="text-muted">Selecione um projeto para ver os relatórios</p>';
-        return;
+    // API_BASE is already defined in app.js
+    const AUTH_TOKEN = '{{ session.token|safe }}';
+    const USER_ID = parseInt('{{ current_user.id }}');
+    
+    // Get auth headers
+    function getAuthHeaders() {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (AUTH_TOKEN) {
+            headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+        }
+        
+        if (USER_ID) {
+            headers['X-User-Id'] = USER_ID;
+        }
+        
+        return headers;
     }
-
-    document.getElementById('reportsListContainer').innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
-
-    fetch('/api/comparisons/project/' + projectId, {
-        headers: {
-            'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || ''),
-            'X-User-Id': '{{ current_user.id }}'
+    
+    async function loadReports(projectId) {
+        const container = document.getElementById('reportsListContainer');
+        
+        if (!projectId) {
+            container.innerHTML = '<p class="text-muted">Selecione um projeto para ver os relatórios</p>';
+            return;
         }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.comparisons && data.comparisons.length > 0) {
-            let html = '<div class="table-responsive"><table class="table table-hover"><thead><tr><th>ID</th><th>Data</th><th>Status</th><th>Diferenças</th><th>Ações</th></tr></thead><tbody>';
-            data.comparisons.forEach(comparison => {
-                html += `<tr>
-                    <td>${comparison.id}</td>
-                    <td>${new Date(comparison.executed_at).toLocaleString('pt-BR')}</td>
-                    <td><span class="badge bg-${comparison.status === 'completed' ? 'success' : 'warning'}">${comparison.status}</span></td>
-                    <td>${comparison.total_differences || 0}</td>
-                    <td>
-                        <a href="/api/comparisons/${comparison.id}/results" class="btn btn-sm btn-info">
-                            <i class="fas fa-eye"></i> Ver Detalhes
-                        </a>
-                    </td>
-                </tr>`;
+
+        container.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2 text-muted">Carregando relatórios...</p></div>';
+
+        try {
+            const headers = getAuthHeaders();
+            const response = await fetch(`${API_BASE}/comparisons/project/${projectId}`, {
+                method: 'GET',
+                headers: headers
             });
-            html += '</tbody></table></div>';
-            document.getElementById('reportsListContainer').innerHTML = html;
-        } else {
-            document.getElementById('reportsListContainer').innerHTML = '<div class="alert alert-info">Nenhum relatório encontrado para este projeto.</div>';
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Erro ao carregar relatórios');
+            }
+            
+            if (data.comparisons && data.comparisons.length > 0) {
+                let html = '<div class="table-responsive"><table class="table table-hover table-striped"><thead class="table-light"><tr><th>ID</th><th>Data de Execução</th><th>Status</th><th>Total de Diferenças</th><th>Ações</th></tr></thead><tbody>';
+                data.comparisons.forEach(comparison => {
+                    const executedDate = comparison.executed_at ? new Date(comparison.executed_at).toLocaleString('pt-BR') : '-';
+                    const statusBadge = comparison.status === 'completed' ? 'success' : (comparison.status === 'failed' ? 'danger' : 'warning');
+                    const statusText = comparison.status === 'completed' ? 'Concluído' : (comparison.status === 'failed' ? 'Falhou' : 'Em Andamento');
+                    
+                    html += `<tr>
+                        <td><code>${comparison.id}</code></td>
+                        <td>${executedDate}</td>
+                        <td><span class="badge bg-${statusBadge}">${statusText}</span></td>
+                        <td><strong>${comparison.total_differences || 0}</strong></td>
+                        <td>
+                            <a href="/relatorios/${comparison.id}/resultados" class="btn btn-sm btn-info" title="Ver Detalhes">
+                                <i class="fas fa-eye"></i> Ver Detalhes
+                            </a>
+                        </td>
+                    </tr>`;
+                });
+                html += '</tbody></table></div>';
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Nenhum relatório encontrado para este projeto. Execute uma comparação primeiro.</div>';
+            }
+        } catch (error) {
+            console.error('Error loading reports:', error);
+            container.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Erro ao carregar relatórios: ${error.message}</div>`;
         }
-    })
-    .catch(error => {
-        document.getElementById('reportsListContainer').innerHTML = '<div class="alert alert-danger">Erro ao carregar relatórios: ' + error.message + '</div>';
-    });
-}
+    }
 </script>
 {% endblock %}
 

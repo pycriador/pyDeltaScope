@@ -61,15 +61,46 @@ class DatabaseService:
         """Get column information for a table"""
         inspector = inspect(engine)
         columns = inspector.get_columns(table_name)
-        return [
-            {
+        result = []
+        for col in columns:
+            # Get type as string, handling different SQLAlchemy type formats
+            col_type_obj = col['type']
+            col_type_str = str(col_type_obj)
+            
+            # Extract the actual database type name
+            # SQLAlchemy types can be like: VARCHAR(255), INTEGER, TINYINT(1), etc.
+            # They might also include module paths like "sqlalchemy.sql.sqltypes.VARCHAR"
+            if '.' in col_type_str:
+                # Extract just the type name (last part after the last dot)
+                col_type_str = col_type_str.split('.')[-1]
+            
+            # Handle types with parameters like VARCHAR(255), TINYINT(1), DECIMAL(10,2)
+            if '(' in col_type_str:
+                # Keep the full type with parameters
+                type_parts = col_type_str.split('(')
+                base_type = type_parts[0].strip().upper()
+                params = '(' + type_parts[1] if len(type_parts) > 1 else ''
+                # Remove any trailing characters that might be from SQLAlchemy representation
+                if params and ')' in params:
+                    params = params.split(')')[0] + ')'
+                col_type = base_type + params
+            else:
+                # Just the type name - remove any trailing characters
+                col_type = col_type_str.split()[0].upper() if col_type_str.split() else col_type_str.upper()
+            
+            # Special handling for common MySQL/MariaDB types
+            if 'TINYINT' in col_type and '1' in col_type:
+                col_type = 'TINYINT(1)'
+            elif 'VARCHAR' in col_type and '(' not in col_type:
+                col_type = 'VARCHAR(255)'  # Default VARCHAR size
+            
+            result.append({
                 'name': col['name'],
-                'type': str(col['type']),
+                'type': col_type,
                 'nullable': col.get('nullable', True),
                 'primary_key': col.get('primary_key', False)
-            }
-            for col in columns
-        ]
+            })
+        return result
     
     @staticmethod
     def get_table_data(engine: Engine, table_name: str, limit: Optional[int] = None) -> pd.DataFrame:

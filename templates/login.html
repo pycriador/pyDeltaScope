@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - DeltaScope</title>
+    <script>
+        // Apply theme IMMEDIATELY before page renders to prevent flash
+        (function() {
+            try {
+                const theme = localStorage.getItem('theme') || 'light';
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark-theme');
+                    document.body.classList.add('dark-theme');
+                }
+            } catch (e) {
+                // Ignore errors
+            }
+        })();
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body style="margin: 0; padding: 0; overflow-x: hidden;">
+    <!-- Login Section - Modern Split Layout -->
+    <div class="login-container" style="display: flex !important; visibility: visible !important; opacity: 1 !important;">
+        <div class="login-wrapper">
+            <div class="login-card">
+                <!-- Left Side - Project Description -->
+                <div class="login-left">
+                    <div class="login-brand">
+                        <div class="brand-icon">
+                            <i class="fas fa-code"></i>
+                        </div>
+                        <h1 class="brand-title">DeltaScope</h1>
+                        <p class="brand-subtitle">Sistema de Comparação de Tabelas</p>
+                    </div>
+                    
+                    <div class="login-features">
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-exchange-alt"></i>
+                            </div>
+                            <div class="feature-content">
+                                <h4>Comparação Inteligente</h4>
+                                <p>Compare tabelas entre diferentes bancos de dados de forma automática e precisa</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="feature-content">
+                                <h4>Dashboards Dinâmicos</h4>
+                                <p>Visualize mudanças e tendências com gráficos interativos e relatórios detalhados</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-database"></i>
+                            </div>
+                            <div class="feature-content">
+                                <h4>Múltiplos Bancos</h4>
+                                <p>Suporte para MariaDB, MySQL e SQLite com geração automática de modelos SQLAlchemy</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="login-footer-left">
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            Sistema seguro com autenticação e controle de acesso
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Right Side - Login Form -->
+                <div class="login-right">
+                    <div class="login-form-container">
+                        <div class="login-header">
+                            <h2>Bem-vindo de volta!</h2>
+                            <p class="text-muted">Entre com suas credenciais para acessar o sistema</p>
+                        </div>
+                        
+                        {% if error %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            {{ error }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endif %}
+                        
+                        <form method="POST" action="/login" class="login-form">
+                            <div class="form-group">
+                                <label for="username" class="form-label">
+                                    <i class="fas fa-user me-2"></i>Usuário
+                                </label>
+                                <input type="text" class="form-control form-control-lg" id="username" name="username" placeholder="Digite seu usuário" required autofocus>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="password" class="form-label">
+                                    <i class="fas fa-lock me-2"></i>Senha
+                                </label>
+                                <input type="password" class="form-control form-control-lg" id="password" name="password" placeholder="Digite sua senha" required>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-lg w-100 login-btn">
+                                <i class="fas fa-sign-in-alt me-2"></i>Entrar
+                            </button>
+                        </form>
+                        
+                        <div class="login-divider">
+                            <span>ou</span>
+                        </div>
+                        
+                        <div class="login-footer-right">
+                            <p class="text-center text-muted mb-0">
+                                Não tem conta? 
+                                <a href="/create_user" class="register-link">
+                                    <strong>Registre-se aqui</strong>
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Theme management for login page
+        (function() {
+            // Create theme toggle button
+            function createThemeToggle() {
+                const toggleBtn = document.createElement('button');
+                toggleBtn.id = 'themeToggle';
+                toggleBtn.className = 'btn btn-outline-light btn-sm';
+                toggleBtn.style.position = 'fixed';
+                toggleBtn.style.top = '20px';
+                toggleBtn.style.right = '20px';
+                toggleBtn.style.zIndex = '1000';
+                toggleBtn.title = 'Alternar tema';
+                toggleBtn.innerHTML = '<i class="fas fa-moon" id="themeIcon"></i>';
+                document.body.appendChild(toggleBtn);
+            }
+            
+            // Load theme preference
+            function loadTheme() {
+                try {
+                    const savedTheme = localStorage.getItem('theme') || 'light';
+                    if (savedTheme === 'dark') {
+                        document.documentElement.classList.add('dark-theme');
+                        document.body.classList.add('dark-theme');
+                        updateThemeIcon(true);
+                    } else {
+                        document.documentElement.classList.remove('dark-theme');
+                        document.body.classList.remove('dark-theme');
+                        updateThemeIcon(false);
+                    }
+                } catch (error) {
+                    console.warn('Could not load theme:', error);
+                }
+            }
+            
+            // Update theme icon
+            function updateThemeIcon(isDark) {
+                const icon = document.getElementById('themeIcon');
+                if (icon) {
+                    if (isDark) {
+                        icon.classList.remove('fa-moon');
+                        icon.classList.add('fa-sun');
+                    } else {
+                        icon.classList.remove('fa-sun');
+                        icon.classList.add('fa-moon');
+                    }
+                }
+            }
+            
+            // Toggle theme
+            function toggleTheme() {
+                try {
+                    const isDark = document.body.classList.contains('dark-theme');
+                    if (isDark) {
+                        document.documentElement.classList.remove('dark-theme');
+                        document.body.classList.remove('dark-theme');
+                        localStorage.setItem('theme', 'light');
+                        updateThemeIcon(false);
+                    } else {
+                        document.documentElement.classList.add('dark-theme');
+                        document.body.classList.add('dark-theme');
+                        localStorage.setItem('theme', 'dark');
+                        updateThemeIcon(true);
+                    }
+                } catch (error) {
+                    console.error('Error toggling theme:', error);
+                }
+            }
+            
+            // Initialize
+            $(document).ready(function() {
+                createThemeToggle();
+                loadTheme();
+                $('#themeToggle').on('click', function(e) {
+                    e.preventDefault();
+                    toggleTheme();
+                });
+            });
+        })();
+    </script>
+</body>
+</html>

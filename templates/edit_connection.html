@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Conexão - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="editConnectionSection">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-edit me-2"></i>Editar Conexão</h2>
+        <a href="/conexoes" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Voltar para Conexões
+        </a>
+    </div>
+    
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-database me-2"></i>{{ connection.name }}</h5>
+        </div>
+        <div class="card-body">
+            {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+            
+            <form id="editConnectionForm">
+                <input type="hidden" id="connectionId" value="{{ connection.id }}">
+                
+                <div class="mb-3">
+                    <label for="connectionName" class="form-label">
+                        <i class="fas fa-tag me-2"></i>Nome da Conexão <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" class="form-control" id="connectionName" value="{{ connection.name }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="connectionDescription" class="form-label">
+                        <i class="fas fa-align-left me-2"></i>Descrição
+                    </label>
+                    <textarea class="form-control" id="connectionDescription" rows="3">{{ connection.description or '' }}</textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="connectionDbType" class="form-label">
+                        <i class="fas fa-database me-2"></i>Tipo de Banco <span class="text-danger">*</span>
+                    </label>
+                    <select class="form-select" id="connectionDbType" required>
+                        <option value="sqlite" {% if connection.db_type == 'sqlite' %}selected{% endif %}>SQLite</option>
+                        <option value="mariadb" {% if connection.db_type == 'mariadb' %}selected{% endif %}>MariaDB</option>
+                        <option value="mysql" {% if connection.db_type == 'mysql' %}selected{% endif %}>MySQL</option>
+                    </select>
+                </div>
+                
+                <div id="connectionDbConfig">
+                    {% if connection.db_type == 'sqlite' %}
+                    <div class="mb-3">
+                        <label for="connectionDbPath" class="form-label">
+                            <i class="fas fa-folder me-2"></i>Caminho do Arquivo <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="connectionDbPath" 
+                               value="{{ decrypted_config.get('path', '') if decrypted_config else '' }}" 
+                               placeholder="instance/deltascope.db" required>
+                    </div>
+                    {% else %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="connectionDbHost" class="form-label">
+                                <i class="fas fa-server me-2"></i>Host <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="connectionDbHost" 
+                                   value="{{ decrypted_config.get('host', 'localhost') if decrypted_config else 'localhost' }}" 
+                                   placeholder="localhost" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="connectionDbPort" class="form-label">
+                                <i class="fas fa-network-wired me-2"></i>Porta <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control" id="connectionDbPort" 
+                                   value="{{ decrypted_config.get('port', '3306') if decrypted_config else '3306' }}" 
+                                   placeholder="3306" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="connectionDbUser" class="form-label">
+                                <i class="fas fa-user me-2"></i>Usuário <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="connectionDbUser" 
+                                   value="{{ decrypted_config.get('user', '') if decrypted_config else '' }}" 
+                                   placeholder="root" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="connectionDbPassword" class="form-label">
+                                <i class="fas fa-lock me-2"></i>Senha
+                            </label>
+                            <input type="password" class="form-control" id="connectionDbPassword" 
+                                   placeholder="Deixe em branco para manter a senha atual">
+                            <small class="form-text text-muted">Deixe em branco para manter a senha atual</small>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="connectionDbName" class="form-label">
+                            <i class="fas fa-database me-2"></i>Nome do Banco de Dados <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="connectionDbName" 
+                               value="{{ decrypted_config.get('database', '') if decrypted_config else '' }}" 
+                               placeholder="nome_do_banco" required>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div id="errorMessage" class="alert alert-danger" style="display: none;"></div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="/conexoes" class="btn btn-secondary">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="successModalLabel">
+                        <i class="fas fa-check-circle me-2"></i>Sucesso
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="successMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal" id="successModalOkBtn">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Error Modal -->
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="errorModalLabel">
+                        <i class="fas fa-exclamation-circle me-2"></i>Erro
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="errorModalMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Warning Modal -->
+    <div class="modal fade" id="warningModal" tabindex="-1" aria-labelledby="warningModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="warningModalLabel">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Atenção
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="warningMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-warning" data-bs-dismiss="modal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // API_BASE is already defined in app.js
+    const AUTH_TOKEN = '{{ session.token }}';
+    const USER_ID = {{ current_user.id }};
+    
+    // Modal functions using jQuery (must be defined before use)
+    function showSuccessModal(message, redirectUrl = null) {
+        $('#successMessage').text(message);
+        
+        // Remove previous handlers
+        $('#successModalOkBtn').off('click');
+        
+        // Add handler
+        $('#successModalOkBtn').on('click', function() {
+            $('#successModal').modal('hide');
+            if (redirectUrl) {
+                setTimeout(function() {
+                    window.location.href = redirectUrl;
+                }, 300);
+            }
+        });
+        
+        $('#successModal').modal('show');
+    }
+    
+    function showErrorModal(message) {
+        $('#errorModalMessage').text(message);
+        $('#errorModal').modal('show');
+    }
+    
+    function showWarningModal(message) {
+        $('#warningMessage').text(message);
+        $('#warningModal').modal('show');
+    }
+    
+    // Get auth headers
+    function getAuthHeaders() {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (AUTH_TOKEN) {
+            headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+        }
+        
+        if (USER_ID) {
+            headers['X-User-Id'] = USER_ID;
+        }
+        
+        return headers;
+    }
+    
+    // Update DB config fields based on type
+    function updateConnectionDbConfig() {
+        const type = $('#connectionDbType').val();
+        const container = $('#connectionDbConfig');
+        
+        if (type === 'sqlite') {
+            const currentPath = $('#connectionDbPath').val() || '';
+            container.html(`
+                <div class="mb-3">
+                    <label for="connectionDbPath" class="form-label">
+                        <i class="fas fa-folder me-2"></i>Caminho do Arquivo <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" class="form-control" id="connectionDbPath" 
+                           value="${currentPath}" 
+                           placeholder="instance/deltascope.db" required>
+                </div>
+            `);
+        } else {
+            const currentHost = $('#connectionDbHost').val() || 'localhost';
+            const currentPort = $('#connectionDbPort').val() || '3306';
+            const currentUser = $('#connectionDbUser').val() || '';
+            const currentDbName = $('#connectionDbName').val() || '';
+            container.html(`
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="connectionDbHost" class="form-label">
+                            <i class="fas fa-server me-2"></i>Host <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="connectionDbHost" 
+                               value="${currentHost}" 
+                               placeholder="localhost" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="connectionDbPort" class="form-label">
+                            <i class="fas fa-network-wired me-2"></i>Porta <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" class="form-control" id="connectionDbPort" 
+                               value="${currentPort}" 
+                               placeholder="3306" required>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="connectionDbUser" class="form-label">
+                            <i class="fas fa-user me-2"></i>Usuário <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="connectionDbUser" 
+                               value="${currentUser}" 
+                               placeholder="root" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="connectionDbPassword" class="form-label">
+                            <i class="fas fa-lock me-2"></i>Senha
+                        </label>
+                        <input type="password" class="form-control" id="connectionDbPassword" 
+                               placeholder="Deixe em branco para manter a senha atual">
+                        <small class="form-text text-muted">Deixe em branco para manter a senha atual</small>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="connectionDbName" class="form-label">
+                        <i class="fas fa-database me-2"></i>Nome do Banco de Dados <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" class="form-control" id="connectionDbName" 
+                           value="${currentDbName}" 
+                           placeholder="nome_do_banco" required>
+                </div>
+            `);
+        }
+    }
+    
+    // Handle DB type change
+    $('#connectionDbType').on('change', function() {
+        updateConnectionDbConfig();
+    });
+    
+    // Handle form submission
+    $('#editConnectionForm').on('submit', async function(e) {
+        e.preventDefault();
+        
+        const connectionId = $('#connectionId').val();
+        const name = $('#connectionName').val().trim();
+        const description = $('#connectionDescription').val().trim();
+        const dbType = $('#connectionDbType').val();
+        
+        // Validation
+        if (!name) {
+            showWarningModal('Nome da conexão é obrigatório');
+            return;
+        }
+        
+        let dbConfig = { type: dbType };
+        
+        if (dbType === 'sqlite') {
+            const path = $('#connectionDbPath').val().trim();
+            if (!path) {
+                showWarningModal('Caminho do arquivo é obrigatório');
+                return;
+            }
+            dbConfig.path = path;
+        } else {
+            const host = $('#connectionDbHost').val().trim();
+            const port = $('#connectionDbPort').val().trim();
+            const user = $('#connectionDbUser').val().trim();
+            const password = $('#connectionDbPassword').val();
+            const database = $('#connectionDbName').val().trim();
+            
+            if (!host || !port || !user || !database) {
+                showWarningModal('Preencha todos os campos obrigatórios');
+                return;
+            }
+            
+            dbConfig.host = host;
+            dbConfig.port = port;
+            dbConfig.user = user;
+            dbConfig.database = database;
+            // Only include password if provided (empty means keep current)
+            if (password) {
+                dbConfig.password = password;
+            }
+        }
+        
+        const errorDiv = $('#errorMessage');
+        errorDiv.hide();
+        
+        // Disable submit button
+        const submitBtn = $(this).find('button[type="submit"]');
+        const originalText = submitBtn.html();
+        submitBtn.prop('disabled', true);
+        submitBtn.html('<i class="fas fa-spinner fa-spin me-2"></i>Salvando...');
+        
+        try {
+            const headers = getAuthHeaders();
+            const response = await fetch(`${API_BASE}/connections/${connectionId}`, {
+                method: 'PUT',
+                headers: headers,
+                body: JSON.stringify({
+                    name: name,
+                    description: description,
+                    db_type: dbType,
+                    db_config: dbConfig
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Erro ao atualizar conexão');
+            }
+            
+            // Success - show modal and redirect
+            showSuccessModal('Conexão atualizada com sucesso!', '/conexoes');
+            
+        } catch (error) {
+            console.error('Error updating connection:', error);
+            errorDiv.text(`Erro ao atualizar conexão: ${error.message}`);
+            errorDiv.show();
+            showErrorModal(`Erro ao atualizar conexão: ${error.message}`);
+        } finally {
+            // Re-enable submit button
+            submitBtn.prop('disabled', false);
+            submitBtn.html(originalText);
+        }
+    });
+    
+    // Clean up modal backdrops when modals are hidden
+    $(document).ready(function() {
+        $('.modal').on('hidden.bs.modal', function() {
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open');
+            $('body').css('padding-right', '');
+        });
+    });
+</script>
+{% endblock %}
+

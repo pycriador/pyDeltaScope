@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Usuário - DeltaScope</title>
+    <script>
+        // Apply theme IMMEDIATELY before page renders to prevent flash
+        (function() {
+            try {
+                const theme = localStorage.getItem('theme') || 'light';
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark-theme');
+                    document.body.classList.add('dark-theme');
+                }
+            } catch (e) {
+                // Ignore errors
+            }
+        })();
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body style="margin: 0; padding: 0; overflow-x: hidden;">
+    <!-- Create User Section - Modern Split Layout -->
+    <div class="login-container" style="display: flex !important; visibility: visible !important; opacity: 1 !important;">
+        <div class="login-wrapper">
+            <div class="login-card">
+                <!-- Left Side - Project Description -->
+                <div class="login-left">
+                    <div class="login-brand">
+                        <div class="brand-icon">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <h1 class="brand-title">Criar Conta</h1>
+                        <p class="brand-subtitle">Junte-se ao DeltaScope</p>
+                    </div>
+                    
+                    <div class="login-features">
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-rocket"></i>
+                            </div>
+                            <div class="feature-content">
+                                <h4>Comece Agora</h4>
+                                <p>Crie sua conta e comece a comparar tabelas em minutos</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-cog"></i>
+                            </div>
+                            <div class="feature-content">
+                                <h4>Configuração Simples</h4>
+                                <p>Configure conexões de banco de dados de forma rápida e segura</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-chart-bar"></i>
+                            </div>
+                            <div class="feature-content">
+                                <h4>Análise Completa</h4>
+                                <p>Acompanhe mudanças com relatórios detalhados e dashboards</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="login-footer-left">
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Registro rápido e gratuito
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Right Side - Create User Form -->
+                <div class="login-right">
+                    <div class="login-form-container">
+                        <div class="login-header">
+                            <h2>Criar Nova Conta</h2>
+                            <p class="text-muted">Preencha os dados abaixo para se registrar</p>
+                        </div>
+                        
+                        {% if error %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            {{ error }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endif %}
+                        
+                        {% if success %}
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            {{ success }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        <script>
+                            setTimeout(function() {
+                                window.location.href = '/login';
+                            }, 2000);
+                        </script>
+                        {% endif %}
+                        
+                        <form method="POST" action="/create_user" class="login-form">
+                            <div class="form-group">
+                                <label for="regUsername" class="form-label">
+                                    <i class="fas fa-user me-2"></i>Usuário
+                                </label>
+                                <input type="text" class="form-control form-control-lg" id="regUsername" name="username" placeholder="Escolha um nome de usuário" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="regEmail" class="form-label">
+                                    <i class="fas fa-envelope me-2"></i>Email
+                                </label>
+                                <input type="email" class="form-control form-control-lg" id="regEmail" name="email" placeholder="seu@email.com" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="regPassword" class="form-label">
+                                    <i class="fas fa-lock me-2"></i>Senha
+                                </label>
+                                <input type="password" class="form-control form-control-lg" id="regPassword" name="password" placeholder="Mínimo 6 caracteres" required minlength="6">
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-lg w-100 login-btn">
+                                <i class="fas fa-user-plus me-2"></i>Criar Conta
+                            </button>
+                        </form>
+                        
+                        <div class="login-divider">
+                            <span>ou</span>
+                        </div>
+                        
+                        <div class="login-footer-right">
+                            <p class="text-center text-muted mb-0">
+                                Já tem conta? 
+                                <a href="/login" class="register-link">
+                                    <strong>Faça login aqui</strong>
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Theme management for register page
+        (function() {
+            // Create theme toggle button
+            function createThemeToggle() {
+                const toggleBtn = document.createElement('button');
+                toggleBtn.id = 'themeToggle';
+                toggleBtn.className = 'btn btn-outline-light btn-sm';
+                toggleBtn.style.position = 'fixed';
+                toggleBtn.style.top = '20px';
+                toggleBtn.style.right = '20px';
+                toggleBtn.style.zIndex = '1000';
+                toggleBtn.title = 'Alternar tema';
+                toggleBtn.innerHTML = '<i class="fas fa-moon" id="themeIcon"></i>';
+                document.body.appendChild(toggleBtn);
+            }
+            
+            // Load theme preference
+            function loadTheme() {
+                try {
+                    const savedTheme = localStorage.getItem('theme') || 'light';
+                    if (savedTheme === 'dark') {
+                        document.documentElement.classList.add('dark-theme');
+                        document.body.classList.add('dark-theme');
+                        updateThemeIcon(true);
+                    } else {
+                        document.documentElement.classList.remove('dark-theme');
+                        document.body.classList.remove('dark-theme');
+                        updateThemeIcon(false);
+                    }
+                } catch (error) {
+                    console.warn('Could not load theme:', error);
+                }
+            }
+            
+            // Update theme icon
+            function updateThemeIcon(isDark) {
+                const icon = document.getElementById('themeIcon');
+                if (icon) {
+                    if (isDark) {
+                        icon.classList.remove('fa-moon');
+                        icon.classList.add('fa-sun');
+                    } else {
+                        icon.classList.remove('fa-sun');
+                        icon.classList.add('fa-moon');
+                    }
+                }
+            }
+            
+            // Toggle theme
+            function toggleTheme() {
+                try {
+                    const isDark = document.body.classList.contains('dark-theme');
+                    if (isDark) {
+                        document.documentElement.classList.remove('dark-theme');
+                        document.body.classList.remove('dark-theme');
+                        localStorage.setItem('theme', 'light');
+                        updateThemeIcon(false);
+                    } else {
+                        document.documentElement.classList.add('dark-theme');
+                        document.body.classList.add('dark-theme');
+                        localStorage.setItem('theme', 'dark');
+                        updateThemeIcon(true);
+                    }
+                } catch (error) {
+                    console.error('Error toggling theme:', error);
+                }
+            }
+            
+            // Initialize
+            $(document).ready(function() {
+                createThemeToggle();
+                loadTheme();
+                $('#themeToggle').on('click', function(e) {
+                    e.preventDefault();
+                    toggleTheme();
+                });
+            });
+        })();
+    </script>
+</body>
+</html>
+

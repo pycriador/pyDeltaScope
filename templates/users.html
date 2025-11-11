@@ -10,74 +10,114 @@
         <div class="card-header bg-primary text-white">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-users me-2"></i>Usuários</h5>
-                <button class="btn btn-light btn-sm" onclick="window.location.href='/usuarios/novo'">
+                <a href="/usuarios/novo" class="btn btn-light btn-sm">
                     <i class="fas fa-plus me-1"></i>Novo Usuário
-                </button>
+                </a>
             </div>
         </div>
         <div class="card-body">
             {% if users %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Usuário</th>
-                            <th>Email</th>
-                            <th>Status</th>
-                            <th>Tipo</th>
-                            <th>Criado em</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for user in users %}
-                        <tr>
-                            <td>{{ user.id }}</td>
-                            <td>
-                                <strong>{{ user.username }}</strong>
-                            </td>
-                            <td>{{ user.email }}</td>
-                            <td>
-                                {% if user.is_active %}
-                                <span class="badge bg-success">Ativo</span>
-                                {% else %}
-                                <span class="badge bg-secondary">Inativo</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if user.is_admin %}
-                                <span class="badge bg-danger">Admin</span>
-                                {% else %}
-                                <span class="badge bg-info">Usuário</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ user.created_at.strftime('%d/%m/%Y %H:%M') if user.created_at else '-' }}</td>
-                            <td>
-                                <div class="btn-group btn-group-sm" role="group">
-                                    {% if current_user.id != user.id %}
-                                    <a href="/api/users/{{ user.id }}/toggle-active" class="btn btn-sm {{ 'btn-secondary' if user.is_active else 'btn-success' }}" title="{{ 'Desativar' if user.is_active else 'Ativar' }}">
-                                        <i class="fas fa-{{ 'ban' if user.is_active else 'check' }}"></i>
-                                    </a>
-                                    {% endif %}
-                                    <a href="/usuarios/{{ user.id }}/senha" class="btn btn-sm btn-warning" title="Alterar Senha">
-                                        <i class="fas fa-key"></i>
-                                    </a>
-                                    {% if current_user.id != user.id %}
-                                    <a href="/api/users/{{ user.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja deletar o usuário {{ user.username }}?');" title="Deletar">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
+            <!-- Filter input -->
+            <div class="mb-3">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text" class="form-control" id="userFilter" placeholder="Filtrar usuários por nome, email ou ID...">
+                </div>
+            </div>
+            
+            <div id="usersCount" class="mb-3">
+                <small class="text-muted">
+                    <i class="fas fa-users me-1"></i>
+                    <span id="usersCountText">{{ users|length }}</span> usuário(s) encontrado(s)
+                </small>
+            </div>
+            
+            <div class="row" id="usersContainer">
+                {% for user in users %}
+                <div class="col-md-6 mb-3 user-card" data-user-id="{{ user.id }}" data-username="{{ user.username|lower }}" data-email="{{ user.email|lower }}">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h5 class="card-title mb-1">
+                                        <i class="fas fa-user me-2"></i>{{ user.username }}
+                                    </h5>
+                                    <p class="card-text text-muted mb-1">
+                                        <i class="fas fa-envelope me-1"></i>{{ user.email }}
+                                    </p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-hashtag me-1"></i>ID: {{ user.id }}
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    {% if user.is_active %}
+                                    <span class="badge bg-success">Ativo</span>
                                     {% else %}
-                                    <button class="btn btn-sm btn-secondary" disabled title="Não é possível deletar seu próprio usuário">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    <span class="badge bg-secondary">Inativo</span>
+                                    {% endif %}
+                                    <br>
+                                    {% if user.is_admin %}
+                                    <span class="badge bg-danger mt-1">Admin</span>
+                                    {% else %}
+                                    <span class="badge bg-info mt-1">Usuário</span>
                                     {% endif %}
                                 </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    Criado em: {{ user.created_at.strftime('%d/%m/%Y %H:%M') if user.created_at else '-' }}
+                                </small>
+                            </div>
+                            
+                            {% set user_groups = user_groups_dict.get(user.id, []) %}
+                            {% if user_groups and user_groups|length > 0 %}
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    <strong><i class="fas fa-user-friends me-1"></i>Grupos:</strong>
+                                </small>
+                                <div class="mt-1">
+                                    {% for group in user_groups %}
+                                    <span class="badge bg-secondary me-1">{{ group.name }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="btn-group btn-group-sm w-100 mt-3" role="group">
+                                {% if current_user.id != user.id %}
+                                <a href="/api/users/{{ user.id }}/toggle-active" class="btn btn-sm {{ 'btn-secondary' if user.is_active else 'btn-success' }}" title="{{ 'Desativar' if user.is_active else 'Ativar' }}">
+                                    <i class="fas fa-{{ 'ban' if user.is_active else 'check' }}"></i>
+                                </a>
+                                {% else %}
+                                <button class="btn btn-sm btn-secondary" disabled title="Não é possível alterar seu próprio status">
+                                    <i class="fas fa-ban"></i>
+                                </button>
+                                {% endif %}
+                                <a href="/usuarios/{{ user.id }}/senha" class="btn btn-sm btn-warning" title="Alterar Senha">
+                                    <i class="fas fa-key"></i>
+                                </a>
+                                {% if current_user.id != user.id %}
+                                <a href="/api/users/{{ user.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja deletar o usuário {{ user.username }}?');" title="Deletar">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                                {% else %}
+                                <button class="btn btn-sm btn-secondary" disabled title="Não é possível deletar seu próprio usuário">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div id="noUsersMessage" class="alert alert-info" style="display: none;">
+                <i class="fas fa-info-circle me-2"></i>Nenhum usuário encontrado com o filtro aplicado.
             </div>
             {% else %}
             <div class="alert alert-info">
@@ -87,4 +127,63 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        const $filterInput = $('#userFilter');
+        const $userCards = $('.user-card');
+        const $usersCountText = $('#usersCountText');
+        const $noUsersMessage = $('#noUsersMessage');
+        
+        // Filter function
+        function filterUsers() {
+            const filterValue = $filterInput.val().toLowerCase().trim();
+            let visibleCount = 0;
+            
+            $userCards.each(function() {
+                const $card = $(this);
+                const username = $card.data('username') || '';
+                const email = $card.data('email') || '';
+                const userId = $card.data('user-id')?.toString() || '';
+                
+                const matches = !filterValue || 
+                    username.includes(filterValue) || 
+                    email.includes(filterValue) || 
+                    userId.includes(filterValue);
+                
+                if (matches) {
+                    $card.show();
+                    visibleCount++;
+                } else {
+                    $card.hide();
+                }
+            });
+            
+            // Update count
+            $usersCountText.text(visibleCount);
+            
+            // Show/hide no results message
+            if (visibleCount === 0 && filterValue) {
+                $noUsersMessage.show();
+            } else {
+                $noUsersMessage.hide();
+            }
+        }
+        
+        // Bind filter input
+        $filterInput.on('input', function() {
+            filterUsers();
+        });
+        
+        // Clear filter on Escape key
+        $filterInput.on('keydown', function(e) {
+            if (e.key === 'Escape') {
+                $(this).val('');
+                filterUsers();
+            }
+        });
+    });
+</script>
 {% endblock %}

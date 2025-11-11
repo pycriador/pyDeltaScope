@@ -1,0 +1,407 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Projeto - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="editProjectSection">
+    <h2 class="mb-4"><i class="fas fa-edit me-2"></i>Editar Projeto</h2>
+    
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-folder me-2"></i>{{ project.name }}</h5>
+        </div>
+        <div class="card-body">
+            {% if error %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                {{ error }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+            
+            {% if success %}
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                {{ success }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endif %}
+            
+            <form id="editProjectForm">
+                <input type="hidden" id="projectId" value="{{ project.id }}">
+                
+                <div class="mb-3">
+                    <label for="projectName" class="form-label">
+                        <i class="fas fa-tag me-2"></i>Nome do Projeto <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" class="form-control" id="projectName" value="{{ project.name }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="projectDescription" class="form-label">
+                        <i class="fas fa-align-left me-2"></i>Descrição
+                    </label>
+                    <textarea class="form-control" id="projectDescription" rows="3">{{ project.description or '' }}</textarea>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="sourceConnectionSelect" class="form-label">
+                            <i class="fas fa-database me-2"></i>Conexão Origem <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="sourceConnectionSelect" required>
+                            <option value="">Selecione uma conexão...</option>
+                            {% for conn in connections %}
+                            <option value="{{ conn.id }}" {% if conn.id == project.source_connection_id %}selected{% endif %}>
+                                {{ conn.name }} ({{ conn.db_type }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="targetConnectionSelect" class="form-label">
+                            <i class="fas fa-database me-2"></i>Conexão Destino <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="targetConnectionSelect" required>
+                            <option value="">Selecione uma conexão...</option>
+                            {% for conn in connections %}
+                            <option value="{{ conn.id }}" {% if conn.id == project.target_connection_id %}selected{% endif %}>
+                                {{ conn.name }} ({{ conn.db_type }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="sourceTableSelect" class="form-label">
+                            <i class="fas fa-table me-2"></i>Tabela Origem <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="sourceTableSelect" required>
+                            <option value="">Selecione uma tabela...</option>
+                            <option value="{{ project.source_table }}" selected>{{ project.source_table }}</option>
+                        </select>
+                        <div class="form-text">Selecione a conexão origem primeiro para carregar as tabelas</div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="targetTableSelect" class="form-label">
+                            <i class="fas fa-table me-2"></i>Tabela Destino <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="targetTableSelect" required>
+                            <option value="">Selecione uma tabela...</option>
+                            <option value="{{ project.target_table }}" selected>{{ project.target_table }}</option>
+                        </select>
+                        <div class="form-text">Selecione a conexão destino primeiro para carregar as tabelas</div>
+                    </div>
+                </div>
+                
+                <div id="loadingTables" class="alert alert-info" style="display: none;">
+                    <i class="fas fa-spinner fa-spin me-2"></i>Carregando tabelas...
+                </div>
+                
+                <div id="errorMessage" class="alert alert-danger" style="display: none;"></div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="/projetos" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="successModalLabel">
+                        <i class="fas fa-check-circle me-2"></i>Sucesso
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="successMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal" id="successModalOkBtn">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Error Modal -->
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="errorModalLabel">
+                        <i class="fas fa-exclamation-circle me-2"></i>Erro
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="errorModalMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Warning Modal -->
+    <div class="modal fade" id="warningModal" tabindex="-1" aria-labelledby="warningModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="warningModalLabel">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Atenção
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="warningMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-warning" data-bs-dismiss="modal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // API_BASE is already defined in app.js, so we don't need to declare it again
+    // Get token and user ID from Flask session (passed from template)
+    const AUTH_TOKEN = '{{ session.token }}';
+    const USER_ID = {{ current_user.id }};
+    let sourceTablesLoaded = false;
+    let targetTablesLoaded = false;
+    
+    // Modal functions using jQuery (must be defined before use)
+    function showSuccessModal(message, redirectUrl = null) {
+        $('#successMessage').text(message);
+        
+        // Remove previous handlers
+        $('#successModalOkBtn').off('click');
+        
+        // Add handler
+        $('#successModalOkBtn').on('click', function() {
+            $('#successModal').modal('hide');
+            if (redirectUrl) {
+                setTimeout(function() {
+                    window.location.href = redirectUrl;
+                }, 300);
+            }
+        });
+        
+        $('#successModal').modal('show');
+    }
+    
+    function showErrorModal(message) {
+        $('#errorModalMessage').text(message);
+        $('#errorModal').modal('show');
+    }
+    
+    function showWarningModal(message) {
+        $('#warningMessage').text(message);
+        $('#warningModal').modal('show');
+    }
+    
+    // Get user token from session (stored by Flask)
+    function getAuthHeaders() {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        // Add token if available
+        if (AUTH_TOKEN) {
+            headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+        }
+        
+        // Add user ID
+        if (USER_ID) {
+            headers['X-User-Id'] = USER_ID;
+        }
+        
+        return headers;
+    }
+    
+    // Load tables for a connection
+    async function loadTables(connectionId, selectId, type) {
+        if (!connectionId) {
+            document.getElementById(selectId).innerHTML = '<option value="">Selecione uma conexão primeiro...</option>';
+            return;
+        }
+        
+        const loadingDiv = $('#loadingTables');
+        const errorDiv = $('#errorMessage');
+        const select = document.getElementById(selectId);
+        
+        loadingDiv.show();
+        errorDiv.hide();
+        select.disabled = true;
+        select.innerHTML = '<option value="">Carregando tabelas...</option>';
+        
+        try {
+            const headers = getAuthHeaders();
+            const response = await fetch(`${API_BASE}/connections/${connectionId}/tables`, {
+                method: 'GET',
+                headers: headers
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Erro ao carregar tabelas');
+            }
+            
+            const tables = data.tables || [];
+            select.innerHTML = '<option value="">Selecione uma tabela...</option>';
+            
+            tables.forEach(table => {
+                const option = document.createElement('option');
+                option.value = table;
+                option.textContent = table;
+                select.appendChild(option);
+            });
+            
+            // Restore selected value if it exists in the list
+            const currentValue = type === 'source' ? '{{ project.source_table }}' : '{{ project.target_table }}';
+            if (tables.includes(currentValue)) {
+                select.value = currentValue;
+            }
+            
+            if (type === 'source') {
+                sourceTablesLoaded = true;
+            } else {
+                targetTablesLoaded = true;
+            }
+            
+        } catch (error) {
+            console.error(`Error loading ${type} tables:`, error);
+            errorDiv.text(`Erro ao carregar tabelas: ${error.message}`);
+            errorDiv.show();
+            showErrorModal(`Erro ao carregar tabelas da conexão: ${error.message}`);
+            select.innerHTML = '<option value="">Erro ao carregar tabelas</option>';
+        } finally {
+            loadingDiv.hide();
+            select.disabled = false;
+        }
+    }
+    
+    // Load tables when connection changes
+    document.getElementById('sourceConnectionSelect').addEventListener('change', function() {
+        const connectionId = this.value;
+        loadTables(connectionId, 'sourceTableSelect', 'source');
+    });
+    
+    document.getElementById('targetConnectionSelect').addEventListener('change', function() {
+        const connectionId = this.value;
+        loadTables(connectionId, 'targetTableSelect', 'target');
+    });
+    
+    // Load tables on page load if connections are already selected
+    $(document).ready(function() {
+        const sourceConnId = document.getElementById('sourceConnectionSelect').value;
+        const targetConnId = document.getElementById('targetConnectionSelect').value;
+        
+        if (sourceConnId) {
+            loadTables(sourceConnId, 'sourceTableSelect', 'source');
+        }
+        if (targetConnId) {
+            loadTables(targetConnId, 'targetTableSelect', 'target');
+        }
+    });
+    
+    // Handle form submission
+    $('#editProjectForm').on('submit', async function(e) {
+        e.preventDefault();
+        
+        const projectId = $('#projectId').val();
+        const name = $('#projectName').val().trim();
+        const description = $('#projectDescription').val().trim();
+        const sourceConnectionId = $('#sourceConnectionSelect').val();
+        const targetConnectionId = $('#targetConnectionSelect').val();
+        const sourceTable = $('#sourceTableSelect').val();
+        const targetTable = $('#targetTableSelect').val();
+        
+        // Validation
+        if (!name) {
+            showWarningModal('Nome do projeto é obrigatório');
+            return;
+        }
+        
+        if (!sourceConnectionId || !targetConnectionId) {
+            showWarningModal('Selecione ambas as conexões');
+            return;
+        }
+        
+        if (!sourceTable || !targetTable) {
+            showWarningModal('Selecione ambas as tabelas');
+            return;
+        }
+        
+        const errorDiv = $('#errorMessage');
+        errorDiv.hide();
+        
+        // Disable submit button
+        const submitBtn = $(this).find('button[type="submit"]');
+        const originalText = submitBtn.html();
+        submitBtn.prop('disabled', true);
+        submitBtn.html('<i class="fas fa-spinner fa-spin me-2"></i>Salvando...');
+        
+        try {
+            const headers = getAuthHeaders();
+            const response = await fetch(`${API_BASE}/projects/${projectId}`, {
+                method: 'PUT',
+                headers: headers,
+                body: JSON.stringify({
+                    name: name,
+                    description: description,
+                    source_connection_id: parseInt(sourceConnectionId),
+                    target_connection_id: parseInt(targetConnectionId),
+                    source_table: sourceTable,
+                    target_table: targetTable
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Erro ao atualizar projeto');
+            }
+            
+            // Success - show modal and redirect
+            showSuccessModal('Projeto atualizado com sucesso!', '/projetos');
+            
+        } catch (error) {
+            console.error('Error updating project:', error);
+            errorDiv.text(`Erro ao atualizar projeto: ${error.message}`);
+            errorDiv.show();
+            showErrorModal(`Erro ao atualizar projeto: ${error.message}`);
+        } finally {
+            // Re-enable submit button
+            submitBtn.prop('disabled', false);
+            submitBtn.html(originalText);
+        }
+    });
+    
+    // Clean up modal backdrops when modals are hidden
+    $(document).ready(function() {
+        $('.modal').on('hidden.bs.modal', function() {
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open');
+            $('body').css('padding-right', '');
+        });
+    });
+</script>
+{% endblock %}
+

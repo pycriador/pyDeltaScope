@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Criar Usuário - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="createUserSection">
+    <h2 class="mb-4"><i class="fas fa-user-plus me-2"></i>Criar Novo Usuário</h2>
+    
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Dados do Usuário</h5>
+        </div>
+        <div class="card-body">
+            <div id="alertContainer"></div>
+            
+            <form id="createUserForm">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="newUsername" class="form-label">
+                            <i class="fas fa-user me-2"></i>Usuário <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="newUsername" placeholder="Nome de usuário" required>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="newEmail" class="form-label">
+                            <i class="fas fa-envelope me-2"></i>Email <span class="text-danger">*</span>
+                        </label>
+                        <input type="email" class="form-control" id="newEmail" placeholder="usuario@exemplo.com" required>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="newPassword" class="form-label">
+                            <i class="fas fa-lock me-2"></i>Senha <span class="text-danger">*</span>
+                        </label>
+                        <input type="password" class="form-control" id="newPassword" placeholder="Mínimo 6 caracteres" required minlength="6">
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label for="confirmPassword" class="form-label">
+                            <i class="fas fa-lock me-2"></i>Confirmar Senha <span class="text-danger">*</span>
+                        </label>
+                        <input type="password" class="form-control" id="confirmPassword" placeholder="Digite a senha novamente" required minlength="6">
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="newIsAdmin">
+                            <label class="form-check-label" for="newIsAdmin">
+                                <i class="fas fa-shield-alt me-2"></i>Administrador
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="newIsActive" checked>
+                            <label class="form-check-label" for="newIsActive">
+                                <i class="fas fa-check-circle me-2"></i>Usuário Ativo
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="/usuarios" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Voltar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Criar Usuário
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const API_BASE = '/api';
+    
+    // Show alert message
+    function showAlert(message, type = 'danger') {
+        const container = document.getElementById('alertContainer');
+        container.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+    }
+    
+    // Handle create user form submission
+    document.getElementById('createUserForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const username = document.getElementById('newUsername').value.trim();
+        const email = document.getElementById('newEmail').value.trim();
+        const password = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const isAdmin = document.getElementById('newIsAdmin').checked;
+        const isActive = document.getElementById('newIsActive').checked;
+        
+        // Validation
+        if (!username || !email || !password || !confirmPassword) {
+            showAlert('Preencha todos os campos obrigatórios');
+            return;
+        }
+        
+        if (password.length < 6) {
+            showAlert('A senha deve ter pelo menos 6 caracteres');
+            return;
+        }
+        
+        if (password !== confirmPassword) {
+            showAlert('As senhas não coincidem');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`${API_BASE}/users/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include', // Include cookies for session
+                body: JSON.stringify({
+                    username,
+                    email,
+                    password,
+                    is_admin: isAdmin,
+                    is_active: isActive
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                showAlert('Usuário criado com sucesso! Redirecionando...', 'success');
+                setTimeout(() => {
+                    window.location.href = '/usuarios';
+                }, 1500);
+            } else {
+                showAlert(data.message || 'Erro ao criar usuário');
+            }
+        } catch (error) {
+            showAlert('Erro ao criar usuário: ' + error.message);
+        }
+    });
+</script>
+{% endblock %}
+

@@ -1,9 +1,10 @@
 # DeltaScope - Sistema de Comparação de Tabelas
 
-Sistema completo para comparação de tabelas entre bancos de dados, com geração automática de modelos SQLAlchemy, dashboards dinâmicos e gerenciamento de usuários e permissões.
+Sistema completo para comparação de tabelas entre bancos de dados, com geração automática de modelos SQLAlchemy, dashboards dinâmicos, gerenciamento de usuários e permissões, e interface moderna com suporte a temas claro/escuro.
 
 ## 📋 Índice
 
+- [Sobre o Projeto](#sobre-o-projeto)
 - [Funcionalidades](#funcionalidades)
 - [Estrutura do Projeto](#estrutura-do-projeto)
 - [Instalação](#instalação)
@@ -11,31 +12,110 @@ Sistema completo para comparação de tabelas entre bancos de dados, com geraç�
 - [Inicialização](#inicialização)
 - [Scripts Disponíveis](#scripts-disponíveis)
 - [Estrutura do Banco de Dados](#estrutura-do-banco-de-dados)
+- [Páginas e Rotas](#páginas-e-rotas)
 - [API Endpoints](#api-endpoints)
-- [Sistema de Modais](#sistema-de-modais)
+- [Filtros por URL](#filtros-por-url)
 - [Gerenciamento de Usuários](#gerenciamento-de-usuários)
 - [Gerenciamento de Grupos](#gerenciamento-de-grupos)
+- [Edição de Tabelas](#edição-de-tabelas)
+- [Dashboard e Gráficos](#dashboard-e-gráficos)
 - [Exemplos de Código](#exemplos-de-código)
 - [Troubleshooting](#troubleshooting)
 
+## 🎯 Sobre o Projeto
+
+O **DeltaScope** é uma aplicação web desenvolvida em Flask que permite comparar tabelas entre diferentes bancos de dados, identificar diferenças, gerar modelos SQLAlchemy automaticamente e visualizar mudanças através de dashboards interativos.
+
+### Principais Características
+
+- 🔐 **Autenticação Segura**: Sistema de login com sessões Flask e tokens
+- 👥 **Gerenciamento de Usuários**: Criação, edição, ativação/desativação e exclusão de usuários
+- 🔑 **Sistema de Permissões**: Grupos com permissões granulares por funcionalidade
+- 🗄️ **Múltiplos Bancos**: Suporte para SQLite, MariaDB e MySQL
+- 🔒 **Criptografia**: Senhas de banco de dados criptografadas com Fernet
+- 📊 **Dashboards Interativos**: Gráficos dinâmicos com Plotly.js
+- 🎨 **Interface Moderna**: Design responsivo com suporte a tema claro/escuro
+- 📝 **Geração Automática**: Modelos SQLAlchemy gerados automaticamente
+- 🔄 **Comparação Inteligente**: Identificação de diferenças entre tabelas origem e destino
+- 📈 **Relatórios**: Exportação de resultados em CSV, JSON e Excel
+
 ## ✨ Funcionalidades
 
-- ✅ Autenticação de usuários com Werkzeug
-- ✅ Sistema de grupos e permissões
-- ✅ CRUD completo de projetos e conexões de banco de dados
+### Autenticação e Usuários
+- ✅ Login e logout com sessões Flask
+- ✅ Cadastro de novos usuários (página pública `/create_user`)
+- ✅ Criação de usuários por administradores (página `/usuarios/novo`)
+- ✅ Ativação/desativação de usuários
+- ✅ Alteração de senhas
+- ✅ Exclusão de usuários (remove automaticamente de todos os grupos)
+- ✅ Proteção contra auto-exclusão e auto-desativação de admins
+
+### Grupos e Permissões
+- ✅ Criação e gerenciamento de grupos
+- ✅ Permissões granulares:
+  - Criar conexões de banco
+  - Criar projetos
+  - Visualizar dashboards
+  - Editar tabelas
+  - Visualizar tabelas
+  - Visualizar relatórios
+  - Baixar relatórios
+- ✅ Associação de usuários a grupos
+- ✅ Usuários admin têm todas as permissões automaticamente
+
+### Conexões de Banco de Dados
+- ✅ CRUD completo de conexões
+- ✅ Suporte para SQLite, MariaDB e MySQL
+- ✅ Teste de conexão antes de salvar
+- ✅ Criptografia de senhas com Fernet
+- ✅ Visualização de tabelas disponíveis
+
+### Projetos
+- ✅ CRUD completo de projetos
 - ✅ Seleção visual de tabelas antes de criar projeto
-- ✅ Teste de conexão com bancos de dados
-- ✅ Comparação automática entre tabelas (origem e destino)
-- ✅ Geração automática de modelos SQLAlchemy baseados nas tabelas
-- ✅ Criptografia de senhas de banco de dados (Fernet)
-- ✅ Registro incremental de mudanças
-- ✅ Envio de mudanças via API usando requests
-- ✅ Dashboards dinâmicos com Plotly.js
-- ✅ Suporte para MariaDB (produção) e SQLite (desenvolvimento)
-- ✅ Interface moderna e responsiva
-- ✅ Modais de notificação personalizados
-- ✅ Verificação automática de tabelas na inicialização
-- ✅ Setup inicial para criação do primeiro admin
+- ✅ Mapeamento de tabelas origem e destino
+- ✅ Geração automática de modelos SQLAlchemy
+
+### Comparações
+- ✅ Execução de comparações entre tabelas
+- ✅ Seleção de chaves primárias para comparação
+- ✅ Mapeamento de colunas com nomes diferentes
+- ✅ Identificação de registros adicionados, modificados e deletados
+- ✅ Visualização de resultados detalhados
+- ✅ Exportação de resultados (CSV, JSON, Excel/TXT)
+
+### Tabelas
+- ✅ Visualização de tabelas por conexão
+- ✅ Informações detalhadas de colunas
+- ✅ Edição de tipos de colunas
+- ✅ Modificação de propriedades (nullable, primary key)
+- ✅ Atualização automática no banco de dados
+- ✅ Geração/atualização de modelos SQLAlchemy locais
+
+### Dashboard
+- ✅ Estatísticas do projeto
+- ✅ Gráficos interativos:
+  - Mudanças ao longo do tempo (linha)
+  - Mudanças por campo (barras)
+  - Campos modificados no período (pizza)
+  - Mudanças por tipo (pizza)
+  - Comparações por status (barras)
+  - Tendência de mudanças (área)
+- ✅ Filtros por data (início e fim)
+- ✅ Filtros por URL (compartilhamento de links)
+
+### Relatórios
+- ✅ Visualização de comparações executadas
+- ✅ Detalhes de resultados por comparação
+- ✅ Exportação de dados
+
+### Interface
+- ✅ Design moderno e responsivo
+- ✅ Tema claro/escuro com toggle
+- ✅ Navegação por URLs significativas
+- ✅ Páginas HTML renderizadas no servidor
+- ✅ Modais Bootstrap para notificações
+- ✅ Loading states e feedback visual
 
 ## 📁 Estrutura do Projeto
 
@@ -54,18 +134,29 @@ pyDeltaScope/
 │   │   ├── database_connection.py   # Modelo de conexão de banco
 │   │   ├── table_model_mapping.py   # Mapeamento tabela-modelo
 │   │   └── generated/               # Modelos SQLAlchemy gerados automaticamente
-│   │       └── __init__.py
-│   ├── routes/                      # Rotas da API
+│   │       └── *.py                 # Modelos gerados dinamicamente
+│   ├── routes/                      # Rotas da aplicação
 │   │   ├── __init__.py
-│   │   ├── auth.py                  # Autenticação (login, registro, logout)
-│   │   ├── users.py                 # Gerenciamento de usuários (Admin)
-│   │   ├── groups.py                # Gerenciamento de grupos (Admin)
-│   │   ├── projects.py              # CRUD de projetos
-│   │   ├── connections.py            # CRUD de conexões de banco
-│   │   ├── comparisons.py           # Execução de comparações
-│   │   ├── dashboard.py              # Dashboards e estatísticas
-│   │   ├── tables.py                 # Operações com tabelas
-│   │   └── setup.py                 # Setup inicial
+│   │   ├── auth.py                  # API de autenticação
+│   │   ├── auth_template.py         # Páginas de autenticação (login, registro)
+│   │   ├── users.py                 # API de usuários (Admin)
+│   │   ├── users_template.py         # Páginas de usuários
+│   │   ├── groups.py                # API de grupos (Admin)
+│   │   ├── groups_template.py       # Páginas de grupos
+│   │   ├── projects.py              # API de projetos
+│   │   ├── projects_template.py     # Páginas de projetos
+│   │   ├── connections.py           # API de conexões
+│   │   ├── connections_template.py  # Páginas de conexões
+│   │   ├── comparisons.py           # API de comparações
+│   │   ├── comparison_template.py  # Páginas de comparação
+│   │   ├── dashboard.py             # API de dashboard
+│   │   ├── dashboard_template.py    # Página de dashboard
+│   │   ├── tables.py                # API de tabelas
+│   │   ├── tables_template.py       # Páginas de tabelas
+│   │   ├── reports_template.py      # Páginas de relatórios
+│   │   ├── home_template.py         # Página inicial
+│   │   ├── api_docs.py              # Página de documentação da API
+│   │   └── setup.py                 # API de setup inicial
 │   ├── services/                    # Serviços de negócio
 │   │   ├── __init__.py
 │   │   ├── database.py              # Serviço de conexão com bancos
@@ -81,11 +172,27 @@ pyDeltaScope/
 │       ├── css/
 │       │   └── style.css            # Estilos customizados
 │       └── js/
-│           └── app.js                # JavaScript da aplicação
+│           └── app.js               # JavaScript da aplicação
 ├── templates/                       # Templates HTML
-│   └── index.html                   # Template principal (SPA)
-├── docs/                            # Documentação
-│   └── QUICKSTART.md                # Guia rápido
+│   ├── base.html                    # Template base
+│   ├── login.html                   # Página de login
+│   ├── create_user_auth.html        # Página pública de cadastro
+│   ├── create_user.html             # Página admin de criação de usuário
+│   ├── home.html                    # Página inicial (bem-vindo)
+│   ├── users.html                   # Página de gerenciamento de usuários
+│   ├── groups.html                  # Página de gerenciamento de grupos
+│   ├── connections.html             # Página de conexões
+│   ├── projects.html                # Página de projetos
+│   ├── comparison.html              # Página de seleção de projeto
+│   ├── comparison_execution.html    # Página de execução de comparação
+│   ├── comparison_results.html      # Página de resultados
+│   ├── dashboard.html               # Página de dashboard
+│   ├── tables.html                  # Página de tabelas
+│   ├── edit_table.html              # Página de edição de colunas
+│   ├── reports.html                 # Página de relatórios
+│   ├── api_docs.html                # Página de documentação da API
+│   ├── change_password.html         # Página de alteração de senha
+│   └── error.html                   # Página de erro
 ├── instance/                        # Banco de dados SQLite (dev)
 │   └── deltascope.db
 ├── config.py                        # Configurações da aplicação
@@ -199,8 +306,14 @@ python init_db.py
 
 Este script irá:
 - Criar todas as tabelas necessárias
-- Criar grupos de permissões padrão
-- Verificar se existe algum usuário admin
+- Criar grupos de permissões padrão:
+  - Administradores
+  - Criadores de Conexões
+  - Criadores de Projetos
+  - Visualizadores de Dashboard
+  - Editores de Tabelas
+  - Visualizadores de Tabelas
+  - Visualizadores de Relatórios
 
 ### 2. Criar o Primeiro Usuário Administrador
 
@@ -215,7 +328,13 @@ python run.py
 3. O sistema detectará que é a primeira execução e mostrará um modal para criar o primeiro admin
 4. Preencha os dados e crie o usuário
 
-**Opção B: Via Script Interativo**
+**Opção B: Via Página de Cadastro Pública**
+
+1. Acesse `http://localhost:5000/create_user`
+2. Preencha os dados do primeiro usuário
+3. O primeiro usuário criado será automaticamente um administrador
+
+**Opção C: Via Script Interativo**
 
 ```bash
 python create_admin.py
@@ -226,7 +345,7 @@ O script irá solicitar:
 - Email
 - Senha (com confirmação)
 
-**Opção C: Via Script CLI (Não Interativo)**
+**Opção D: Via Script CLI (Não Interativo)**
 
 ```bash
 python change_password.py admin senha123 --create-admin
@@ -252,14 +371,8 @@ python init_db.py
 
 **O que faz:**
 - Cria todas as tabelas do sistema
-- Cria grupos de permissões padrão:
-  - Administradores
-  - Criadores de Conexões
-  - Criadores de Projetos
-  - Visualizadores de Dashboard
-  - Editores de Tabelas
-  - Visualizadores de Tabelas
-  - Visualizadores de Relatórios
+- Cria grupos de permissões padrão
+- Verifica se existe algum usuário admin
 
 ### `create_admin.py`
 
@@ -345,6 +458,7 @@ Armazena configurações de conexão com bancos de dados.
 | db_type | String(50) | Tipo (sqlite, mariadb, mysql) |
 | encrypted_config | Text | Configuração criptografada |
 | user_id | Integer | FK para users.id |
+| is_active | Boolean | Status ativo/inativo |
 | created_at | DateTime | Data de criação |
 | updated_at | DateTime | Data de atualização |
 
@@ -360,7 +474,9 @@ Armazena projetos de comparação.
 | target_connection_id | Integer | FK para database_connections.id |
 | source_table | String(200) | Nome da tabela origem |
 | target_table | String(200) | Nome da tabela destino |
+| model_file_path | String(500) | Caminho do arquivo do modelo |
 | user_id | Integer | FK para users.id |
+| is_active | Boolean | Status ativo/inativo |
 | created_at | DateTime | Data de criação |
 | updated_at | DateTime | Data de atualização |
 
@@ -372,7 +488,8 @@ Armazena execuções de comparação.
 | id | Integer | Chave primária |
 | project_id | Integer | FK para projects.id |
 | executed_at | DateTime | Data de execução |
-| status | String(50) | Status (completed, failed) |
+| status | String(50) | Status (pending, running, completed, failed) |
+| total_differences | Integer | Total de diferenças encontradas |
 | comparison_metadata | JSON | Metadados da comparação |
 | user_id | Integer | FK para users.id |
 
@@ -383,6 +500,7 @@ Armazena resultados detalhados das comparações.
 |-------|------|-----------|
 | id | Integer | Chave primária |
 | comparison_id | Integer | FK para comparisons.id |
+| record_id | String(200) | ID do registro (chave primária) |
 | field_name | String(200) | Nome do campo |
 | source_value | Text | Valor origem |
 | target_value | Text | Valor destino |
@@ -394,11 +512,15 @@ Armazena logs incrementais de mudanças.
 | Campo | Tipo | Descrição |
 |-------|------|-----------|
 | id | Integer | Chave primária |
+| project_id | Integer | FK para projects.id |
 | comparison_id | Integer | FK para comparisons.id |
+| record_id | String(200) | ID do registro |
 | field_name | String(200) | Nome do campo |
 | old_value | Text | Valor antigo |
 | new_value | Text | Valor novo |
-| changed_at | DateTime | Data da mudança |
+| change_type | String(50) | Tipo (added, modified, deleted) |
+| detected_at | DateTime | Data da detecção |
+| sent_to_api | Boolean | Se foi enviado para API externa |
 
 #### `table_model_mappings`
 Mapeia tabelas para seus arquivos de modelo SQLAlchemy gerados.
@@ -413,14 +535,44 @@ Mapeia tabelas para seus arquivos de modelo SQLAlchemy gerados.
 | created_at | DateTime | Data de criação |
 | updated_at | DateTime | Data de atualização |
 
-**Constraint único:** `(connection_id, table_name)`
+**Constraint único:** `(connection_id, table_name, user_id)`
+
+## 🌐 Páginas e Rotas
+
+### Páginas Públicas (Não Autenticadas)
+
+- `/` - Página inicial (redireciona para login se não autenticado)
+- `/login` - Página de login
+- `/create_user` - Página pública de cadastro de usuário
+- `/docs` - Documentação da API (pública)
+
+### Páginas Autenticadas
+
+- `/home` - Página inicial após login (bem-vindo)
+- `/usuarios` - Gerenciamento de usuários (Admin)
+- `/usuarios/novo` - Criar novo usuário (Admin)
+- `/usuarios/<id>/senha` - Alterar senha de usuário (Admin)
+- `/grupos` - Gerenciamento de grupos (Admin)
+- `/conexoes` - Gerenciamento de conexões de banco
+- `/conexoes/novo` - Criar nova conexão
+- `/conexoes/<id>/editar` - Editar conexão
+- `/projetos` - Gerenciamento de projetos
+- `/projetos/novo` - Criar novo projeto
+- `/projetos/<id>/editar` - Editar projeto
+- `/comparacao` - Seleção de projeto para comparação
+- `/comparacao/<id>/execution` - Execução de comparação
+- `/relatorios` - Visualização de relatórios
+- `/relatorios/<id>/resultados` - Resultados detalhados de comparação
+- `/dashboard` - Dashboard com gráficos e estatísticas
+- `/tabelas` - Visualização de tabelas
+- `/tabelas/<connection_id>/edit/<table_name>` - Edição de colunas de tabela
 
 ## 🔌 API Endpoints
 
 ### Autenticação
 
 #### `POST /api/auth/register`
-Registrar novo usuário.
+Registrar novo usuário (público).
 
 **Request:**
 ```json
@@ -488,6 +640,7 @@ Obter usuário atual autenticado.
 **Headers:**
 ```
 Authorization: Bearer {token}
+X-User-Id: {user_id}
 ```
 
 **Response (200):**
@@ -561,7 +714,8 @@ X-User-Id: {user_id}
       "username": "admin",
       "email": "admin@exemplo.com",
       "is_admin": true,
-      "is_active": true
+      "is_active": true,
+      "groups": []
     }
   ]
 }
@@ -576,7 +730,8 @@ Criar novo usuário.
   "username": "novo_usuario",
   "email": "novo@exemplo.com",
   "password": "senha123",
-  "is_admin": false
+  "is_admin": false,
+  "group_ids": [1, 2]
 }
 ```
 
@@ -589,7 +744,8 @@ Atualizar usuário.
   "username": "usuario_atualizado",
   "email": "atualizado@exemplo.com",
   "is_admin": false,
-  "is_active": true
+  "is_active": true,
+  "group_ids": [1]
 }
 ```
 
@@ -706,7 +862,7 @@ X-User-Id: {user_id}
 #### `POST /api/connections`
 Criar nova conexão.
 
-**Request:**
+**Request (MariaDB/MySQL):**
 ```json
 {
   "name": "Conexão Produção",
@@ -722,7 +878,7 @@ Criar nova conexão.
 }
 ```
 
-**Para SQLite:**
+**Request (SQLite):**
 ```json
 {
   "name": "Conexão Local",
@@ -740,7 +896,7 @@ Obter detalhes de uma conexão.
 Atualizar conexão.
 
 #### `DELETE /api/connections/<connection_id>`
-Deletar conexão.
+Deletar conexão (soft delete).
 
 #### `POST /api/connections/<connection_id>/test`
 Testar conexão.
@@ -778,7 +934,7 @@ Obter detalhes de um projeto.
 Atualizar projeto.
 
 #### `DELETE /api/projects/<project_id>`
-Deletar projeto.
+Deletar projeto (soft delete).
 
 ### Comparações
 
@@ -827,28 +983,96 @@ Enviar mudanças para API externa.
 Obter estatísticas do projeto.
 
 **Query Parameters:**
-- `start_date` (opcional): Data inicial (YYYY-MM-DD)
-- `end_date` (opcional): Data final (YYYY-MM-DD)
+- `start_date` (opcional): Data inicial (ISO format: YYYY-MM-DDTHH:mm:ss)
+- `end_date` (opcional): Data final (ISO format: YYYY-MM-DDTHH:mm:ss)
 
 **Response:**
 ```json
 {
   "total_comparisons": 10,
+  "completed_comparisons": 8,
   "total_changes": 150,
-  "modified_fields_count": 25,
-  "last_comparison": "2024-01-15T10:30:00"
+  "total_differences": 120,
+  "unsent_changes": 5,
+  "modified_fields_count": 25
 }
 ```
 
 #### `GET /api/dashboard/project/<project_id>/changes-over-time`
-Obter mudanças ao longo do tempo.
+Obter mudanças ao longo do tempo (para gráfico de linha).
 
 **Query Parameters:**
 - `start_date` (opcional)
 - `end_date` (opcional)
 
+**Response:**
+```json
+{
+  "data": {
+    "2024-01-01": {
+      "added": 5,
+      "modified": 10,
+      "deleted": 2
+    },
+    "2024-01-02": {
+      "added": 3,
+      "modified": 8,
+      "deleted": 1
+    }
+  }
+}
+```
+
 #### `GET /api/dashboard/project/<project_id>/field-changes`
-Obter mudanças por campo (para gráfico de pizza).
+Obter mudanças por campo (para gráfico de pizza e barras).
+
+**Query Parameters:**
+- `start_date` (opcional)
+- `end_date` (opcional)
+
+**Response:**
+```json
+{
+  "data": [
+    {"field": "nome", "count": 45},
+    {"field": "email", "count": 30},
+    {"field": "ativo", "count": 15}
+  ]
+}
+```
+
+#### `GET /api/dashboard/project/<project_id>/changes-by-type`
+Obter mudanças agrupadas por tipo (added, modified, deleted).
+
+**Query Parameters:**
+- `start_date` (opcional)
+- `end_date` (opcional)
+
+**Response:**
+```json
+{
+  "data": {
+    "added": 20,
+    "modified": 50,
+    "deleted": 10
+  }
+}
+```
+
+#### `GET /api/dashboard/project/<project_id>/comparisons-by-status`
+Obter comparações agrupadas por status.
+
+**Response:**
+```json
+{
+  "data": {
+    "pending": 2,
+    "running": 1,
+    "completed": 15,
+    "failed": 1
+  }
+}
+```
 
 ### Tabelas
 
@@ -862,7 +1086,7 @@ Listar tabelas de um banco.
 Obter colunas de uma tabela.
 
 #### `POST /api/tables/update-column-type`
-Atualizar tipo de coluna.
+Atualizar tipo de coluna no banco de dados e regenerar modelo.
 
 **Request:**
 ```json
@@ -876,96 +1100,154 @@ Atualizar tipo de coluna.
 }
 ```
 
+**Response (200):**
+```json
+{
+  "message": "Column type updated successfully. Models regenerated for 1 project(s).",
+  "updated_projects": [
+    {"id": 1, "name": "Projeto Teste"}
+  ],
+  "model_file_path": "app/models/generated/ProjetoTeste_usuarios_model.py"
+}
+```
+
+**Notas:**
+- Para SQLite: Recria a tabela com a nova estrutura (única forma de alterar tipos)
+- Para MySQL/MariaDB: Usa `ALTER TABLE MODIFY COLUMN`
+- Sempre atualiza o modelo SQLAlchemy local
+- Cria ou atualiza o `TableModelMapping` no banco
+
 #### `POST /api/tables/update-primary-keys`
 Atualizar chaves primárias de uma tabela.
 
 #### `GET /api/tables/model/<connection_id>/<table_name>`
 Obter código do modelo SQLAlchemy gerado.
 
-#### `GET /api/tables/data-types`
-Listar tipos de dados disponíveis.
+## 🔗 Filtros por URL
 
-## 🎨 Sistema de Modais
+O sistema suporta filtros diretamente na URL para facilitar compartilhamento e bookmarking.
 
-O sistema utiliza modais Bootstrap 5 personalizados para notificações e confirmações.
+### Dashboard
 
-### Tipos de Modal
-
-#### Modal de Notificação (`notificationModal`)
-
-Exibe mensagens de sucesso, erro, aviso ou informação.
-
-**Funções JavaScript:**
-```javascript
-showSuccess('Operação realizada com sucesso!');
-showError('Erro ao processar requisição');
-showWarning('Atenção: Esta ação não pode ser desfeita');
-showInfo('Informação importante');
+**URL Base:**
+```
+/dashboard
 ```
 
-**Cores:**
-- ✅ Sucesso: Verde (`#198754`)
-- ❌ Erro: Vermelho (`#dc3545`)
-- ⚠️ Aviso: Amarelo (`#ffc107`)
-- ℹ️ Info: Azul (`#0dcaf0`)
-
-#### Modal de Confirmação (`confirmationModal`)
-
-Solicita confirmação do usuário antes de executar uma ação.
-
-**Função JavaScript:**
-```javascript
-const confirmed = await showConfirmation('Confirmação', 'Deseja realmente deletar este item?');
-if (confirmed) {
-    // Executar ação
-}
+**Com Filtros:**
+```
+/dashboard?project_id=1&start_date=2024-01-01T00:00&end_date=2024-01-31T23:59
 ```
 
-**Retorna:** `Promise<boolean>`
-- `true` se confirmado
-- `false` se cancelado
+**Parâmetros:**
+- `project_id` (opcional): ID do projeto a visualizar
+- `start_date` (opcional): Data de início (formato: `YYYY-MM-DDTHH:mm`)
+- `end_date` (opcional): Data de fim (formato: `YYYY-MM-DDTHH:mm`)
 
-#### Modal de Loading (`loadingModal`)
+**Exemplos:**
+```
+# Dashboard com projeto específico
+/dashboard?project_id=1
 
-Exibe durante operações assíncronas.
+# Dashboard com período específico
+/dashboard?project_id=1&start_date=2024-01-01T00:00&end_date=2024-01-31T23:59
 
-**Função JavaScript:**
-```javascript
-// Mostrar loading
-const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
-loadingModal.show();
-
-// Ocultar loading
-loadingModal.hide();
+# Dashboard apenas com data de início
+/dashboard?project_id=1&start_date=2024-01-15T08:00
 ```
 
-### Estrutura HTML dos Modais
+**Comportamento:**
+- Ao acessar uma URL com parâmetros, os campos são preenchidos automaticamente
+- Se houver `project_id` na URL, o dashboard carrega automaticamente
+- Ao alterar filtros, a URL é atualizada automaticamente (sem recarregar a página)
+- A URL pode ser compartilhada e manterá os filtros aplicados
 
-Todos os modais estão definidos em `templates/index.html`:
+### Tabelas
 
-- `#notificationModal` - Notificações
-- `#confirmationModal` - Confirmações
-- `#loadingModal` - Loading
-- `#setupModal` - Setup inicial
-- `#createConnectionModal` - Criar conexão
-- `#editConnectionModal` - Editar conexão
-- `#createProjectModal` - Criar projeto
-- `#editProjectModal` - Editar projeto
-- `#columnTypeModal` - Editar tipo de coluna
-- `#tableDetailsModal` - Detalhes da tabela
-- `#groupUsersModal` - Usuários do grupo
-- `#addUserToGroupModal` - Adicionar usuário ao grupo
+**URL Base:**
+```
+/tabelas
+```
+
+**Com Conexão Selecionada:**
+```
+/tabelas?connection_id=1
+```
+
+**Parâmetros:**
+- `connection_id` (opcional): ID da conexão a visualizar
+
+**Comportamento:**
+- Ao acessar com `connection_id`, a conexão é selecionada automaticamente
+- As tabelas são carregadas automaticamente
+- Ao voltar de uma página de edição, a conexão permanece selecionada
+
+### Relatórios
+
+**URL Base:**
+```
+/relatorios
+```
+
+**Resultados de Comparação:**
+```
+/relatorios/<comparison_id>/resultados
+```
 
 ## 👥 Gerenciamento de Usuários
 
-### Criar Usuário
+### Cadastro Público de Usuário
+
+Qualquer pessoa pode criar uma conta através da página pública de cadastro.
+
+**URL:** `/create_user`
+
+**Características:**
+- Página pública (não requer autenticação)
+- O primeiro usuário criado será automaticamente um administrador
+- Validação de dados em tempo real
+- Verificação de duplicatas (username e email)
+- Senha mínima de 6 caracteres
+
+**Campos:**
+- Usuário (obrigatório, único)
+- Email (obrigatório, único, formato válido)
+- Senha (obrigatório, mínimo 6 caracteres)
+- Confirmar Senha (obrigatório, deve coincidir)
+
+### Criação de Usuário por Administrador
+
+Administradores podem criar usuários através da interface administrativa.
+
+**URL:** `/usuarios/novo`
+
+**Características:**
+- Requer autenticação como administrador
+- Permite definir grupos do usuário
+- Permite definir se o usuário é administrador
+- Validação completa de dados
+
+### Listar Usuários
 
 **Via Interface Web:**
 1. Faça login como administrador
 2. Acesse "Usuários" no menu
-3. Clique em "Novo Usuário"
-4. Preencha os dados
-5. Clique em "Criar"
+3. Visualize todos os usuários com seus grupos
+
+**Via API:**
+```bash
+curl -X GET http://localhost:5000/api/users/ \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"
+```
+
+### Criar Usuário
+
+**Via Interface Web:**
+1. Acesse "Usuários" > "Novo Usuário"
+2. Preencha os dados
+3. Selecione os grupos (opcional)
+4. Clique em "Criar"
 
 **Via API:**
 ```bash
@@ -977,7 +1259,8 @@ curl -X POST http://localhost:5000/api/users/ \
     "username": "novo_usuario",
     "email": "novo@exemplo.com",
     "password": "senha123",
-    "is_admin": false
+    "is_admin": false,
+    "group_ids": [1, 2]
   }'
 ```
 
@@ -995,7 +1278,8 @@ data = {
     "username": "novo_usuario",
     "email": "novo@exemplo.com",
     "password": "senha123",
-    "is_admin": False
+    "is_admin": False,
+    "group_ids": [1]
 }
 
 response = requests.post(url, json=data, headers=headers)
@@ -1008,6 +1292,10 @@ print(response.json())
 1. Acesse "Usuários"
 2. Clique no botão de deletar do usuário
 3. Confirme a ação
+
+**Proteções:**
+- Administradores não podem deletar a si mesmos
+- Usuário é removido automaticamente de todos os grupos
 
 **Via API:**
 ```bash
@@ -1022,6 +1310,10 @@ curl -X DELETE http://localhost:5000/api/users/2 \
 1. Acesse "Usuários"
 2. Clique no botão de ativar/desativar
 
+**Proteções:**
+- Administradores não podem desativar a si mesmos
+- Usuários desativados não podem fazer login
+
 **Via API:**
 ```bash
 curl -X PUT http://localhost:5000/api/users/2/toggle-active \
@@ -1033,7 +1325,7 @@ curl -X PUT http://localhost:5000/api/users/2/toggle-active \
 
 **Via Interface Web:**
 1. Acesse "Usuários"
-2. Clique em "Alterar Senha"
+2. Clique em "Alterar Senha" do usuário
 3. Digite a nova senha
 4. Confirme
 
@@ -1115,6 +1407,118 @@ curl -X DELETE http://localhost:5000/api/groups/1 \
   -H "Authorization: Bearer {token}" \
   -H "X-User-Id: {user_id}"
 ```
+
+## 🔧 Edição de Tabelas
+
+### Visualizar Tabelas
+
+1. Acesse "Tabelas" no menu
+2. Selecione uma conexão
+3. Visualize todas as tabelas disponíveis
+4. Clique em "Informações" para ver detalhes da tabela
+5. Clique em "Editar" para editar colunas
+
+### Editar Colunas de Tabela
+
+**URL:** `/tabelas/<connection_id>/edit/<table_name>`
+
+**Funcionalidades:**
+- Visualizar todas as colunas da tabela
+- Alterar tipo de dado da coluna
+- Modificar propriedade nullable (permite nulos ou não)
+- Modificar chave primária
+- Salvar alterações no banco de dados
+- Atualizar modelo SQLAlchemy local automaticamente
+
+**Tipos de Dados Suportados:**
+- VARCHAR(255)
+- TEXT
+- INT
+- BIGINT
+- DECIMAL(10,2)
+- DATE
+- DATETIME
+- TIMESTAMP
+- BOOLEAN
+- TINYINT(1)
+
+**Comportamento por Banco:**
+
+**SQLite:**
+- Recria a tabela com a nova estrutura
+- Copia todos os dados da tabela antiga
+- Remove a tabela antiga
+- Renomeia a nova tabela
+
+**MySQL/MariaDB:**
+- Usa `ALTER TABLE MODIFY COLUMN`
+- Atualiza dados existentes quando necessário (ex: conversão para Boolean)
+- Suporta alteração de chaves primárias
+
+**Após Salvar:**
+- Alterações são aplicadas no banco de dados
+- Modelo SQLAlchemy é regenerado automaticamente
+- `TableModelMapping` é criado ou atualizado
+- Página recarrega mostrando as alterações
+
+## 📊 Dashboard e Gráficos
+
+### Acessar Dashboard
+
+**URL:** `/dashboard`
+
+**Com Filtros:**
+```
+/dashboard?project_id=1&start_date=2024-01-01T00:00&end_date=2024-01-31T23:59
+```
+
+### Gráficos Disponíveis
+
+1. **Mudanças ao Longo do Tempo** (Linha)
+   - Mostra evolução de mudanças por dia
+   - Separa por tipo: Adicionado, Modificado, Deletado
+   - Altura: 400px
+
+2. **Mudanças por Campo** (Barras)
+   - Mostra quantidade de mudanças por campo
+   - Ordenado por quantidade (maior para menor)
+   - Altura: 600px (aumentada para evitar corte de números)
+
+3. **Campos Modificados no Período** (Pizza)
+   - Distribuição percentual de mudanças por campo
+   - Cores automáticas para melhor visualização
+   - Altura: 500px
+
+4. **Mudanças por Tipo** (Pizza)
+   - Distribuição entre Adicionado, Modificado e Deletado
+   - Cores: Verde (Adicionado), Amarelo (Modificado), Vermelho (Deletado)
+   - Altura: 500px
+
+5. **Comparações por Status** (Barras)
+   - Quantidade de comparações por status
+   - Status: Pendente, Em Execução, Concluída, Falhou
+   - Altura: 400px
+
+6. **Tendência de Mudanças** (Área)
+   - Evolução do total de mudanças ao longo do tempo
+   - Gráfico de área preenchido
+   - Altura: 400px
+
+### Estatísticas Exibidas
+
+- **Total de Comparações**: Número total de comparações executadas
+- **Total de Mudanças**: Número total de mudanças detectadas
+- **Campos Modificados**: Quantidade de campos únicos modificados
+- **Comparações Concluídas**: Comparações com status "completed"
+- **Total de Diferenças**: Soma de todas as diferenças encontradas
+- **Mudanças Não Enviadas**: Mudanças ainda não enviadas para API externa
+
+### Filtros de Data
+
+- **Data Início**: Filtra desde esta data
+- **Data Fim**: Filtra até esta data
+- **Botão "Hoje"**: Define automaticamente início e fim do dia atual
+- Todos os gráficos respeitam os filtros de data selecionados
 
 ## 💻 Exemplos de Código
 
@@ -1220,35 +1624,66 @@ print("Comparação ID:", result['comparison_id'])
 print("Estatísticas:", result['stats'])
 ```
 
-#### Obter Resultados de Comparação
+#### Obter Dashboard com Filtros
+
+```python
+import requests
+from datetime import datetime
+
+token = "seu_token_aqui"
+user_id = 1
+project_id = 1
+
+# Definir período
+start_date = datetime(2024, 1, 1, 0, 0, 0).isoformat()
+end_date = datetime(2024, 1, 31, 23, 59, 59).isoformat()
+
+url = f"http://localhost:5000/api/dashboard/project/{project_id}/stats"
+params = {
+    "start_date": start_date,
+    "end_date": end_date
+}
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id)
+}
+
+response = requests.get(url, params=params, headers=headers)
+stats = response.json()
+
+print("Total de comparações:", stats['total_comparisons'])
+print("Total de mudanças:", stats['total_changes'])
+print("Campos modificados:", stats['modified_fields_count'])
+```
+
+#### Atualizar Tipo de Coluna
 
 ```python
 import requests
 
 token = "seu_token_aqui"
 user_id = 1
-comparison_id = 1
 
-url = f"http://localhost:5000/api/comparisons/{comparison_id}/results"
+url = "http://localhost:5000/api/tables/update-column-type"
 headers = {
     "Authorization": f"Bearer {token}",
-    "X-User-Id": str(user_id)
+    "X-User-Id": str(user_id),
+    "Content-Type": "application/json"
+}
+data = {
+    "connection_id": 1,
+    "table_name": "usuarios",
+    "column_name": "ativo",
+    "new_type": "BOOLEAN",
+    "nullable": True,
+    "primary_key": False
 }
 
-response = requests.get(url, headers=headers)
-results = response.json()
+response = requests.post(url, json=data, headers=headers)
+result = response.json()
 
-print("Total de registros:", results['stats']['total_records'])
-print("Adicionados:", results['stats']['added'])
-print("Modificados:", results['stats']['modified'])
-print("Deletados:", results['stats']['deleted'])
-
-# Listar diferenças
-for diff in results['differences']:
-    print(f"Campo: {diff['field_name']}")
-    print(f"  Origem: {diff['source_value']}")
-    print(f"  Destino: {diff['target_value']}")
-    print(f"  Tipo: {diff['change_type']}")
+print("Mensagem:", result['message'])
+print("Modelo atualizado:", result['model_file_path'])
 ```
 
 ### cURL
@@ -1278,7 +1713,8 @@ curl -X POST http://localhost:5000/api/users/ \
     "username": "novo_usuario",
     "email": "novo@exemplo.com",
     "password": "senha123",
-    "is_admin": false
+    "is_admin": false,
+    "group_ids": [1, 2]
   }'
 ```
 
@@ -1319,14 +1755,14 @@ curl -X POST http://localhost:5000/api/comparisons/project/$PROJECT_ID \
   }'
 ```
 
-#### Obter Dashboard
+#### Obter Dashboard com Filtros
 
 ```bash
 TOKEN="seu_token_aqui"
 USER_ID=1
 PROJECT_ID=1
 
-curl -X GET "http://localhost:5000/api/dashboard/project/$PROJECT_ID/stats?start_date=2024-01-01&end_date=2024-01-31" \
+curl -X GET "http://localhost:5000/api/dashboard/project/$PROJECT_ID/stats?start_date=2024-01-01T00:00:00&end_date=2024-01-31T23:59:59" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-User-Id: $USER_ID"
 ```
@@ -1414,6 +1850,17 @@ class DeltaScopeClient {
     public function getComparisonResults($comparisonId) {
         return $this->request('GET', "/api/comparisons/$comparisonId/results");
     }
+    
+    public function getDashboardStats($projectId, $startDate = null, $endDate = null) {
+        $endpoint = "/api/dashboard/project/$projectId/stats";
+        if ($startDate || $endDate) {
+            $params = [];
+            if ($startDate) $params[] = "start_date=" . urlencode($startDate);
+            if ($endDate) $params[] = "end_date=" . urlencode($endDate);
+            $endpoint .= "?" . implode("&", $params);
+        }
+        return $this->request('GET', $endpoint);
+    }
 }
 
 // Uso
@@ -1442,45 +1889,10 @@ if ($loginResult) {
         $results = $client->getComparisonResults($comparisonId);
         print_r($results);
     }
-}
-?>
-```
-
-#### Exemplo Simples
-
-```php
-<?php
-
-// Login
-$ch = curl_init('http://localhost:5000/api/auth/login');
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-    'username' => 'admin',
-    'password' => 'senha123'
-]));
-curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-
-$response = curl_exec($ch);
-$data = json_decode($response, true);
-curl_close($ch);
-
-if (isset($data['token'])) {
-    $token = $data['token'];
-    $userId = $data['user']['id'];
     
-    // Listar projetos
-    $ch = curl_init('http://localhost:5000/api/projects');
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "Authorization: Bearer $token",
-        "X-User-Id: $userId"
-    ]);
-    
-    $projects = json_decode(curl_exec($ch), true);
-    curl_close($ch);
-    
-    print_r($projects);
+    // Obter dashboard com filtros
+    $stats = $client->getDashboardStats(1, '2024-01-01T00:00:00', '2024-01-31T23:59:59');
+    print_r($stats);
 }
 ?>
 ```
@@ -1522,6 +1934,22 @@ if (isset($data['token'])) {
 2. Verifique se há projetos associados ao usuário
 3. Verifique os logs do servidor para mais detalhes
 
+### Problema: Alterações em tabelas não são salvas
+
+**Solução:**
+1. Verifique os logs do servidor para erros de SQL
+2. Para SQLite, verifique permissões de escrita no arquivo do banco
+3. Para MySQL/MariaDB, verifique se o usuário tem permissão `ALTER TABLE`
+4. Verifique se o modelo está sendo gerado em `app/models/generated/`
+
+### Problema: Dashboard não carrega gráficos
+
+**Solução:**
+1. Verifique se há dados de comparação no período selecionado
+2. Verifique o console do navegador (F12) para erros JavaScript
+3. Verifique se o Plotly.js está carregando corretamente
+4. Verifique os logs do servidor para erros na API
+
 ## 📝 Notas Importantes
 
 1. **Senhas de Banco de Dados:** São criptografadas usando Fernet antes de serem salvas. Se perder a `ENCRYPTION_KEY`, não será possível recuperar as senhas.
@@ -1532,7 +1960,17 @@ if (isset($data['token'])) {
 
 4. **Permissões:** Usuários admin têm todas as permissões automaticamente. Outros usuários precisam estar em grupos com as permissões apropriadas.
 
-5. **Sessões:** O sistema usa sessões Flask para autenticação. Tokens são gerados usando `secrets.token_urlsafe()`.
+5. **Sessões:** O sistema usa sessões Flask para autenticação em páginas HTML. APIs usam tokens Bearer.
+
+6. **Edição de Tabelas:** 
+   - SQLite requer recriação da tabela (única limitação)
+   - MySQL/MariaDB suporta `ALTER TABLE` diretamente
+   - Modelos são sempre atualizados após alterações
+
+7. **Filtros por URL:** 
+   - Dashboard suporta `project_id`, `start_date` e `end_date`
+   - Tabelas suporta `connection_id`
+   - URLs podem ser compartilhadas e bookmarkadas
 
 ## 📄 Licença
 

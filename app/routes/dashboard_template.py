@@ -23,8 +23,14 @@ def dashboard_page(current_user):
             user_id=current_user.id
         ).first()
     
+    # Get date filters from query parameters
+    start_date = request.args.get('start_date', '')
+    end_date = request.args.get('end_date', '')
+    
     return render_template('dashboard.html', 
                          projects=projects, 
                          selected_project=selected_project,
+                         start_date=start_date,
+                         end_date=end_date,
                          current_user=current_user)
 

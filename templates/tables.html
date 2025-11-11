@@ -17,7 +17,7 @@
                 <select class="form-select" id="connectionSelect" onchange="loadTables(this.value)">
                     <option value="">Selecione uma conexão...</option>
                     {% for conn in connections %}
-                    <option value="{{ conn.id }}">{{ conn.name }} ({{ conn.db_type.upper() }})</option>
+                    <option value="{{ conn.id }}" {% if selected_connection_id and selected_connection_id == conn.id %}selected{% endif %}>{{ conn.name }} ({{ conn.db_type.upper() }})</option>
                     {% endfor %}
                 </select>
             </div>
@@ -34,46 +34,167 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
-function loadTables(connectionId) {
-    if (!connectionId) {
-        document.getElementById('tablesListContainer').innerHTML = '<p class="text-muted">Selecione uma conexão para ver as tabelas</p>';
-        return;
+    // Get token and user ID from Flask session (passed from template)
+    const AUTH_TOKEN = '{{ session.token|safe }}';
+    const USER_ID = parseInt('{{ current_user.id }}');
+    
+    // Get auth headers
+    function getAuthHeaders() {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (AUTH_TOKEN) {
+            headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+        }
+        
+        if (USER_ID) {
+            headers['X-User-Id'] = USER_ID;
+        }
+        
+        return headers;
     }
-
-    document.getElementById('tablesListContainer').innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
-
-    fetch('/api/connections/' + connectionId + '/tables', {
-        headers: {
-            'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || ''),
-            'X-User-Id': '{{ current_user.id }}'
+    
+    // Load tables on page load if connection is selected
+    $(document).ready(function() {
+        const connectionSelect = document.getElementById('connectionSelect');
+        if (connectionSelect && connectionSelect.value) {
+            loadTables(connectionSelect.value);
         }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.tables && data.tables.length > 0) {
-            let html = '<div class="table-responsive"><table class="table table-hover"><thead><tr><th>Nome da Tabela</th><th>Ações</th></tr></thead><tbody>';
-            data.tables.forEach(table => {
-                html += `<tr>
-                    <td>${table}</td>
-                    <td>
-                        <a href="/api/connections/${connectionId}/tables/${table}/info" class="btn btn-sm btn-info">
-                            <i class="fas fa-info-circle"></i> Informações
-                        </a>
-                    </td>
-                </tr>`;
-            });
-            html += '</tbody></table></div>';
-            document.getElementById('tablesListContainer').innerHTML = html;
-        } else {
-            document.getElementById('tablesListContainer').innerHTML = '<div class="alert alert-info">Nenhuma tabela encontrada nesta conexão.</div>';
-        }
-    })
-    .catch(error => {
-        document.getElementById('tablesListContainer').innerHTML = '<div class="alert alert-danger">Erro ao carregar tabelas: ' + error.message + '</div>';
     });
-}
+    
+    function loadTables(connectionId) {
+        if (!connectionId) {
+            document.getElementById('tablesListContainer').innerHTML = '<p class="text-muted">Selecione uma conexão para ver as tabelas</p>';
+            return;
+        }
+
+        document.getElementById('tablesListContainer').innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+
+        fetch('/api/connections/' + connectionId + '/tables', {
+            headers: getAuthHeaders()
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401) {
+                    throw new Error('Não autorizado. Por favor, faça login novamente.');
+                }
+                return response.json().then(data => {
+                    throw new Error(data.message || 'Erro ao carregar tabelas');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.tables && data.tables.length > 0) {
+                let html = '<div class="table-responsive"><table class="table table-hover"><thead><tr><th>Nome da Tabela</th><th>Ações</th></tr></thead><tbody>';
+                data.tables.forEach(table => {
+                    html += `<tr>
+                        <td>${table}</td>
+                        <td>
+                            <a href="/tabelas/${connectionId}/edit/${encodeURIComponent(table)}" class="btn btn-sm btn-primary me-1">
+                                <i class="fas fa-edit"></i> Editar
+                            </a>
+                            <button onclick="viewTableInfo(${connectionId}, '${table}')" class="btn btn-sm btn-info">
+                                <i class="fas fa-info-circle"></i> Informações
+                            </button>
+                        </td>
+                    </tr>`;
+                });
+                html += '</tbody></table></div>';
+                document.getElementById('tablesListContainer').innerHTML = html;
+            } else {
+                document.getElementById('tablesListContainer').innerHTML = '<div class="alert alert-info">Nenhuma tabela encontrada nesta conexão.</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading tables:', error);
+            document.getElementById('tablesListContainer').innerHTML = '<div class="alert alert-danger">Erro ao carregar tabelas: ' + error.message + '</div>';
+        });
+    }
+    
+    async function viewTableInfo(connectionId, tableName) {
+        try {
+            const response = await fetch(`/api/connections/${connectionId}/tables/${encodeURIComponent(tableName)}/info`, {
+                headers: getAuthHeaders()
+            });
+            
+            if (!response.ok) {
+                if (response.status === 401) {
+                    alert('Não autorizado. Por favor, faça login novamente.');
+                    return;
+                }
+                const errorData = await response.json();
+                alert('Erro ao carregar informações: ' + (errorData.message || 'Erro desconhecido'));
+                return;
+            }
+            
+            const data = await response.json();
+            
+            // Show table info in a modal or alert
+            let infoHtml = `<h5>Informações da Tabela: ${tableName}</h5>`;
+            if (data.columns && data.columns.length > 0) {
+                infoHtml += '<table class="table table-sm"><thead><tr><th>Coluna</th><th>Tipo</th><th>Nulo</th><th>Chave Primária</th></tr></thead><tbody>';
+                data.columns.forEach(col => {
+                    infoHtml += `<tr>
+                        <td>${col.name}</td>
+                        <td>${col.type || '-'}</td>
+                        <td>${col.nullable ? 'Sim' : 'Não'}</td>
+                        <td>${col.primary_key ? 'Sim' : 'Não'}</td>
+                    </tr>`;
+                });
+                infoHtml += '</tbody></table>';
+            } else {
+                infoHtml += '<p class="text-muted">Nenhuma informação disponível.</p>';
+            }
+            
+            // Create and show modal
+            const modalHtml = `
+                <div class="modal fade" id="tableInfoModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Informações da Tabela</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                ${infoHtml}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            const existingModal = document.getElementById('tableInfoModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            
+            // Add modal to body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('tableInfoModal'));
+            modal.show();
+            
+            // Clean up when modal is hidden
+            document.getElementById('tableInfoModal').addEventListener('hidden.bs.modal', function() {
+                this.remove();
+            });
+            
+        } catch (error) {
+            console.error('Error loading table info:', error);
+            alert('Erro ao carregar informações da tabela: ' + error.message);
+        }
+    }
 </script>
 {% endblock %}
 

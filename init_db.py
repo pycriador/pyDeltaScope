@@ -91,6 +91,17 @@ with app.app_context():
             'can_view_tables': False,
             'can_view_reports': True,
             'can_download_reports': True
+        },
+        {
+            'name': 'Usuários Básicos',
+            'description': 'Usuários com acesso limitado - apenas visualização da tela inicial',
+            'can_create_connections': False,
+            'can_create_projects': False,
+            'can_view_dashboards': False,
+            'can_edit_tables': False,
+            'can_view_tables': False,
+            'can_view_reports': False,
+            'can_download_reports': False
         }
     ]
     

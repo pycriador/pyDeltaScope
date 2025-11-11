@@ -1,0 +1,874 @@
+{% extends "base.html" %}
+
+{% block title %}Executar Comparação - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="comparisonExecutionSection">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-code-branch me-2"></i>Executar Comparação</h2>
+        <a href="/comparacao" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Voltar
+        </a>
+    </div>
+    
+    <div class="card shadow mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações do Projeto</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <h6 class="text-muted mb-2"><i class="fas fa-folder me-2"></i>Projeto</h6>
+                <p class="mb-0">
+                    <strong>{{ project.name }}</strong>
+                    {% if project.description %}
+                    <br><small class="text-muted">{{ project.description }}</small>
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <h6 class="text-muted mb-2"><i class="fas fa-database me-2"></i>Tabela Origem</h6>
+                    <div id="sourceTableInfo">
+                        <p class="mb-1"><strong>Tabela:</strong> <code class="table-name-code">{{ project.source_table }}</code></p>
+                        <p class="mb-1"><strong>Conexão:</strong> {{ project.source_connection.name if project.source_connection else 'N/A' }}</p>
+                        <p class="mb-0"><strong>Tipo:</strong> <span class="badge bg-info">{{ project.source_connection.db_type.upper() if project.source_connection else 'N/A' }}</span></p>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <h6 class="text-muted mb-2"><i class="fas fa-database me-2"></i>Tabela Destino</h6>
+                    <div id="targetTableInfo">
+                        <p class="mb-1"><strong>Tabela:</strong> <code class="table-name-code">{{ project.target_table }}</code></p>
+                        <p class="mb-1"><strong>Conexão:</strong> {{ project.target_connection.name if project.target_connection else 'N/A' }}</p>
+                        <p class="mb-0"><strong>Tipo:</strong> <span class="badge bg-info">{{ project.target_connection.db_type.upper() if project.target_connection else 'N/A' }}</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Column Selection Section -->
+    <div id="columnSelectionSection" class="card shadow mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-key me-2"></i>Seleção de Chaves Primárias</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Instruções:</strong>
+                <ul class="mb-0 mt-2">
+                    <li>Selecione as colunas que serão usadas como chave primária para comparar os registros</li>
+                    <li>Marque as colunas correspondentes em cada tabela (origem e destino)</li>
+                    <li>Se as colunas tiverem nomes diferentes, você pode mapeá-las manualmente</li>
+                </ul>
+            </div>
+            
+            <div id="loadingColumns" class="alert alert-info text-center" style="display: none;">
+                <i class="fas fa-spinner fa-spin me-2"></i>Carregando colunas das tabelas...
+            </div>
+            
+            <div id="columnsContainer" style="display: none;">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="mb-3">
+                            <i class="fas fa-database me-2"></i>Tabela Origem: <code class="table-name-code">{{ project.source_table }}</code>
+                        </h6>
+                        <div id="sourceColumnsList" class="border p-3 rounded" style="max-height: 400px; overflow-y: auto;">
+                            <p class="text-muted text-center">Carregando colunas...</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="mb-3">
+                            <i class="fas fa-database me-2"></i>Tabela Destino: <code class="table-name-code">{{ project.target_table }}</code>
+                        </h6>
+                        <div id="targetColumnsList" class="border p-3 rounded" style="max-height: 400px; overflow-y: auto;">
+                            <p class="text-muted text-center">Carregando colunas...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="selectedKeysContainer" class="mt-3" style="display: none;">
+                    <h6 class="mb-2"><i class="fas fa-list me-2"></i>Chaves Primárias Selecionadas:</h6>
+                    <div id="selectedKeysList" class="alert alert-light">
+                        <p class="text-muted mb-0">Nenhuma chave selecionada</p>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <button id="loadColumnsBtn" class="btn btn-info">
+                        <i class="fas fa-sync me-2"></i>Carregar Colunas
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Execution Section -->
+    <div id="executionSection" class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-play me-2"></i>Executar Comparação</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Instruções:</strong>
+                <ul class="mb-0 mt-2">
+                    <li>A comparação irá comparar os dados entre as tabelas origem e destino</li>
+                    <li>As diferenças encontradas serão salvas e poderão ser visualizadas no dashboard</li>
+                    <li>Este processo pode levar alguns minutos dependendo do tamanho das tabelas</li>
+                </ul>
+            </div>
+            
+            <div id="comparisonError" class="alert alert-danger" style="display: none;"></div>
+            
+            <div class="text-center mt-4">
+                <button id="executeComparisonBtn" class="btn btn-success btn-lg" disabled>
+                    <i class="fas fa-play me-2"></i>Executar Comparação
+                </button>
+                <small class="d-block text-muted mt-2">Selecione pelo menos uma chave primária acima para habilitar a execução</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Section -->
+    <div id="loadingSection" class="card shadow mb-4" style="display: none;">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="fas fa-spinner fa-spin me-2"></i>Executando Comparação</h5>
+        </div>
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+            <h5>Processando Comparação</h5>
+            <p class="text-muted mb-0">Aguarde enquanto comparamos as tabelas. Este processo pode levar alguns minutos...</p>
+        </div>
+    </div>
+    
+    <!-- Results Section -->
+    <div id="resultsSection" class="card shadow mb-4" style="display: none;">
+        <div class="card-header bg-success text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Resultados da Comparação</h5>
+                <div id="exportButtons">
+                    <button class="btn btn-light btn-sm me-2" onclick="exportToCSV()">
+                        <i class="fas fa-file-csv me-1"></i>Exportar CSV
+                    </button>
+                    <button class="btn btn-light btn-sm me-2" onclick="exportToJSON()">
+                        <i class="fas fa-file-code me-1"></i>Exportar JSON
+                    </button>
+                    <button class="btn btn-light btn-sm" onclick="exportToExcel()">
+                        <i class="fas fa-file-excel me-1"></i>Exportar Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="resultsSummary" class="mb-4">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h3 id="totalDifferences" class="text-primary mb-0">0</h3>
+                                <small class="text-muted">Total de Diferenças</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h3 id="addedRecords" class="text-success mb-0">0</h3>
+                                <small class="text-muted">Registros Adicionados</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h3 id="modifiedRecords" class="text-warning mb-0">0</h3>
+                                <small class="text-muted">Registros Modificados</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table id="resultsTable" class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID do Registro</th>
+                            <th>Campo</th>
+                            <th>Tipo de Mudança</th>
+                            <th>Valor Origem</th>
+                            <th>Valor Destino</th>
+                            <th>Data de Detecção</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody">
+                        <!-- Results will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="noResults" class="alert alert-info" style="display: none;">
+                <i class="fas fa-info-circle me-2"></i>
+                Nenhuma diferença encontrada entre as tabelas.
+            </div>
+            
+            <div class="mt-4 text-center">
+                <a href="/dashboard?project_id={{ project.id }}" class="btn btn-primary">
+                    <i class="fas fa-chart-bar me-2"></i>Ver Dashboard
+                </a>
+                <button id="executeAgainBtn" class="btn btn-success">
+                    <i class="fas fa-redo me-2"></i>Executar Novamente
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="successModalLabel">
+                        <i class="fas fa-check-circle me-2"></i>Sucesso
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="successMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Error Modal -->
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="errorModalLabel">
+                        <i class="fas fa-exclamation-circle me-2"></i>Erro
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="errorModalMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="confirmationModalLabel">
+                        <i class="fas fa-question-circle me-2"></i>Confirmação
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmationMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="confirmationCancelBtn">Cancelar</button>
+                    <button type="button" class="btn btn-warning" id="confirmationConfirmBtn">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // API_BASE is already defined in app.js, so we don't need to declare it again
+    // Get token and user ID from Flask session (passed from template)
+    const AUTH_TOKEN = '{{ session.token|safe }}';
+    const USER_ID = parseInt('{{ current_user.id }}');
+    const PROJECT_ID = parseInt('{{ project.id }}');
+    const SOURCE_CONN_ID = parseInt('{{ project.source_connection_id }}');
+    const TARGET_CONN_ID = parseInt('{{ project.target_connection_id }}');
+    const SOURCE_TABLE = '{{ project.source_table|safe }}';
+    const TARGET_TABLE = '{{ project.target_table|safe }}';
+    
+    let comparisonResults = [];
+    let currentComparisonId = null;
+    let sourceColumns = [];
+    let targetColumns = [];
+    // Use a local variable name to avoid conflicts with app.js global variable
+    let comparisonPrimaryKeyMappings = [];
+    
+    // Get auth headers
+    function getAuthHeaders() {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (AUTH_TOKEN) {
+            headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+        }
+        
+        if (USER_ID) {
+            headers['X-User-Id'] = USER_ID;
+        }
+        
+        return headers;
+    }
+    
+    // Execute comparison
+    async function executeComparison() {
+        const errorDiv = document.getElementById('comparisonError');
+        const executeBtn = document.getElementById('executeComparisonBtn');
+        const executionSection = document.getElementById('executionSection');
+        const loadingSection = document.getElementById('loadingSection');
+        const resultsSection = document.getElementById('resultsSection');
+        
+        // Hide error and execution section, show loading
+        errorDiv.style.display = 'none';
+        executionSection.style.display = 'none';
+        loadingSection.style.display = 'block';
+        resultsSection.style.display = 'none';
+        
+        executeBtn.disabled = true;
+        
+        try {
+            // Prepare primary keys and mappings
+            const primary_keys = comparisonPrimaryKeyMappings.map(m => m.source);
+            const key_mappings = comparisonPrimaryKeyMappings.reduce((acc, m) => {
+                acc[m.source] = m.target;
+                return acc;
+            }, {});
+            
+            const headers = getAuthHeaders();
+            const response = await fetch(`${API_BASE}/comparisons/project/${PROJECT_ID}`, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({
+                    primary_keys: primary_keys,
+                    key_mappings: key_mappings
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Erro ao executar comparação');
+            }
+            
+            // Store comparison ID
+            currentComparisonId = data.comparison.id;
+            
+            // Load results
+            await loadComparisonResults(currentComparisonId);
+            
+        } catch (error) {
+            console.error('Error executing comparison:', error);
+            
+            // Hide loading, show error
+            loadingSection.style.display = 'none';
+            executionSection.style.display = 'block';
+            
+            // Show error modal
+            showErrorModal(`Erro ao executar comparação: ${error.message}`);
+            
+            errorDiv.textContent = `Erro ao executar comparação: ${error.message}`;
+            errorDiv.style.display = 'block';
+            
+            executeBtn.disabled = false;
+            executeBtn.innerHTML = '<i class="fas fa-play me-2"></i>Executar Comparação';
+        }
+    }
+    
+    // Load comparison results
+    async function loadComparisonResults(comparisonId) {
+        try {
+            const headers = getAuthHeaders();
+            const response = await fetch(`${API_BASE}/comparisons/${comparisonId}/results`, {
+                method: 'GET',
+                headers: headers
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Erro ao carregar resultados');
+            }
+            
+            comparisonResults = data.results || [];
+            
+            // Display results
+            displayResults(data.comparison, comparisonResults);
+            
+        } catch (error) {
+            console.error('Error loading results:', error);
+            const loadingSection = document.getElementById('loadingSection');
+            const executionSection = document.getElementById('executionSection');
+            const errorDiv = document.getElementById('comparisonError');
+            
+            loadingSection.style.display = 'none';
+            executionSection.style.display = 'block';
+            
+            // Show error modal
+            showErrorModal(`Erro ao carregar resultados: ${error.message}`);
+            
+            errorDiv.textContent = `Erro ao carregar resultados: ${error.message}`;
+            errorDiv.style.display = 'block';
+        }
+    }
+    
+    // Display results
+    function displayResults(comparison, results) {
+        const loadingSection = document.getElementById('loadingSection');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsTableBody = document.getElementById('resultsTableBody');
+        const noResults = document.getElementById('noResults');
+        
+        // Hide loading, show results
+        loadingSection.style.display = 'none';
+        resultsSection.style.display = 'block';
+        
+        // Update summary
+        document.getElementById('totalDifferences').textContent = comparison.total_differences || 0;
+        
+        const addedCount = results.filter(r => r.change_type === 'added').length;
+        const modifiedCount = results.filter(r => r.change_type === 'modified').length;
+        const deletedCount = results.filter(r => r.change_type === 'deleted').length;
+        
+        document.getElementById('addedRecords').textContent = addedCount;
+        document.getElementById('modifiedRecords').textContent = modifiedCount;
+        
+        // Clear table
+        resultsTableBody.innerHTML = '';
+        
+        if (results.length === 0) {
+            noResults.style.display = 'block';
+            document.getElementById('resultsTable').style.display = 'none';
+        } else {
+            noResults.style.display = 'none';
+            document.getElementById('resultsTable').style.display = 'table';
+            
+            // Populate table
+            results.forEach(result => {
+                const row = document.createElement('tr');
+                
+                // Determine badge color based on change type
+                let badgeClass = 'bg-secondary';
+                let changeTypeText = result.change_type || 'unknown';
+                if (changeTypeText === 'added') {
+                    badgeClass = 'bg-success';
+                    changeTypeText = 'Adicionado';
+                } else if (changeTypeText === 'modified') {
+                    badgeClass = 'bg-warning';
+                    changeTypeText = 'Modificado';
+                } else if (changeTypeText === 'deleted') {
+                    badgeClass = 'bg-danger';
+                    changeTypeText = 'Deletado';
+                }
+                
+                const detectedDate = result.detected_at ? new Date(result.detected_at).toLocaleString('pt-BR') : '-';
+                
+                row.innerHTML = `
+                    <td><code>${result.record_id || '-'}</code></td>
+                    <td><strong>${result.field_name || '-'}</strong></td>
+                    <td><span class="badge ${badgeClass}">${changeTypeText}</span></td>
+                    <td><code class="text-primary">${formatValue(result.source_value)}</code></td>
+                    <td><code class="target-value-code">${formatValue(result.target_value)}</code></td>
+                    <td><small class="text-muted">${detectedDate}</small></td>
+                `;
+                
+                resultsTableBody.appendChild(row);
+            });
+        }
+    }
+    
+    // Format value for display
+    function formatValue(value) {
+        if (value === null || value === undefined) {
+            return '<em class="text-muted">null</em>';
+        }
+        if (typeof value === 'string' && value.length > 50) {
+            return value.substring(0, 50) + '...';
+        }
+        return String(value);
+    }
+    
+    // Modal functions using jQuery
+    function showSuccessModal(message) {
+        $('#successMessage').text(message);
+        $('#successModal').modal('show');
+    }
+    
+    function showErrorModal(message) {
+        $('#errorModalMessage').text(message);
+        $('#errorModal').modal('show');
+    }
+    
+    function showWarningModal(message) {
+        // Use confirmation modal for warnings
+        alert(message);
+    }
+    
+    function showConfirmationModal(message) {
+        return new Promise((resolve) => {
+            $('#confirmationMessage').text(message);
+            
+            // Remove previous handlers
+            $('#confirmationConfirmBtn').off('click');
+            $('#confirmationCancelBtn').off('click');
+            
+            // Add new handlers
+            $('#confirmationConfirmBtn').on('click', function() {
+                $('#confirmationModal').modal('hide');
+                resolve(true);
+            });
+            
+            $('#confirmationCancelBtn').on('click', function() {
+                $('#confirmationModal').modal('hide');
+                resolve(false);
+            });
+            
+            $('#confirmationModal').modal('show');
+        });
+    }
+    
+    // Export functions
+    function exportToCSV() {
+        if (comparisonResults.length === 0) {
+            showErrorModal('Nenhum resultado para exportar');
+            return;
+        }
+        
+        // Create CSV content
+        const headers = ['ID do Registro', 'Campo', 'Tipo de Mudança', 'Valor Origem', 'Valor Destino', 'Data de Detecção'];
+        const rows = comparisonResults.map(r => [
+            r.record_id || '',
+            r.field_name || '',
+            r.change_type || '',
+            r.source_value || '',
+            r.target_value || '',
+            r.detected_at || ''
+        ]);
+        
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        ].join('\n');
+        
+        // Download
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `comparison_${currentComparisonId}_${new Date().getTime()}.csv`;
+        link.click();
+    }
+    
+    function exportToJSON() {
+        if (comparisonResults.length === 0) {
+            alert('Nenhum resultado para exportar');
+            return;
+        }
+        
+        const jsonContent = JSON.stringify({
+            comparison_id: currentComparisonId,
+            project_id: PROJECT_ID,
+            exported_at: new Date().toISOString(),
+            total_differences: comparisonResults.length,
+            results: comparisonResults
+        }, null, 2);
+        
+        const blob = new Blob([jsonContent], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `comparison_${currentComparisonId}_${new Date().getTime()}.json`;
+        link.click();
+    }
+    
+    function exportToExcel() {
+        // For Excel, we'll use CSV format (most browsers can open CSV in Excel)
+        // Or we could use a library like SheetJS, but CSV is simpler
+        showInfoModal('Exportando como CSV', 'O arquivo CSV pode ser aberto no Excel. Para formato Excel nativo, use a exportação CSV.');
+        exportToCSV();
+    }
+    
+    function showInfoModal(title, message) {
+        // Create a simple info modal if needed, or use alert
+        alert(`${title}\n\n${message}`);
+    }
+    
+    // Load columns from tables
+    async function loadColumns() {
+        const loadingDiv = $('#loadingColumns');
+        const columnsContainer = $('#columnsContainer');
+        const sourceList = $('#sourceColumnsList');
+        const targetList = $('#targetColumnsList');
+        
+        loadingDiv.show();
+        columnsContainer.hide();
+        
+        try {
+            // Load source table columns
+            const sourceResponse = await fetch(`${API_BASE}/connections/${SOURCE_CONN_ID}/tables/${SOURCE_TABLE}/info`, {
+                method: 'GET',
+                headers: getAuthHeaders()
+            });
+            
+            if (!sourceResponse.ok) {
+                throw new Error('Erro ao carregar colunas da tabela origem');
+            }
+            
+            const sourceData = await sourceResponse.json();
+            sourceColumns = sourceData.columns || [];
+            
+            // Load target table columns
+            const targetResponse = await fetch(`${API_BASE}/connections/${TARGET_CONN_ID}/tables/${TARGET_TABLE}/info`, {
+                method: 'GET',
+                headers: getAuthHeaders()
+            });
+            
+            if (!targetResponse.ok) {
+                throw new Error('Erro ao carregar colunas da tabela destino');
+            }
+            
+            const targetData = await targetResponse.json();
+            targetColumns = targetData.columns || [];
+            
+            // Render columns
+            renderColumns();
+            
+            loadingDiv.hide();
+            columnsContainer.show();
+            
+        } catch (error) {
+            console.error('Error loading columns:', error);
+            loadingDiv.hide();
+            showErrorModal(`Erro ao carregar colunas: ${error.message}`);
+        }
+    }
+    
+    // Render columns in lists
+    function renderColumns() {
+        const sourceList = $('#sourceColumnsList');
+        const targetList = $('#targetColumnsList');
+        
+        // Render source columns
+        if (sourceColumns.length === 0) {
+            sourceList.html('<p class="text-muted text-center">Nenhuma coluna encontrada</p>');
+        } else {
+            sourceList.html(sourceColumns.map(col => {
+                const isPrimary = col.primary_key || false;
+                const isSelected = comparisonPrimaryKeyMappings.some(m => m.source === col.name);
+                return `
+                    <div class="form-check mb-2">
+                        <input class="form-check-input column-checkbox" 
+                               type="checkbox" 
+                               data-column="${col.name}" 
+                               data-type="source"
+                               data-is-primary="${isPrimary}"
+                               id="source_${col.name}"
+                               ${isSelected ? 'checked' : ''}>
+                        <label class="form-check-label" for="source_${col.name}">
+                            <code class="column-name-code">${col.name}</code>
+                            <span class="badge bg-${col.primary_key ? 'danger' : 'secondary'} ms-1">${col.type}</span>
+                            ${col.primary_key ? '<span class="badge bg-warning ms-1">PK</span>' : ''}
+                        </label>
+                    </div>
+                `;
+            }).join(''));
+        }
+        
+        // Render target columns
+        if (targetColumns.length === 0) {
+            targetList.html('<p class="text-muted text-center">Nenhuma coluna encontrada</p>');
+        } else {
+            targetList.html(targetColumns.map(col => {
+                const isPrimary = col.primary_key || false;
+                const isSelected = comparisonPrimaryKeyMappings.some(m => m.target === col.name);
+                return `
+                    <div class="form-check mb-2">
+                        <input class="form-check-input column-checkbox" 
+                               type="checkbox" 
+                               data-column="${col.name}" 
+                               data-type="target"
+                               data-is-primary="${isPrimary}"
+                               id="target_${col.name}"
+                               ${isSelected ? 'checked' : ''}>
+                        <label class="form-check-label" for="target_${col.name}">
+                            <code class="column-name-code">${col.name}</code>
+                            <span class="badge bg-${col.primary_key ? 'danger' : 'secondary'} ms-1">${col.type}</span>
+                            ${col.primary_key ? '<span class="badge bg-warning ms-1">PK</span>' : ''}
+                        </label>
+                    </div>
+                `;
+            }).join(''));
+        }
+        
+        // Add event listeners to checkboxes
+        $('.column-checkbox').on('change', function() {
+            handleColumnSelection($(this));
+        });
+        
+        updateSelectedKeysDisplay();
+    }
+    
+    // Handle column selection
+    function handleColumnSelection($checkbox) {
+        const columnName = $checkbox.data('column');
+        const type = $checkbox.data('type');
+        const isChecked = $checkbox.is(':checked');
+        
+        if (type === 'source') {
+            if (isChecked) {
+                // Find matching target column (same name or first available)
+                let targetCol = targetColumns.find(c => c.name === columnName);
+                if (!targetCol && targetColumns.length > 0) {
+                    // If no exact match, use first column
+                    targetCol = targetColumns[0];
+                }
+                
+                if (targetCol) {
+                    // Add mapping
+                    comparisonPrimaryKeyMappings.push({
+                        source: columnName,
+                        target: targetCol.name
+                    });
+                    
+                    // Check target checkbox
+                    $(`#target_${targetCol.name}`).prop('checked', true);
+                } else {
+                    // No target column available, remove source selection
+                    $checkbox.prop('checked', false);
+                    showWarningModal('Nenhuma coluna correspondente encontrada na tabela destino');
+                    return;
+                }
+            } else {
+                // Remove mapping
+                comparisonPrimaryKeyMappings = comparisonPrimaryKeyMappings.filter(m => m.source !== columnName);
+                
+                // Uncheck corresponding target
+                const mapping = comparisonPrimaryKeyMappings.find(m => m.source === columnName);
+                if (mapping) {
+                    $(`#target_${mapping.target}`).prop('checked', false);
+                }
+            }
+        } else {
+            // Target column selected
+            if (isChecked) {
+                // Find matching source column
+                let sourceCol = sourceColumns.find(c => c.name === columnName);
+                if (!sourceCol && sourceColumns.length > 0) {
+                    sourceCol = sourceColumns[0];
+                }
+                
+                if (sourceCol) {
+                    // Check if mapping already exists
+                    const existingMapping = comparisonPrimaryKeyMappings.find(m => m.target === columnName);
+                    if (!existingMapping) {
+                        comparisonPrimaryKeyMappings.push({
+                            source: sourceCol.name,
+                            target: columnName
+                        });
+                        
+                        // Check source checkbox
+                        $(`#source_${sourceCol.name}`).prop('checked', true);
+                    }
+                }
+            } else {
+                // Remove mapping
+                comparisonPrimaryKeyMappings = comparisonPrimaryKeyMappings.filter(m => m.target !== columnName);
+                
+                // Uncheck corresponding source
+                const mapping = comparisonPrimaryKeyMappings.find(m => m.target === columnName);
+                if (mapping) {
+                    $(`#source_${mapping.source}`).prop('checked', false);
+                }
+            }
+        }
+        
+        updateSelectedKeysDisplay();
+        updateExecuteButton();
+    }
+    
+    // Update selected keys display
+    function updateSelectedKeysDisplay() {
+        const container = $('#selectedKeysContainer');
+        const list = $('#selectedKeysList');
+        
+        if (comparisonPrimaryKeyMappings.length === 0) {
+            container.hide();
+            return;
+        }
+        
+        container.show();
+        list.html(comparisonPrimaryKeyMappings.map(m => {
+            return `<span class="badge bg-primary me-2 mb-2">
+                <i class="fas fa-arrow-right me-1"></i>
+                <code>${m.source}</code> → <code>${m.target}</code>
+            </span>`;
+        }).join(''));
+    }
+    
+    // Update execute button state
+    function updateExecuteButton() {
+        const btn = $('#executeComparisonBtn');
+        if (comparisonPrimaryKeyMappings.length > 0) {
+            btn.prop('disabled', false);
+            btn.next('small').hide();
+        } else {
+            btn.prop('disabled', true);
+            btn.next('small').show();
+        }
+    }
+    
+    // Setup event listeners
+    $(document).ready(function() {
+        // Load columns on page load
+        loadColumns();
+        
+        // Load columns button
+        $('#loadColumnsBtn').on('click', function() {
+            loadColumns();
+        });
+        
+        $('#executeComparisonBtn').on('click', function(e) {
+            e.preventDefault();
+            if (comparisonPrimaryKeyMappings.length === 0) {
+                showWarningModal('Selecione pelo menos uma chave primária antes de executar a comparação');
+                return;
+            }
+            executeComparison();
+        });
+        
+        $('#executeAgainBtn').on('click', function(e) {
+            e.preventDefault();
+            // Ask for confirmation
+            showConfirmationModal('Deseja executar uma nova comparação? Os resultados atuais serão mantidos.').then(function(confirmed) {
+                if (confirmed) {
+                    // Hide results, show execution section
+                    $('#resultsSection').hide();
+                    $('#executionSection').show();
+                    $('#executeComparisonBtn').prop('disabled', false);
+                    comparisonResults = [];
+                    currentComparisonId = null;
+                }
+            });
+        });
+        
+        // Clean up modal backdrops when modals are hidden
+        $('.modal').on('hidden.bs.modal', function() {
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open');
+            $('body').css('padding-right', '');
+        });
+    });
+</script>
+{% endblock %}

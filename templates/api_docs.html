@@ -2662,6 +2662,156 @@ echo $response;</code></pre>
         </div>
     </div>
 
+    <!-- Browser Tips Section -->
+    <div class="container-fluid mt-5 mb-5">
+        <div class="api-endpoint">
+            <h2>
+                <i class="fas fa-lightbulb"></i>
+                Dicas de Navegador e Funcionalidades
+            </h2>
+            
+            <div class="mb-4">
+                <h4><i class="fas fa-link me-2"></i>Filtros por URL</h4>
+                <p>O DeltaScope suporta filtros diretamente na URL para facilitar compartilhamento e bookmarking.</p>
+                
+                <h5>Dashboard</h5>
+                <p>Você pode filtrar o dashboard diretamente pela URL:</p>
+                <ul>
+                    <li><strong>URL Base:</strong> <code>/dashboard</code></li>
+                    <li><strong>Com Projeto:</strong> <code>/dashboard?project_id=1</code></li>
+                    <li><strong>Com Período:</strong> <code>/dashboard?project_id=1&start_date=2024-01-01T00:00&end_date=2024-01-31T23:59</code></li>
+                </ul>
+                
+                <p><strong>Parâmetros disponíveis:</strong></p>
+                <ul>
+                    <li><code>project_id</code> - ID do projeto a visualizar</li>
+                    <li><code>start_date</code> - Data de início (formato: YYYY-MM-DDTHH:mm)</li>
+                    <li><code>end_date</code> - Data de fim (formato: YYYY-MM-DDTHH:mm)</li>
+                </ul>
+                
+                <p><strong>Exemplos práticos:</strong></p>
+                <ul>
+                    <li>Dashboard do projeto 1: <code>/dashboard?project_id=1</code></li>
+                    <li>Dashboard de janeiro/2024: <code>/dashboard?project_id=1&start_date=2024-01-01T00:00&end_date=2024-01-31T23:59</code></li>
+                    <li>Dashboard apenas com data início: <code>/dashboard?project_id=1&start_date=2024-01-15T08:00</code></li>
+                </ul>
+                
+                <p><strong>Comportamento:</strong></p>
+                <ul>
+                    <li>Ao acessar uma URL com parâmetros, os campos são preenchidos automaticamente</li>
+                    <li>Se houver <code>project_id</code> na URL, o dashboard carrega automaticamente</li>
+                    <li>Ao alterar filtros, a URL é atualizada automaticamente (sem recarregar a página)</li>
+                    <li>A URL pode ser compartilhada e manterá os filtros aplicados</li>
+                </ul>
+                
+                <h5>Tabelas</h5>
+                <p>Você pode pré-selecionar uma conexão:</p>
+                <ul>
+                    <li><code>/tabelas?connection_id=1</code></li>
+                </ul>
+                <p>Ao voltar de uma página de edição, a conexão permanece selecionada automaticamente.</p>
+            </div>
+            
+            <div class="mb-4">
+                <h4><i class="fas fa-user-plus me-2"></i>Cadastro de Usuário</h4>
+                <p>O sistema oferece duas formas de criar usuários:</p>
+                
+                <h5>1. Cadastro Público</h5>
+                <p><strong>URL:</strong> <code>/create_user</code></p>
+                <p>Qualquer pessoa pode criar uma conta através desta página pública:</p>
+                <ul>
+                    <li>Não requer autenticação</li>
+                    <li>O primeiro usuário criado será automaticamente um administrador</li>
+                    <li>Validação de dados em tempo real</li>
+                    <li>Verificação de duplicatas (username e email)</li>
+                    <li>Senha mínima de 6 caracteres</li>
+                </ul>
+                
+                <h5>2. Criação por Administrador</h5>
+                <p><strong>URL:</strong> <code>/usuarios/novo</code></p>
+                <p>Administradores podem criar usuários através da interface administrativa:</p>
+                <ul>
+                    <li>Requer autenticação como administrador</li>
+                    <li>Permite definir grupos do usuário</li>
+                    <li>Permite definir se o usuário é administrador</li>
+                    <li>Validação completa de dados</li>
+                </ul>
+            </div>
+            
+            <div class="mb-4">
+                <h4><i class="fas fa-palette me-2"></i>Tema Claro/Escuro</h4>
+                <p>O sistema possui suporte completo a temas claro e escuro:</p>
+                <ul>
+                    <li>Toggle de tema no canto superior direito</li>
+                    <li>Preferência salva no navegador (localStorage)</li>
+                    <li>Aplicação imediata sem flash de conteúdo</li>
+                    <li>Todos os elementos se adaptam automaticamente ao tema</li>
+                </ul>
+            </div>
+            
+            <div class="mb-4">
+                <h4><i class="fas fa-keyboard me-2"></i>Atalhos de Teclado</h4>
+                <ul>
+                    <li><strong>Enter</strong> no campo de senha: Faz login automaticamente</li>
+                    <li><strong>F5</strong>: Recarrega a página mantendo filtros (se aplicável)</li>
+                </ul>
+            </div>
+            
+            <div class="mb-4">
+                <h4><i class="fas fa-share-alt me-2"></i>Compartilhamento de Links</h4>
+                <p>Você pode compartilhar links do dashboard com filtros específicos:</p>
+                <ul>
+                    <li>Copie a URL completa do navegador após aplicar filtros</li>
+                    <li>Cole em outro navegador ou compartilhe com outros usuários</li>
+                    <li>Os filtros serão aplicados automaticamente ao acessar o link</li>
+                </ul>
+            </div>
+            
+            <div class="mb-4">
+                <h4><i class="fas fa-bookmark me-2"></i>Bookmarks</h4>
+                <p>Salve URLs com filtros como favoritos no navegador:</p>
+                <ul>
+                    <li>Configure os filtros desejados</li>
+                    <li>Salve como favorito (Ctrl+D / Cmd+D)</li>
+                    <li>Ao acessar o favorito, os filtros serão aplicados automaticamente</li>
+                </ul>
+            </div>
+            
+            <div class="mb-4">
+                <h4><i class="fas fa-download me-2"></i>Exportação de Dados</h4>
+                <p>Vários recursos permitem exportação de dados:</p>
+                <ul>
+                    <li><strong>Resultados de Comparação:</strong> CSV, JSON, Excel/TXT</li>
+                    <li><strong>Relatórios:</strong> Exportação completa de resultados</li>
+                    <li>Botões de exportação aparecem após carregar dados</li>
+                </ul>
+            </div>
+            
+            <div class="mb-4">
+                <h4><i class="fas fa-table me-2"></i>Edição de Tabelas</h4>
+                <p>Funcionalidades avançadas de edição:</p>
+                <ul>
+                    <li>Alteração de tipos de colunas diretamente no banco</li>
+                    <li>Modificação de propriedades (nullable, primary key)</li>
+                    <li>Atualização automática de modelos SQLAlchemy</li>
+                    <li>Suporte completo para SQLite e MySQL/MariaDB</li>
+                </ul>
+            </div>
+            
+            <div class="mb-4">
+                <h4><i class="fas fa-chart-bar me-2"></i>Dashboard Interativo</h4>
+                <p>O dashboard oferece múltiplos gráficos:</p>
+                <ul>
+                    <li>6 tipos diferentes de gráficos</li>
+                    <li>Filtros por data aplicados a todos os gráficos</li>
+                    <li>Gráficos responsivos e interativos</li>
+                    <li>Hover para ver detalhes</li>
+                    <li>Zoom e pan em gráficos Plotly</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="mt-5 py-4" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);">
         <div class="container-fluid">

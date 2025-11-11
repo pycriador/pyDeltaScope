@@ -225,7 +225,8 @@ def update_column_type(user):
         # If primary key status changed, update it in database
         if primary_key != was_primary_key:
             if connection.db_type.lower() in ['mariadb', 'mysql']:
-                with engine.connect() as conn:
+                # Use begin() to ensure transaction is committed
+                with engine.begin() as conn:
                     if primary_key:
                         # Add primary key constraint
                         # First, remove existing primary key if exists
@@ -233,135 +234,255 @@ def update_column_type(user):
                             alter_sql = f"ALTER TABLE `{table_name}` DROP PRIMARY KEY"
                             try:
                                 conn.execute(text(alter_sql))
+                                print(f"[TABLES] Dropped existing primary key from {table_name}")
                             except Exception as e:
                                 print(f"Warning: Could not drop primary key: {e}")
                         
                         # Add new primary key
                         alter_sql = f"ALTER TABLE `{table_name}` ADD PRIMARY KEY (`{column_name}`)"
                         conn.execute(text(alter_sql))
+                        print(f"[TABLES] Added primary key to column {column_name} in {table_name}")
                     else:
                         # Remove primary key constraint
                         if was_primary_key:
                             alter_sql = f"ALTER TABLE `{table_name}` DROP PRIMARY KEY"
                             try:
                                 conn.execute(text(alter_sql))
+                                print(f"[TABLES] Removed primary key from column {column_name} in {table_name}")
                             except Exception as e:
                                 print(f"Warning: Could not drop primary key: {e}")
-                    conn.commit()
+                    # Transaction is automatically committed when exiting 'with' block
             # Note: SQLite doesn't support ALTER TABLE for primary keys easily
         
-        # Map SQLAlchemy type to database-specific type
-        # For MariaDB/MySQL, use TINYINT(1) for Boolean instead of BOOLEAN
-        # to avoid issues with existing data
+        # Map form type to database-specific type
+        # The form sends types like 'VARCHAR(255)', 'TEXT', 'INT', 'BOOLEAN', etc.
+        # We need to map these to actual database types
         if connection.db_type.lower() in ['mariadb', 'mysql']:
-            type_mapping = {
-                'Integer': 'INTEGER',
-                'BigInteger': 'BIGINT',
-                'SmallInteger': 'SMALLINT',
-                'String': 'VARCHAR(255)',
-                'Text': 'TEXT',
-                'DateTime': 'DATETIME',
-                'Date': 'DATE',
-                'Time': 'TIME',
-                'Float': 'FLOAT',
-                'Numeric': 'DECIMAL(10,2)',
-                'Boolean': 'TINYINT(1)',  # Use TINYINT(1) for MySQL/MariaDB
-                'LargeBinary': 'BLOB',
-                'JSON': 'JSON'
-            }
+            # Direct mapping - form already sends correct MySQL types
+            if new_type.upper() == 'BOOLEAN':
+                db_type = 'TINYINT(1)'  # Use TINYINT(1) for MySQL/MariaDB
+            elif new_type.upper().startswith('VARCHAR'):
+                db_type = new_type  # Keep as is (e.g., VARCHAR(255))
+            elif new_type.upper().startswith('DECIMAL'):
+                db_type = new_type  # Keep as is (e.g., DECIMAL(10,2))
+            elif new_type.upper().startswith('TINYINT'):
+                db_type = new_type  # Keep as is
+            else:
+                # Map common types
+                type_mapping = {
+                    'INT': 'INT',
+                    'BIGINT': 'BIGINT',
+                    'TEXT': 'TEXT',
+                    'DATETIME': 'DATETIME',
+                    'DATE': 'DATE',
+                    'TIMESTAMP': 'TIMESTAMP',
+                    'FLOAT': 'FLOAT',
+                    'DOUBLE': 'DOUBLE'
+                }
+                db_type = type_mapping.get(new_type.upper(), new_type)
         else:
-            type_mapping = {
-                'Integer': 'INTEGER',
-                'BigInteger': 'BIGINT',
-                'SmallInteger': 'SMALLINT',
-                'String': 'VARCHAR(255)',
-                'Text': 'TEXT',
-                'DateTime': 'DATETIME',
-                'Date': 'DATE',
-                'Time': 'TIME',
-                'Float': 'FLOAT',
-                'Numeric': 'DECIMAL(10,2)',
-                'Boolean': 'BOOLEAN',
-                'LargeBinary': 'BLOB',
-                'JSON': 'JSON'
-            }
-        
-        db_type = type_mapping.get(new_type, 'VARCHAR(255)')
+            # SQLite - use similar mapping
+            if new_type.upper() == 'BOOLEAN':
+                db_type = 'BOOLEAN'
+            elif new_type.upper().startswith('VARCHAR'):
+                db_type = 'TEXT'  # SQLite doesn't have VARCHAR, use TEXT
+            elif new_type.upper().startswith('DECIMAL'):
+                db_type = 'REAL'  # SQLite uses REAL for decimals
+            else:
+                db_type = new_type
         
         # Alter column type in database (SQLite/MariaDB specific)
         if connection.db_type.lower() == 'sqlite':
-            # SQLite doesn't support ALTER COLUMN directly, need to recreate table
-            # For now, just update the model file
-            pass
+            # SQLite has limited ALTER TABLE support - we need to recreate the table
+            print(f"[TABLES] SQLite detected - recreating table to change column type")
+            try:
+                with engine.begin() as conn:
+                    print(f"[TABLES] ===== Starting SQLite table recreation ======")
+                    print(f"[TABLES] Table: {table_name}, Column: {column_name}")
+                    print(f"[TABLES] New type: {new_type}, DB type: {db_type}")
+                    
+                    # Get current table structure
+                    inspector = inspect(engine)
+                    current_cols = inspector.get_columns(table_name)
+                    current_col = next((c for c in current_cols if c['name'] == column_name), None)
+                    
+                    if not current_col:
+                        raise Exception(f"Column {column_name} not found in table {table_name}")
+                    
+                    # Get primary keys
+                    pk_constraint = inspector.get_pk_constraint(table_name)
+                    primary_keys = pk_constraint.get('constrained_columns', [])
+                    
+                    # Get all column names for SELECT
+                    all_column_names = [col['name'] for col in current_cols]
+                    
+                    # Build new column definitions
+                    new_column_defs = []
+                    for col in current_cols:
+                        col_name = col['name']
+                        if col_name == column_name:
+                            # Use new type
+                            col_type = db_type
+                            col_nullable = nullable
+                            col_pk = primary_key
+                        else:
+                            # Keep existing type and properties
+                            col_type = str(col['type'])
+                            col_nullable = col.get('nullable', True)
+                            col_pk = col_name in primary_keys
+                        
+                        col_def = f"`{col_name}` {col_type}"
+                        if col_pk:
+                            col_def += " PRIMARY KEY"
+                        elif not col_nullable:
+                            col_def += " NOT NULL"
+                        new_column_defs.append(col_def)
+                    
+                    # Create temporary table name
+                    temp_table_name = f"{table_name}_temp_{int(datetime.utcnow().timestamp())}"
+                    
+                    # Step 1: Create new table with updated structure
+                    create_sql = f"CREATE TABLE `{temp_table_name}` ({', '.join(new_column_defs)})"
+                    print(f"[TABLES] Creating temporary table: {create_sql}")
+                    conn.execute(text(create_sql))
+                    
+                    # Step 2: Copy data from old table to new table
+                    column_list = ', '.join([f"`{col}`" for col in all_column_names])
+                    copy_sql = f"INSERT INTO `{temp_table_name}` ({column_list}) SELECT {column_list} FROM `{table_name}`"
+                    print(f"[TABLES] Copying data: {copy_sql}")
+                    conn.execute(text(copy_sql))
+                    
+                    # Step 3: Drop old table
+                    drop_sql = f"DROP TABLE `{table_name}`"
+                    print(f"[TABLES] Dropping old table: {drop_sql}")
+                    conn.execute(text(drop_sql))
+                    
+                    # Step 4: Rename new table to original name
+                    rename_sql = f"ALTER TABLE `{temp_table_name}` RENAME TO `{table_name}`"
+                    print(f"[TABLES] Renaming table: {rename_sql}")
+                    conn.execute(text(rename_sql))
+                    
+                    print(f"[TABLES] ===== SQLite table recreation completed ======")
+            except Exception as e:
+                import traceback
+                print(f"[TABLES] ERROR recreating SQLite table: {str(e)}")
+                print(traceback.format_exc())
+                raise Exception(f"Failed to recreate SQLite table: {str(e)}")
         elif connection.db_type.lower() in ['mariadb', 'mysql']:
-            with engine.connect() as conn:
-                # For Boolean type, we need to handle existing data carefully
-                # First, check if we're converting to Boolean
-                if new_type == 'Boolean':
+            # Use begin() to start a transaction
+            try:
+                with engine.begin() as conn:
+                    print(f"[TABLES] ===== Starting ALTER TABLE ======")
+                    print(f"[TABLES] Table: {table_name}, Column: {column_name}")
+                    print(f"[TABLES] New type from form: {new_type}")
+                    print(f"[TABLES] Mapped DB type: {db_type}")
+                    print(f"[TABLES] Nullable: {nullable}, Primary Key: {primary_key}")
+                    
                     # Get current column type to see if we need to convert data
                     inspector = inspect(engine)
                     current_cols = inspector.get_columns(table_name)
                     current_col = next((c for c in current_cols if c['name'] == column_name), None)
                     
-                    if current_col:
-                        current_type = str(current_col['type']).upper()
-                        # If converting from string/text, we need to handle data conversion
+                    if not current_col:
+                        raise Exception(f"Column {column_name} not found in table {table_name}")
+                    
+                    current_type = str(current_col['type']).upper()
+                    print(f"[TABLES] Current column type in DB: {current_type}")
+                    
+                    # Build ALTER TABLE statement
+                    if new_type.upper() == 'BOOLEAN' or 'TINYINT(1)' in db_type.upper():
+                        # Boolean type - use TINYINT(1)
+                        alter_sql = f"ALTER TABLE `{table_name}` MODIFY COLUMN `{column_name}` TINYINT(1)"
+                        if not nullable:
+                            alter_sql += " NOT NULL"
+                    else:
+                        # For non-Boolean types, use the mapped db_type
+                        alter_sql = f"ALTER TABLE `{table_name}` MODIFY COLUMN `{column_name}` {db_type}"
+                        if not nullable:
+                            alter_sql += " NOT NULL"
+                    
+                    print(f"[TABLES] SQL to execute: {alter_sql}")
+                    
+                    # Execute ALTER TABLE
+                    result = conn.execute(text(alter_sql))
+                    print(f"[TABLES] ALTER TABLE executed successfully")
+                    print(f"[TABLES] Result: {result}")
+                    
+                    # If converting to Boolean from string/text, convert data
+                    if new_type.upper() == 'BOOLEAN' or 'TINYINT(1)' in db_type.upper():
                         if 'VARCHAR' in current_type or 'TEXT' in current_type or 'CHAR' in current_type:
-                            # First convert to INT, then to TINYINT(1)
-                            # Convert 'true'/'false' strings to 1/0
-                            alter_sql = f"""
-                                ALTER TABLE `{table_name}` 
-                                MODIFY COLUMN `{column_name}` TINYINT(1) 
-                                {'NOT NULL' if not nullable else ''}
-                            """
-                            conn.execute(text(alter_sql))
                             # Update existing data: convert 'true'/'false' strings to 1/0
                             update_sql = f"""
                                 UPDATE `{table_name}` 
                                 SET `{column_name}` = CASE 
-                                    WHEN LOWER(TRIM(`{column_name}`)) = 'true' THEN 1
-                                    WHEN LOWER(TRIM(`{column_name}`)) = 'false' THEN 0
-                                    WHEN `{column_name}` = '1' THEN 1
-                                    WHEN `{column_name}` = '0' THEN 0
+                                    WHEN LOWER(TRIM(CAST(`{column_name}` AS CHAR))) = 'true' THEN 1
+                                    WHEN LOWER(TRIM(CAST(`{column_name}` AS CHAR))) = 'false' THEN 0
+                                    WHEN CAST(`{column_name}` AS CHAR) = '1' THEN 1
+                                    WHEN CAST(`{column_name}` AS CHAR) = '0' THEN 0
                                     ELSE 0
                                 END
                             """
                             try:
-                                conn.execute(text(update_sql))
+                                print(f"[TABLES] Executing data conversion: {update_sql}")
+                                update_result = conn.execute(text(update_sql))
+                                print(f"[TABLES] Data conversion executed. Rows affected: {update_result.rowcount if hasattr(update_result, 'rowcount') else 'N/A'}")
                             except Exception as e:
-                                print(f"Warning: Could not convert existing data: {e}")
-                        else:
-                            # Direct conversion to TINYINT(1)
-                            alter_sql = f"ALTER TABLE `{table_name}` MODIFY COLUMN `{column_name}` TINYINT(1)"
-                            if not nullable:
-                                alter_sql += " NOT NULL"
-                            conn.execute(text(alter_sql))
-                    else:
-                        # Column not found, just create it
-                        alter_sql = f"ALTER TABLE `{table_name}` MODIFY COLUMN `{column_name}` TINYINT(1)"
-                        if not nullable:
-                            alter_sql += " NOT NULL"
-                        conn.execute(text(alter_sql))
-                else:
-                    # For non-Boolean types, use standard ALTER
-                    alter_sql = f"ALTER TABLE `{table_name}` MODIFY COLUMN `{column_name}` {db_type}"
-                    if not nullable:
-                        alter_sql += " NOT NULL"
-                    conn.execute(text(alter_sql))
-                
-                conn.commit()
+                                print(f"[TABLES] Warning: Could not convert existing data: {e}")
+                                import traceback
+                                print(traceback.format_exc())
+                    
+                    # Transaction is automatically committed when exiting 'with' block
+                    print(f"[TABLES] ===== ALTER TABLE transaction completed ======")
+                    
+            except Exception as e:
+                import traceback
+                print(f"[TABLES] ERROR executing ALTER TABLE: {str(e)}")
+                print(traceback.format_exc())
+                raise Exception(f"Failed to execute ALTER TABLE: {str(e)}")
+        else:
+            print(f"[TABLES] Unsupported database type: {connection.db_type}")
+        
+        # IMPORTANT: Create a new engine connection to ensure we get fresh data
+        # The inspector may cache column information, so we need to refresh it
+        print(f"[TABLES] ===== Refreshing column information from database ======")
+        
+        # Close the old engine to force a fresh connection
+        try:
+            engine.dispose()
+        except:
+            pass
+        
+        # Create a completely new engine
+        fresh_engine = DatabaseService.get_engine(decrypted_config, already_decrypted=True)
         
         # Get updated columns (refresh after potential primary key changes)
-        columns = DatabaseService.get_table_columns(engine, table_name)
+        # This ensures we have the latest column information from the database
+        columns = DatabaseService.get_table_columns(fresh_engine, table_name)
+        updated_primary_keys = DatabaseService.get_primary_keys(fresh_engine, table_name)
         
-        # Update the specific column information
+        print(f"[TABLES] Retrieved {len(columns)} columns from database")
+        found_updated_column = False
         for col in columns:
             if col['name'] == column_name:
-                col['type'] = new_type
-                col['nullable'] = nullable
-                # Update primary key status from database (may have changed)
-                updated_primary_keys = DatabaseService.get_primary_keys(engine, table_name)
+                found_updated_column = True
+                print(f"[TABLES] ===== UPDATED COLUMN INFO ======")
+                print(f"[TABLES] Name: {col['name']}")
+                print(f"[TABLES] Type: {col['type']}")
+                print(f"[TABLES] Nullable: {col['nullable']}")
+                print(f"[TABLES] Primary Key: {col['primary_key']}")
+                print(f"[TABLES] =================================")
+        
+        if not found_updated_column:
+            print(f"[TABLES] WARNING: Column {column_name} not found in refreshed columns!")
+            raise Exception(f"Column {column_name} not found after update")
+        
+        # Verify column information matches what we expect
+        # The columns already contain the updated info from database query above
+        for col in columns:
+            if col['name'] == column_name:
+                # Ensure primary key status is correct (from database)
                 col['primary_key'] = col['name'] in updated_primary_keys
+                print(f"[TABLES] Final column info - Name: {col['name']}, Type: {col['type']}, Nullable: {col['nullable']}, Primary Key: {col['primary_key']}")
         
         # Find all projects that use this table
         projects = Project.query.filter(
@@ -379,57 +500,89 @@ def update_column_type(user):
         base_path = Path(__file__).parent.parent.parent
         updated_projects = []
         
-        # Use the first project's name for the model file (or a generic name if no projects)
+        # Always generate and save model file, even if no projects exist
+        # Use connection name + table name as fallback if no projects
         if projects:
-            # Use the first project name for consistency
+            # Generate model for each project (they may have different names)
+            for project in projects:
+                model_code = TableMapper.generate_model_code(table_name, columns, decrypted_config)
+                model_path = TableMapper.save_model_file(
+                    project.name,
+                    table_name,
+                    model_code,
+                    base_path
+                )
+                
+                # Update project model file path if source table
+                if project.source_connection_id == connection_id and project.source_table == table_name:
+                    project.model_file_path = str(model_path)
+                
+                updated_projects.append({
+                    'id': project.id,
+                    'name': project.name
+                })
+            
+            # Use first project name for mapping
             project_name_for_model = projects[0].name
         else:
-            # If no projects use this table, use connection name + table name
+            # No projects - use connection name + table name
             project_name_for_model = f"{connection.name}_{table_name}"
         
-        # Generate model code once (same for all projects using this table)
-        model_code = TableMapper.generate_model_code(table_name, columns, decrypted_config)
-        model_path = TableMapper.save_model_file(
-            project_name_for_model,
-            table_name,
-            model_code,
-            base_path
-        )
-        
-        # Update or create mapping (only once, outside the loop)
-        if not mapping:
-            mapping = TableModelMapping(
-                connection_id=connection_id,
-                table_name=table_name,
-                model_file_path=str(model_path),
-                user_id=user.id
-            )
-            db.session.add(mapping)
-        else:
-            mapping.model_file_path = str(model_path)
-            mapping.updated_at = datetime.utcnow()
-        
-        # Update all projects that use this table
-        for project in projects:
-            # Regenerate model for each project (in case project name changed)
+        # Always generate model code (even if no projects)
+        # This ensures the model file always exists and is up-to-date
+        try:
             model_code = TableMapper.generate_model_code(table_name, columns, decrypted_config)
             model_path = TableMapper.save_model_file(
-                project.name,
+                project_name_for_model,
                 table_name,
                 model_code,
                 base_path
             )
             
-            # Update project model file path if source table
-            if project.source_connection_id == connection_id and project.source_table == table_name:
-                project.model_file_path = str(model_path)
+            print(f"[TABLES] Model file saved/updated: {model_path}")
             
-            updated_projects.append({
-                'id': project.id,
-                'name': project.name
-            })
+            # Verify file was created
+            if not model_path.exists():
+                raise Exception(f"Model file was not created at {model_path}")
+            
+        except Exception as e:
+            import traceback
+            print(f"[TABLES] Error generating/saving model file: {str(e)}")
+            print(traceback.format_exc())
+            # Still try to continue, but log the error
+            model_path = None
         
-        db.session.commit()
+        # Update or create mapping (always ensure mapping exists)
+        if not mapping:
+            if model_path:
+                mapping = TableModelMapping(
+                    connection_id=connection_id,
+                    table_name=table_name,
+                    model_file_path=str(model_path),
+                    user_id=user.id
+                )
+                db.session.add(mapping)
+                print(f"[TABLES] Created new TableModelMapping for {table_name}")
+            else:
+                print(f"[TABLES] Warning: Could not create mapping - model file was not created")
+        else:
+            if model_path:
+                mapping.model_file_path = str(model_path)
+                mapping.updated_at = datetime.utcnow()
+                print(f"[TABLES] Updated TableModelMapping for {table_name}")
+            else:
+                print(f"[TABLES] Warning: Could not update mapping - model file was not created")
+        
+        # Commit all database changes (including TableModelMapping)
+        try:
+            db.session.commit()
+            print(f"[TABLES] Database changes committed successfully")
+        except Exception as e:
+            db.session.rollback()
+            import traceback
+            print(f"[TABLES] Error committing database changes: {str(e)}")
+            print(traceback.format_exc())
+            raise
         
         return jsonify({
             'message': f'Column type updated successfully. Models regenerated for {len(updated_projects)} project(s).',

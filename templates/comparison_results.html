@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}Resultados da Comparação - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="comparisonResultsSection">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-file-alt me-2"></i>Resultados da Comparação</h2>
+        <a href="/relatorios" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Voltar para Relatórios
+        </a>
+    </div>
+    
+    <!-- Comparison Info -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações da Comparação</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <h6 class="text-muted mb-2"><i class="fas fa-folder me-2"></i>Projeto</h6>
+                    <p class="mb-0"><strong>{{ project.name }}</strong></p>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <h6 class="text-muted mb-2"><i class="fas fa-hashtag me-2"></i>ID da Comparação</h6>
+                    <p class="mb-0"><code>{{ comparison.id }}</code></p>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <h6 class="text-muted mb-2"><i class="fas fa-calendar me-2"></i>Data de Execução</h6>
+                    <p class="mb-0">{{ comparison.executed_at.strftime('%d/%m/%Y %H:%M:%S') if comparison.executed_at else '-' }}</p>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <h6 class="text-muted mb-2"><i class="fas fa-chart-bar me-2"></i>Status</h6>
+                    <p class="mb-0">
+                        {% if comparison.status == 'completed' %}
+                        <span class="badge bg-success">Concluído</span>
+                        {% elif comparison.status == 'failed' %}
+                        <span class="badge bg-danger">Falhou</span>
+                        {% else %}
+                        <span class="badge bg-warning">Em Andamento</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-md-12 mb-3">
+                    <h6 class="text-muted mb-2"><i class="fas fa-exclamation-triangle me-2"></i>Total de Diferenças</h6>
+                    <p class="mb-0"><strong class="text-primary" style="font-size: 1.5rem;">{{ comparison.total_differences or 0 }}</strong></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Export Buttons -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="fas fa-download me-2"></i>Exportar Resultados</h5>
+        </div>
+        <div class="card-body">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-success" onclick="exportToJSON()">
+                    <i class="fas fa-file-code me-2"></i>Exportar JSON
+                </button>
+                <button type="button" class="btn btn-info" onclick="exportToCSV()">
+                    <i class="fas fa-file-csv me-2"></i>Exportar CSV
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="exportToTXT()">
+                    <i class="fas fa-file-alt me-2"></i>Exportar TXT
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Results Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-list me-2"></i>Diferenças Encontradas</h5>
+        </div>
+        <div class="card-body">
+            {% if results %}
+            <div class="table-responsive">
+                <table id="resultsTable" class="table table-striped table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID do Registro</th>
+                            <th>Campo</th>
+                            <th>Tipo de Mudança</th>
+                            <th>Valor Origem</th>
+                            <th>Valor Destino</th>
+                            <th>Data de Detecção</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in results %}
+                        <tr>
+                            <td><code>{{ result.record_id or '-' }}</code></td>
+                            <td><strong>{{ result.field_name or '-' }}</strong></td>
+                            <td>
+                                {% if result.change_type == 'added' %}
+                                <span class="badge bg-success">Adicionado</span>
+                                {% elif result.change_type == 'modified' %}
+                                <span class="badge bg-warning">Modificado</span>
+                                {% elif result.change_type == 'deleted' %}
+                                <span class="badge bg-danger">Deletado</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ result.change_type or '-' }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <code class="text-primary">
+                                    {% if result.source_value is none %}
+                                    <em class="text-muted">null</em>
+                                    {% elif result.source_value|length > 50 %}
+                                    {{ result.source_value[:50] }}...
+                                    {% else %}
+                                    {{ result.source_value }}
+                                    {% endif %}
+                                </code>
+                            </td>
+                            <td>
+                                <code class="text-danger">
+                                    {% if result.target_value is none %}
+                                    <em class="text-muted">null</em>
+                                    {% elif result.target_value|length > 50 %}
+                                    {{ result.target_value[:50] }}...
+                                    {% else %}
+                                    {{ result.target_value }}
+                                    {% endif %}
+                                </code>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    {{ result.detected_at.strftime('%d/%m/%Y %H:%M:%S') if result.detected_at else '-' }}
+                                </small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Nenhuma diferença encontrada entre as tabelas.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const COMPARISON_ID = {{ comparison.id }};
+    const COMPARISON_DATA = {
+        id: {{ comparison.id }},
+        project_id: {{ comparison.project_id }},
+        executed_at: '{{ comparison.executed_at.isoformat() if comparison.executed_at else "" }}',
+        status: '{{ comparison.status }}',
+        total_differences: {{ comparison.total_differences or 0 }},
+        results: [
+            {% for result in results %}
+            {
+                id: {{ result.id }},
+                record_id: {{ result.record_id|tojson }},
+                field_name: {{ result.field_name|tojson }},
+                source_value: {{ result.source_value|tojson }},
+                target_value: {{ result.target_value|tojson }},
+                change_type: {{ result.change_type|tojson }},
+                detected_at: '{{ result.detected_at.isoformat() if result.detected_at else "" }}'
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ]
+    };
+    
+    // Export to JSON
+    function exportToJSON() {
+        const jsonContent = JSON.stringify(COMPARISON_DATA, null, 2);
+        const blob = new Blob([jsonContent], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `comparison_${COMPARISON_ID}_${new Date().getTime()}.json`;
+        link.click();
+    }
+    
+    // Export to CSV
+    function exportToCSV() {
+        const headers = ['ID do Registro', 'Campo', 'Tipo de Mudança', 'Valor Origem', 'Valor Destino', 'Data de Detecção'];
+        const rows = COMPARISON_DATA.results.map(r => [
+            r.record_id || '',
+            r.field_name || '',
+            r.change_type || '',
+            r.source_value || '',
+            r.target_value || '',
+            r.detected_at || ''
+        ]);
+        
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(cell => {
+                const cellStr = String(cell).replace(/"/g, '""');
+                return `"${cellStr}"`;
+            }).join(','))
+        ].join('\n');
+        
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `comparison_${COMPARISON_ID}_${new Date().getTime()}.csv`;
+        link.click();
+    }
+    
+    // Export to TXT
+    function exportToTXT() {
+        let txtContent = `RESULTADOS DA COMPARAÇÃO\n`;
+        txtContent += `========================\n\n`;
+        txtContent += `ID da Comparação: ${COMPARISON_DATA.id}\n`;
+        txtContent += `Projeto ID: ${COMPARISON_DATA.project_id}\n`;
+        txtContent += `Data de Execução: ${COMPARISON_DATA.executed_at}\n`;
+        txtContent += `Status: ${COMPARISON_DATA.status}\n`;
+        txtContent += `Total de Diferenças: ${COMPARISON_DATA.total_differences}\n\n`;
+        txtContent += `DIFERENÇAS ENCONTRADAS\n`;
+        txtContent += `======================\n\n`;
+        
+        if (COMPARISON_DATA.results.length === 0) {
+            txtContent += `Nenhuma diferença encontrada.\n`;
+        } else {
+            COMPARISON_DATA.results.forEach((result, index) => {
+                txtContent += `${index + 1}. Registro ID: ${result.record_id || 'N/A'}\n`;
+                txtContent += `   Campo: ${result.field_name || 'N/A'}\n`;
+                txtContent += `   Tipo: ${result.change_type || 'N/A'}\n`;
+                txtContent += `   Valor Origem: ${result.source_value !== null && result.source_value !== undefined ? result.source_value : 'null'}\n`;
+                txtContent += `   Valor Destino: ${result.target_value !== null && result.target_value !== undefined ? result.target_value : 'null'}\n`;
+                txtContent += `   Data de Detecção: ${result.detected_at || 'N/A'}\n`;
+                txtContent += `\n`;
+            });
+        }
+        
+        const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `comparison_${COMPARISON_ID}_${new Date().getTime()}.txt`;
+        link.click();
+    }
+</script>
+{% endblock %}
+

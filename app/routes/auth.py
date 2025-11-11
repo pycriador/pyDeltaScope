@@ -107,8 +107,12 @@ def login():
     token = generate_token(user)
     session['user_id'] = user.id
     session['token'] = token
+    session.permanent = True  # Make session permanent
     
     print(f"[LOGIN] Login successful for user '{username}'")
+    print(f"[LOGIN] Session user_id set to: {session.get('user_id')}")
+    print(f"[LOGIN] Session keys: {list(session.keys())}")
+    print(f"[LOGIN] Session permanent: {session.permanent}")
     
     return jsonify({
         'message': 'Login successful',

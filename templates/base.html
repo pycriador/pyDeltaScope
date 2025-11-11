@@ -7,6 +7,20 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <script>
+        // Apply theme IMMEDIATELY before page renders to prevent flash
+        (function() {
+            try {
+                const theme = localStorage.getItem('theme') || 'light';
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark-theme');
+                    document.body.classList.add('dark-theme');
+                }
+            } catch (e) {
+                // Ignore errors
+            }
+        })();
+    </script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -18,56 +32,80 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'connections_template.connections_page' %}active{% endif %}" href="/conexoes">
-                            <i class="fas fa-database me-1"></i>Conexões
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'projects_template.projects_page' %}active{% endif %}" href="/projetos">
-                            <i class="fas fa-folder me-1"></i>Projetos
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'comparison_template.comparison_page' %}active{% endif %}" href="/comparacao">
-                            <i class="fas fa-code-branch me-1"></i>Comparação
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'dashboard_template.dashboard_page' %}active{% endif %}" href="/dashboard">
-                            <i class="fas fa-chart-bar me-1"></i>Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'tables_template.tables_page' %}active{% endif %}" href="/tabelas">
-                            <i class="fas fa-table me-1"></i>Tabelas
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'reports_template.reports_page' %}active{% endif %}" href="/relatorios">
-                            <i class="fas fa-file-alt me-1"></i>Relatórios
-                        </a>
-                    </li>
+                       <ul class="navbar-nav me-auto">
+                           {% set user_groups_list = current_user.groups if current_user.groups else [] %}
+                           {% if current_user.is_admin or user_groups_list|selectattr('can_create_connections')|list|length > 0 or user_groups_list|selectattr('can_create_projects')|list|length > 0 or user_groups_list|selectattr('can_view_dashboards')|list|length > 0 or user_groups_list|selectattr('can_view_tables')|list|length > 0 or user_groups_list|selectattr('can_view_reports')|list|length > 0 %}
+                               {% if current_user.is_admin or user_groups_list|selectattr('can_create_connections')|list|length > 0 %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'connections_template.connections_page' %}active{% endif %}" href="/conexoes" data-template-link="true">
+                                <i class="fas fa-database me-1"></i>Conexões
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                               {% if current_user.is_admin or user_groups_list|selectattr('can_create_projects')|list|length > 0 %}
+                               <li class="nav-item">
+                                   <a class="nav-link {% if request.endpoint == 'projects_template.projects_page' %}active{% endif %}" href="/projetos" data-template-link="true">
+                                       <i class="fas fa-folder me-1"></i>Projetos
+                                   </a>
+                               </li>
+                               {% endif %}
+                               
+                               {% if current_user.is_admin or user_groups_list|selectattr('can_create_projects')|list|length > 0 %}
+                               <li class="nav-item">
+                                   <a class="nav-link {% if request.endpoint == 'comparison_template.comparison_page' %}active{% endif %}" href="/comparacao" data-template-link="true">
+                                       <i class="fas fa-code-branch me-1"></i>Comparação
+                                   </a>
+                               </li>
+                               {% endif %}
+                               
+                               {% if current_user.is_admin or user_groups_list|selectattr('can_view_dashboards')|list|length > 0 %}
+                               <li class="nav-item">
+                                   <a class="nav-link {% if request.endpoint == 'dashboard_template.dashboard_page' %}active{% endif %}" href="/dashboard" data-template-link="true">
+                                       <i class="fas fa-chart-bar me-1"></i>Dashboard
+                                   </a>
+                               </li>
+                               {% endif %}
+                               
+                               {% if current_user.is_admin or user_groups_list|selectattr('can_view_tables')|list|length > 0 %}
+                               <li class="nav-item">
+                                   <a class="nav-link {% if request.endpoint == 'tables_template.tables_page' %}active{% endif %}" href="/tabelas" data-template-link="true">
+                                       <i class="fas fa-table me-1"></i>Tabelas
+                                   </a>
+                               </li>
+                               {% endif %}
+                               
+                               {% if current_user.is_admin or user_groups_list|selectattr('can_view_reports')|list|length > 0 %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'reports_template.reports_page' %}active{% endif %}" href="/relatorios" data-template-link="true">
+                                <i class="fas fa-file-alt me-1"></i>Relatórios
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% endif %}
+                    
                     {% if current_user.is_admin %}
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'users_template.users_page' %}active{% endif %}" href="/usuarios">
+                        <a class="nav-link {% if request.endpoint == 'users_template.users_page' %}active{% endif %}" href="/usuarios" data-template-link="true">
                             <i class="fas fa-users me-1"></i>Usuários
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'groups_template.groups_page' %}active{% endif %}" href="/grupos">
+                        <a class="nav-link {% if request.endpoint == 'groups_template.groups_page' %}active{% endif %}" href="/grupos" data-template-link="true">
                             <i class="fas fa-user-friends me-1"></i>Grupos
                         </a>
                     </li>
                     {% endif %}
                 </ul>
                 <div class="navbar-nav">
+                    <button class="btn btn-outline-light btn-sm me-2" id="themeToggle" title="Alternar tema">
+                        <i class="fas fa-moon" id="themeIcon"></i>
+                    </button>
                     <span class="navbar-text me-3">Olá, {{ current_user.username }}</span>
                     <a href="/api-docs" class="btn btn-outline-light btn-sm me-2" target="_blank">
                         <i class="fas fa-book me-1"></i>API Docs
                     </a>
-                    <a href="/" class="btn btn-outline-light btn-sm" onclick="sessionStorage.clear(); localStorage.clear();">
+                    <a href="/api/auth/logout" class="btn btn-outline-light btn-sm" onclick="handleLogout(event);">
                         <i class="fas fa-sign-out-alt me-1"></i>Sair
                     </a>
                 </div>
@@ -78,8 +116,99 @@
     <div class="main-app-container">
         {% block content %}{% endblock %}
     </div>
+    
+    <script>
+        // Ensure navigation links work correctly on template pages
+        // This runs IMMEDIATELY to prevent any interference from app.js
+        (function() {
+            // Only run on template pages (no mainApp element)
+            if (!document.getElementById('mainApp')) {
+                // Intercept clicks on template links BEFORE any other handlers
+                document.addEventListener('click', function(e) {
+                    const link = e.target.closest('a[data-template-link="true"]');
+                    if (link && link.href && link.href !== '#' && !link.href.includes('javascript:')) {
+                        // Force navigation using window.location
+                        console.log('[NAV] Template link clicked, navigating to:', link.href);
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        window.location.href = link.href;
+                        return false;
+                    }
+                }, true); // Use capture phase to run FIRST, before any other listeners
+            }
+        })();
+    </script>
+    
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // Theme management for template pages
+        (function() {
+            // Load theme preference
+            function loadTheme() {
+                try {
+                    const savedTheme = localStorage.getItem('theme') || 'light';
+                    if (savedTheme === 'dark') {
+                        document.documentElement.classList.add('dark-theme');
+                        document.body.classList.add('dark-theme');
+                        updateThemeIcon(true);
+                    } else {
+                        document.documentElement.classList.remove('dark-theme');
+                        document.body.classList.remove('dark-theme');
+                        updateThemeIcon(false);
+                    }
+                } catch (error) {
+                    console.warn('Could not load theme:', error);
+                }
+            }
+            
+            // Update theme icon
+            function updateThemeIcon(isDark) {
+                const icon = document.getElementById('themeIcon');
+                if (icon) {
+                    if (isDark) {
+                        icon.classList.remove('fa-moon');
+                        icon.classList.add('fa-sun');
+                    } else {
+                        icon.classList.remove('fa-sun');
+                        icon.classList.add('fa-moon');
+                    }
+                }
+            }
+            
+            // Toggle theme
+            function toggleTheme() {
+                try {
+                    const isDark = document.body.classList.contains('dark-theme');
+                    if (isDark) {
+                        document.documentElement.classList.remove('dark-theme');
+                        document.body.classList.remove('dark-theme');
+                        localStorage.setItem('theme', 'light');
+                        updateThemeIcon(false);
+                    } else {
+                        document.documentElement.classList.add('dark-theme');
+                        document.body.classList.add('dark-theme');
+                        localStorage.setItem('theme', 'dark');
+                        updateThemeIcon(true);
+                    }
+                } catch (error) {
+                    console.error('Error toggling theme:', error);
+                }
+            }
+            
+            // Initialize theme on page load
+            loadTheme();
+            
+            // Setup toggle button click handler
+            $(document).ready(function() {
+                $('#themeToggle').on('click', function(e) {
+                    e.preventDefault();
+                    toggleTheme();
+                });
+            });
+        })();
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

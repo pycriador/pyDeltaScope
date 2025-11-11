@@ -13,6 +13,13 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    # Session configuration
+    SESSION_PERMANENT = True
+    PERMANENT_SESSION_LIFETIME = 86400  # 24 hours in seconds
+    SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    
     # Encryption key for database passwords
     ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY') or None
     
