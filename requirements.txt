@@ -1,0 +1,14 @@
+Flask
+SQLAlchemy
+Flask-SQLAlchemy
+Flask-Migrate
+Werkzeug
+python-dotenv
+PyMySQL
+cryptography
+requests
+pandas
+plotly
+flask-cors
+
+

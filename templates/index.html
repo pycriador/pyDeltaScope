@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeltaScope - Comparação de Tabelas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-exchange-alt me-2"></i>DeltaScope
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/conexoes" onclick="event.preventDefault(); navigateToSection('connections');">
+                            <i class="fas fa-database me-1"></i>Conexões
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/projetos" onclick="event.preventDefault(); navigateToSection('projects');">
+                            <i class="fas fa-folder me-1"></i>Projetos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/comparacao" onclick="event.preventDefault(); navigateToSection('comparison');">
+                            <i class="fas fa-code-branch me-1"></i>Comparação
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard" onclick="event.preventDefault(); navigateToSection('dashboard');">
+                            <i class="fas fa-chart-bar me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/tabelas" onclick="event.preventDefault(); navigateToSection('tables');">
+                            <i class="fas fa-table me-1"></i>Tabelas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/relatorios" onclick="event.preventDefault(); navigateToSection('reports');">
+                            <i class="fas fa-file-alt me-1"></i>Relatórios
+                        </a>
+                    </li>
+                    <li class="nav-item" id="adminUsersNav" style="display: none;">
+                        <a class="nav-link" href="/usuarios" onclick="event.preventDefault(); navigateToSection('users');">
+                            <i class="fas fa-users me-1"></i>Usuários
+                        </a>
+                    </li>
+                    <li class="nav-item" id="adminGroupsNav" style="display: none;">
+                        <a class="nav-link" href="/grupos" onclick="event.preventDefault(); navigateToSection('groups');">
+                            <i class="fas fa-user-friends me-1"></i>Grupos
+                        </a>
+                    </li>
+                </ul>
+                <div class="navbar-nav">
+                    <button class="btn btn-outline-light btn-sm me-2" onclick="toggleTheme()" id="themeToggle" title="Alternar tema">
+                        <i class="fas fa-moon" id="themeIcon"></i>
+                    </button>
+                    <span class="navbar-text me-3" id="userInfo"></span>
+                    <a href="/api-docs" class="btn btn-outline-light btn-sm me-2" target="_blank">
+                        <i class="fas fa-book me-1"></i>API Docs
+                    </a>
+                    <button class="btn btn-outline-light btn-sm" onclick="logout()">
+                        <i class="fas fa-sign-out-alt me-1"></i>Sair
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Login Section - Modern Split Layout -->
+    <div id="loginSection" class="login-container">
+        <div class="login-wrapper">
+            <div class="login-card">
+                <!-- Left Side - Project Description -->
+                <div class="login-left">
+                    <div class="login-brand">
+                        <div class="brand-icon">
+                            <i class="fas fa-code"></i>
+                        </div>
+                        <h1 class="brand-title">DeltaScope</h1>
+                        <p class="brand-subtitle">Sistema de Comparação de Tabelas</p>
+                    </div>
+                    
+                    <div class="login-features">
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-exchange-alt"></i>
+                            </div>
+                            <div class="feature-content">
+                                <h4>Comparação Inteligente</h4>
+                                <p>Compare tabelas entre diferentes bancos de dados de forma automática e precisa</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="feature-content">
+                                <h4>Dashboards Dinâmicos</h4>
+                                <p>Visualize mudanças e tendências com gráficos interativos e relatórios detalhados</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-database"></i>
+                            </div>
+                            <div class="feature-content">
+                                <h4>Múltiplos Bancos</h4>
+                                <p>Suporte para MariaDB, MySQL e SQLite com geração automática de modelos SQLAlchemy</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="login-footer-left">
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            Sistema seguro com autenticação e controle de acesso
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Right Side - Login Form -->
+                <div class="login-right">
+                    <div class="login-form-container">
+                        <div class="login-header">
+                            <h2>Bem-vindo de volta!</h2>
+                            <p class="text-muted">Entre com suas credenciais para acessar o sistema</p>
+                        </div>
+                        
+                        <form id="loginForm" class="login-form">
+                            <div class="form-group">
+                                <label for="username" class="form-label">
+                                    <i class="fas fa-user me-2"></i>Usuário
+                                </label>
+                                <input type="text" class="form-control form-control-lg" id="username" placeholder="Digite seu usuário" required autofocus>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="password" class="form-label">
+                                    <i class="fas fa-lock me-2"></i>Senha
+                                </label>
+                                <input type="password" class="form-control form-control-lg" id="password" placeholder="Digite sua senha" required>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-lg w-100 login-btn">
+                                <i class="fas fa-sign-in-alt me-2"></i>Entrar
+                            </button>
+                        </form>
+                        
+                        <div class="login-divider">
+                            <span>ou</span>
+                        </div>
+                        
+                        <div class="login-footer-right">
+                            <p class="text-center text-muted mb-0">
+                                Não tem conta? 
+                                <a href="#" onclick="showRegister()" class="register-link">
+                                    <strong>Registre-se aqui</strong>
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Section - Modern Split Layout -->
+    <div id="registerSection" class="login-container" style="display: none;">
+        <div class="login-wrapper">
+            <div class="login-card">
+                <!-- Left Side - Project Description -->
+                <div class="login-left">
+                    <div class="login-brand">
+                        <div class="brand-icon">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <h1 class="brand-title">Criar Conta</h1>
+                        <p class="brand-subtitle">Junte-se ao DeltaScope</p>
+                    </div>
+                    
+                    <div class="login-features">
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-rocket"></i>
+                            </div>
+                            <div class="feature-content">
+                                <h4>Comece Agora</h4>
+                                <p>Crie sua conta e comece a comparar tabelas em minutos</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-cog"></i>
+                            </div>
+                            <div class="feature-content">
+                                <h4>Configuração Simples</h4>
+                                <p>Configure conexões de banco de dados de forma rápida e segura</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-chart-bar"></i>
+                            </div>
+                            <div class="feature-content">
+                                <h4>Análise Completa</h4>
+                                <p>Acompanhe mudanças com relatórios detalhados e dashboards</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="login-footer-left">
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Registro rápido e gratuito
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Right Side - Register Form -->
+                <div class="login-right">
+                    <div class="login-form-container">
+                        <div class="login-header">
+                            <h2>Criar Nova Conta</h2>
+                            <p class="text-muted">Preencha os dados abaixo para se registrar</p>
+                        </div>
+                        
+                        <form id="registerForm" class="login-form">
+                            <div class="form-group">
+                                <label for="regUsername" class="form-label">
+                                    <i class="fas fa-user me-2"></i>Usuário
+                                </label>
+                                <input type="text" class="form-control form-control-lg" id="regUsername" placeholder="Escolha um nome de usuário" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="regEmail" class="form-label">
+                                    <i class="fas fa-envelope me-2"></i>Email
+                                </label>
+                                <input type="email" class="form-control form-control-lg" id="regEmail" placeholder="seu@email.com" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="regPassword" class="form-label">
+                                    <i class="fas fa-lock me-2"></i>Senha
+                                </label>
+                                <input type="password" class="form-control form-control-lg" id="regPassword" placeholder="Mínimo 6 caracteres" required minlength="6">
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-lg w-100 login-btn">
+                                <i class="fas fa-user-plus me-2"></i>Criar Conta
+                            </button>
+                        </form>
+                        
+                        <div class="login-divider">
+                            <span>ou</span>
+                        </div>
+                        
+                        <div class="login-footer-right">
+                            <p class="text-center text-muted mb-0">
+                                Já tem conta? 
+                                <a href="#" onclick="showLogin()" class="register-link">
+                                    <strong>Faça login aqui</strong>
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <!-- Main Application Sections -->
+        <div id="mainApp" style="display: none;" class="main-app-container">
+            <!-- Welcome Section -->
+            <div id="welcomeSection">
+                <div class="welcome-container">
+                    <div class="welcome-content">
+                        <div class="welcome-icon">
+                            <i class="fas fa-rocket"></i>
+                        </div>
+                        <h1 class="welcome-title">Bem-vindo ao DeltaScope!</h1>
+                        <p class="welcome-subtitle">Sistema de Comparação de Tabelas entre Bancos de Dados</p>
+                        
+                        <div class="welcome-features">
+                            <div class="welcome-feature-card">
+                                <div class="feature-icon-card">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </div>
+                                <h4>Comparação Inteligente</h4>
+                                <p>Compare tabelas entre diferentes bancos de dados de forma automática</p>
+                            </div>
+                            
+                            <div class="welcome-feature-card">
+                                <div class="feature-icon-card">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <h4>Dashboards Dinâmicos</h4>
+                                <p>Visualize mudanças e tendências com gráficos interativos</p>
+                            </div>
+                            
+                            <div class="welcome-feature-card">
+                                <div class="feature-icon-card">
+                                    <i class="fas fa-database"></i>
+                                </div>
+                                <h4>Múltiplos Bancos</h4>
+                                <p>Suporte para MariaDB, MySQL e SQLite</p>
+                            </div>
+                        </div>
+                        
+                        <div class="welcome-actions">
+                            <button class="btn btn-primary btn-lg" onclick="navigateToSection('connections')">
+                                <i class="fas fa-database me-2"></i>Começar - Criar Conexão
+                            </button>
+                            <button class="btn btn-outline-primary btn-lg" onclick="navigateToSection('dashboard')">
+                                <i class="fas fa-chart-bar me-2"></i>Ver Dashboard
+                            </button>
+                        </div>
+                        
+                        <p class="welcome-help">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Use o menu de navegação acima para acessar todas as funcionalidades
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tables Management Section -->
+            <div id="tablesSection" style="display: none;">
+                <h2 class="mb-4"><i class="fas fa-table me-2"></i>Gerenciar Tabelas</h2>
+                <div class="card shadow mb-4">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="tableConnectionSelect" class="form-label">Selecione uma Conexão</label>
+                            <select class="form-select" id="tableConnectionSelect" onchange="onTableConnectionChange(this.value)">
+                                <option value="">Selecione uma conexão...</option>
+                            </select>
+                        </div>
+                        <div id="tablesListContainer"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Connections Section -->
+            <div id="connectionsSection">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-database me-2"></i>Conexões de Banco de Dados</h2>
+                    <button class="btn btn-primary" onclick="showCreateConnectionModal()">
+                        <i class="fas fa-plus me-1"></i>Nova Conexão
+                    </button>
+                </div>
+                <div id="connectionsList" class="row"></div>
+            </div>
+
+            <!-- Projects Section -->
+            <div id="projectsSection" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-folder me-2"></i>Projetos</h2>
+                    <button class="btn btn-primary" onclick="showCreateProjectModal()">
+                        <i class="fas fa-plus me-1"></i>Novo Projeto
+                    </button>
+                </div>
+                <div id="projectsList" class="row"></div>
+            </div>
+
+            <!-- Comparison Section -->
+            <div id="comparisonSection" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-code-branch me-2"></i>Comparação de Tabelas</h2>
+                </div>
+                
+                <div class="card shadow mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-project-diagram me-2"></i>Selecione um Projeto para Comparação</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="comparisonProjectsList" class="row mb-4">
+                            <!-- Projects will be rendered here as cards -->
+                        </div>
+                        
+                        <div id="projectComparisonInfo" style="display: none;">
+                            <hr class="my-4">
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <h6 class="text-muted mb-1"><i class="fas fa-folder me-2"></i>Projeto</h6>
+                                                    <p class="mb-0 fw-bold" id="selectedProjectName"></p>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <h6 class="text-muted mb-1"><i class="fas fa-arrow-right me-2 text-primary"></i>Tabela Origem</h6>
+                                                    <p class="mb-0 fw-bold" id="selectedSourceTable"></p>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <h6 class="text-muted mb-1"><i class="fas fa-arrow-left me-2 text-success"></i>Tabela Destino</h6>
+                                                    <p class="mb-0 fw-bold" id="selectedTargetTable"></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="card h-100 border-primary">
+                                        <div class="card-header bg-primary text-white">
+                                            <h6 class="mb-0"><i class="fas fa-database me-2"></i>Tabela Origem</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="sourceTableInfo" class="small"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card h-100 border-success">
+                                        <div class="card-header bg-success text-white">
+                                            <h6 class="mb-0"><i class="fas fa-database me-2"></i>Tabela Destino</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="targetTableInfo" class="small"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <button class="btn btn-success btn-lg px-5" onclick="showPrimaryKeySelection()" id="compareBtn">
+                                    <i class="fas fa-play me-2"></i>Executar Comparação
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Results Section -->
+                <div id="comparisonResults" class="mt-4" style="display: none;">
+                    <div class="card shadow">
+                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i>Resultados da Comparação</h5>
+                            <div>
+                                <button class="btn btn-sm btn-light me-2" onclick="exportResults('csv')">
+                                    <i class="fas fa-file-csv me-1"></i>CSV
+                                </button>
+                                <button class="btn btn-sm btn-light me-2" onclick="exportResults('json')">
+                                    <i class="fas fa-file-code me-1"></i>JSON
+                                </button>
+                                <button class="btn btn-sm btn-light" onclick="exportResults('txt')">
+                                    <i class="fas fa-file-alt me-1"></i>TXT
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-4">
+                                <div class="col-md-3 mb-3">
+                                    <div class="card bg-primary text-white stat-card h-100">
+                                        <div class="card-body text-center">
+                                            <h2 class="mb-2" id="totalDifferences">0</h2>
+                                            <p class="mb-0"><i class="fas fa-exchange-alt me-1"></i>Total de Diferenças</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="card bg-info text-white stat-card h-100">
+                                        <div class="card-body text-center">
+                                            <h2 class="mb-2" id="totalModified">0</h2>
+                                            <p class="mb-0"><i class="fas fa-edit me-1"></i>Campos Modificados</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="card bg-warning text-white stat-card h-100">
+                                        <div class="card-body text-center">
+                                            <h2 class="mb-2" id="totalAdded">0</h2>
+                                            <p class="mb-0"><i class="fas fa-plus-circle me-1"></i>Registros Adicionados</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="card bg-danger text-white stat-card h-100">
+                                        <div class="card-body text-center">
+                                            <h2 class="mb-2" id="totalDeleted">0</h2>
+                                            <p class="mb-0"><i class="fas fa-minus-circle me-1"></i>Registros Removidos</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover" id="resultsTable">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>ID do Registro</th>
+                                            <th>Campo</th>
+                                            <th>Valor Origem</th>
+                                            <th>Valor Destino</th>
+                                            <th>Tipo de Mudança</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="resultsTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Section -->
+            <div id="dashboardSection" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-chart-bar me-2"></i>Dashboard</h2>
+                    <div class="d-flex gap-2">
+                        <select class="form-select" id="dashboardProjectSelect" style="width: 300px;" onchange="loadDashboard()">
+                            <option value="">Selecione um projeto...</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label"><strong>Data Inicial:</strong></label>
+                                <input type="datetime-local" class="form-control" id="dashboardStartDate" onchange="loadDashboard()">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label"><strong>Data Final:</strong></label>
+                                <input type="datetime-local" class="form-control" id="dashboardEndDate" onchange="loadDashboard()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-white bg-primary">
+                            <div class="card-body">
+                                <h5 class="card-title">Total de Comparações</h5>
+                                <h2 id="statTotalComparisons">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-white bg-success">
+                            <div class="card-body">
+                                <h5 class="card-title">Comparações Concluídas</h5>
+                                <h2 id="statCompletedComparisons">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-white bg-warning">
+                            <div class="card-body">
+                                <h5 class="card-title">Total de Diferenças</h5>
+                                <h2 id="statTotalDifferences">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-white bg-info">
+                            <div class="card-body">
+                                <h5 class="card-title">Campos Modificados</h5>
+                                <h2 id="statModifiedFields">0</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Mudanças ao Longo do Tempo</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="changesOverTimeChart"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Campos Mais Modificados</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="fieldChangesChart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Section -->
+            <div id="reportsSection" style="display: none;">
+                <h2 class="mb-4"><i class="fas fa-file-alt me-2"></i>Relatórios</h2>
+                <div class="card shadow mb-4">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="reportsProjectSelect" class="form-label">
+                                <strong>Selecione um Projeto</strong>
+                            </label>
+                            <select class="form-select" id="reportsProjectSelect" onchange="loadReports()">
+                                <option value="">Todos os projetos...</option>
+                            </select>
+                        </div>
+                        <div id="reportsList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Connection Modal -->
+    <div class="modal fade" id="createConnectionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nova Conexão de Banco de Dados</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createConnectionForm">
+                        <div class="mb-3">
+                            <label for="connectionName" class="form-label">Nome da Conexão</label>
+                            <input type="text" class="form-control" id="connectionName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="connectionDescription" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="connectionDescription" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="connectionDbType" class="form-label">Tipo de Banco</label>
+                            <select class="form-select" id="connectionDbType" onchange="updateConnectionDbConfig()">
+                                <option value="sqlite">SQLite</option>
+                                <option value="mariadb">MariaDB</option>
+                            </select>
+                        </div>
+                        <div id="connectionDbConfig"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="testConnectionForNew()">Testar Conexão</button>
+                    <button type="button" class="btn btn-primary" onclick="createConnection()">Criar Conexão</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Connection Modal -->
+    <div class="modal fade" id="editConnectionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Conexão de Banco de Dados</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editConnectionForm">
+                        <input type="hidden" id="editConnectionId">
+                        <div class="mb-3">
+                            <label for="editConnectionName" class="form-label">Nome da Conexão</label>
+                            <input type="text" class="form-control" id="editConnectionName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editConnectionDescription" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="editConnectionDescription" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editConnectionDbType" class="form-label">Tipo de Banco</label>
+                            <select class="form-select" id="editConnectionDbType" onchange="updateEditConnectionDbConfig()">
+                                <option value="sqlite">SQLite</option>
+                                <option value="mariadb">MariaDB</option>
+                            </select>
+                        </div>
+                        <div id="editConnectionDbConfig"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="testEditConnection()">Testar Conexão</button>
+                    <button type="button" class="btn btn-primary" onclick="updateConnection()">Salvar Alterações</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Project Modal -->
+    <div class="modal fade" id="createProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Novo Projeto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Step 1: Project Info and Connection Selection -->
+                    <div id="projectConfigStep">
+                        <form id="createProjectForm">
+                            <div class="mb-3">
+                                <label for="projectName" class="form-label">Nome do Projeto</label>
+                                <input type="text" class="form-control" id="projectName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="projectDescription" class="form-label">Descrição</label>
+                                <textarea class="form-control" id="projectDescription" rows="2"></textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Conexão Origem</h6>
+                                    <select class="form-select mb-3" id="sourceConnectionSelect" onchange="loadConnectionTables('source')">
+                                        <option value="">Selecione uma conexão...</option>
+                                    </select>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="showCreateConnectionModal()">
+                                        <i class="fas fa-plus me-1"></i>Nova Conexão
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Conexão Destino</h6>
+                                    <select class="form-select mb-3" id="targetConnectionSelect" onchange="loadConnectionTables('target')">
+                                        <option value="">Selecione uma conexão...</option>
+                                    </select>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="showCreateConnectionModal()">
+                                        <i class="fas fa-plus me-1"></i>Nova Conexão
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Step 2: Table Selection -->
+                    <div id="tableSelectionStep" style="display: none;">
+                        <h6 class="mb-3">Selecione as Tabelas</h6>
+                        <div class="row">
+                            <div class="col-md-5">
+                                <h6>Tabela Origem</h6>
+                                <select class="form-select mb-3" id="modalSourceTableSelect" size="10" onchange="updateModalTableInfo('source', this.value)">
+                                    <option value="">Selecione uma conexão primeiro...</option>
+                                </select>
+                                <div id="modalSourceTableInfo" class="small text-muted"></div>
+                            </div>
+                            <div class="col-md-2 text-center align-self-center">
+                                <i class="fas fa-exchange-alt fa-2x text-primary"></i>
+                            </div>
+                            <div class="col-md-5">
+                                <h6>Tabela Destino</h6>
+                                <select class="form-select mb-3" id="modalTargetTableSelect" size="10" onchange="updateModalTableInfo('target', this.value)">
+                                    <option value="">Selecione uma conexão primeiro...</option>
+                                </select>
+                                <div id="modalTargetTableInfo" class="small text-muted"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-outline-primary" id="backToConfigBtn" style="display: none;" onclick="backToConfig()">Voltar</button>
+                    <button type="button" class="btn btn-primary" id="nextToTablesBtn" onclick="loadTablesForProject()" disabled>Próximo: Selecionar Tabelas</button>
+                    <button type="button" class="btn btn-success" id="createProjectBtn" style="display: none;" onclick="createProject()">Criar Projeto</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Project Modal -->
+    <div class="modal fade" id="editProjectModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Projeto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Step 1: Project Info and Connection Selection -->
+                    <div id="editProjectConfigStep">
+                        <form id="editProjectForm">
+                            <input type="hidden" id="editProjectId">
+                            <div class="mb-3">
+                                <label for="editProjectName" class="form-label">Nome do Projeto</label>
+                                <input type="text" class="form-control" id="editProjectName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editProjectDescription" class="form-label">Descrição</label>
+                                <textarea class="form-control" id="editProjectDescription" rows="2"></textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Conexão Origem</h6>
+                                    <select class="form-select mb-3" id="editSourceConnectionSelect" onchange="loadEditConnectionTables('source')">
+                                        <option value="">Selecione uma conexão...</option>
+                                    </select>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="showCreateConnectionModal()">
+                                        <i class="fas fa-plus me-1"></i>Nova Conexão
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Conexão Destino</h6>
+                                    <select class="form-select mb-3" id="editTargetConnectionSelect" onchange="loadEditConnectionTables('target')">
+                                        <option value="">Selecione uma conexão...</option>
+                                    </select>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="showCreateConnectionModal()">
+                                        <i class="fas fa-plus me-1"></i>Nova Conexão
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Step 2: Table Selection -->
+                    <div id="editTableSelectionStep" style="display: none;">
+                        <h6 class="mb-3">Selecione as Tabelas</h6>
+                        <div class="row">
+                            <div class="col-md-5">
+                                <h6>Tabela Origem</h6>
+                                <select class="form-select mb-3" id="editModalSourceTableSelect" size="10" onchange="updateEditModalTableInfo('source', this.value)">
+                                    <option value="">Selecione uma conexão primeiro...</option>
+                                </select>
+                                <div id="editModalSourceTableInfo" class="small text-muted"></div>
+                            </div>
+                            <div class="col-md-2 text-center align-self-center">
+                                <i class="fas fa-exchange-alt fa-2x text-primary"></i>
+                            </div>
+                            <div class="col-md-5">
+                                <h6>Tabela Destino</h6>
+                                <select class="form-select mb-3" id="editModalTargetTableSelect" size="10" onchange="updateEditModalTableInfo('target', this.value)">
+                                    <option value="">Selecione uma conexão primeiro...</option>
+                                </select>
+                                <div id="editModalTargetTableInfo" class="small text-muted"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-outline-primary" id="editBackToConfigBtn" style="display: none;" onclick="editBackToConfig()">Voltar</button>
+                    <button type="button" class="btn btn-primary" id="editNextToTablesBtn" onclick="loadEditTablesForProject()" disabled>Próximo: Selecionar Tabelas</button>
+                    <button type="button" class="btn btn-success" id="updateProjectBtn" style="display: none;" onclick="updateProject()">Salvar Alterações</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Modal -->
+    <div class="modal fade" id="notificationModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" id="notificationHeader">
+                    <h5 class="modal-title" id="notificationTitle">Notificação</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="notificationBody">
+                    <p id="notificationMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title" id="confirmationTitle">Confirmação</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmationMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="confirmationCancelBtn">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="confirmationConfirmBtn">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Primary Key Mapping Modal -->
+    <div class="modal fade" id="primaryKeyModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-key me-2"></i>Mapear Chaves de Comparação</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Selecione os campos correspondentes em cada tabela que serão usados como chave primária para comparar os registros. 
+                        Por exemplo: se na tabela origem o campo é "user_id" e na destino é "id_user", selecione ambos.
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-5">
+                            <h6 class="mb-3"><strong>Tabela Origem:</strong> <span id="sourceTableNameModal"></span></h6>
+                            <div id="sourceColumnsList" class="border p-3 rounded" style="max-height: 400px; overflow-y: auto;">
+                                <p class="text-muted text-center">Carregando colunas...</p>
+                            </div>
+                        </div>
+                        <div class="col-md-2 text-center align-self-center">
+                            <i class="fas fa-exchange-alt fa-2x text-primary"></i>
+                            <p class="small mt-2">Mapear</p>
+                        </div>
+                        <div class="col-md-5">
+                            <h6 class="mb-3"><strong>Tabela Destino:</strong> <span id="targetTableNameModal"></span></h6>
+                            <div id="targetColumnsList" class="border p-3 rounded" style="max-height: 400px; overflow-y: auto;">
+                                <p class="text-muted text-center">Carregando colunas...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h6><strong>Mapeamentos Selecionados:</strong></h6>
+                        <div id="keyMappingsList" class="border p-3 rounded bg-light">
+                            <p class="text-muted text-center mb-0">Nenhum mapeamento selecionado ainda.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning mt-3" id="primaryKeyWarning" style="display: none;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Selecione pelo menos um mapeamento de chave primária.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="clearAllPrimaryKeyCheckboxes()">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmPrimaryKeysAndRun()">
+                        <i class="fas fa-play me-2"></i>Executar Comparação
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-5">
+                    <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <h5 id="loadingMessage">Executando comparação...</h5>
+                    <p class="text-muted mt-2" id="loadingDetails">Por favor, aguarde enquanto processamos os dados.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Column Type Edit Modal -->
+    <div class="modal fade" id="columnTypeModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" style="z-index: 1060;">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Alterar Tipo de Dado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="columnTypeForm">
+                        <input type="hidden" id="columnTypeConnectionId">
+                        <input type="hidden" id="editTableName">
+                        <input type="hidden" id="editColumnName">
+                        
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Coluna:</strong></label>
+                            <p class="form-control-plaintext" id="editColumnDisplay"></p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="editColumnType" class="form-label"><strong>Tipo de Dado:</strong></label>
+                            <select class="form-select" id="editColumnType" required>
+                                <option value="">Selecione um tipo...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="editColumnNullable">
+                                <label class="form-check-label" for="editColumnNullable">
+                                    Permite NULL
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="editColumnPrimaryKey">
+                                <label class="form-check-label" for="editColumnPrimaryKey">
+                                    Chave Primária
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Atenção:</strong> Esta alteração será aplicada no banco de dados original e todos os modelos SQLAlchemy relacionados serão atualizados automaticamente.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-warning" onclick="saveColumnType()">
+                        <i class="fas fa-save me-2"></i>Salvar Alterações
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Viewer Modal -->
+    <div class="modal fade" id="modelViewerModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title"><i class="fas fa-code me-2"></i>Visualizar Modelo SQLAlchemy</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <strong>Tabela:</strong> <span id="modelTableName"></span><br>
+                        <strong>Conexão:</strong> <span id="modelConnectionName"></span><br>
+                        <strong>Arquivo:</strong> <span id="modelFilePath" class="text-muted small"></span>
+                    </div>
+                    <pre class="bg-light p-3 rounded" style="max-height: 500px; overflow-y: auto;"><code id="modelCodeContent"></code></pre>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-primary" onclick="copyModelCode()">
+                        <i class="fas fa-copy me-2"></i>Copiar Código
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Management Section -->
+    <div id="usersSection" style="display: none;">
+        <div class="px-3 px-md-4">
+            <h2 class="mb-4"><i class="fas fa-users me-2"></i>Gerenciamento de Usuários</h2>
+            
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>Usuários</h5>
+                        <button class="btn btn-light btn-sm" onclick="showCreateUserModal()">
+                            <i class="fas fa-plus me-1"></i>Novo Usuário
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="usersListContainer">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create User Modal -->
+    <div class="modal fade" id="createUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Criar Novo Usuário</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createUserForm">
+                        <div class="mb-3">
+                            <label for="newUsername" class="form-label">Usuário <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="newUsername" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newEmail" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="newEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">Senha <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="newPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="newIsAdmin">
+                                <label class="form-check-label" for="newIsAdmin">
+                                    Administrador
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="newIsActive" checked>
+                                <label class="form-check-label" for="newIsActive">
+                                    Usuário Ativo
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" onclick="createUser()">
+                        <i class="fas fa-save me-2"></i>Criar Usuário
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div class="modal fade" id="changePasswordModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="fas fa-key me-2"></i>Alterar Senha</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="changePasswordForm">
+                        <input type="hidden" id="passwordUserId">
+                        <div class="mb-3">
+                            <label for="newUserPassword" class="form-label">Nova Senha <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="newUserPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmUserPassword" class="form-label">Confirmar Senha <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="confirmUserPassword" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-warning" onclick="savePasswordChange()">
+                        <i class="fas fa-save me-2"></i>Alterar Senha
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Groups Management Section -->
+    <div id="groupsSection" style="display: none;">
+        <div class="px-3 px-md-4">
+            <h2 class="mb-4"><i class="fas fa-user-friends me-2"></i>Gerenciamento de Grupos</h2>
+            
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-user-friends me-2"></i>Grupos</h5>
+                        <button class="btn btn-light btn-sm" onclick="showCreateGroupModal()">
+                            <i class="fas fa-plus me-1"></i>Novo Grupo
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="groupsListContainer">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit Group Modal -->
+    <div class="modal fade" id="groupModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="groupModalTitle"><i class="fas fa-user-friends me-2"></i>Criar Novo Grupo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="groupForm">
+                        <input type="hidden" id="groupId">
+                        <div class="mb-3">
+                            <label for="groupName" class="form-label">Nome do Grupo <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="groupName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="groupDescription" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="groupDescription" rows="2"></textarea>
+                        </div>
+                        <hr>
+                        <h6 class="mb-3">Permissões:</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permCreateConnections">
+                                    <label class="form-check-label" for="permCreateConnections">
+                                        Criar Conexões
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permCreateProjects">
+                                    <label class="form-check-label" for="permCreateProjects">
+                                        Criar Projetos
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permViewDashboards">
+                                    <label class="form-check-label" for="permViewDashboards">
+                                        Visualizar Dashboards
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permEditTables">
+                                    <label class="form-check-label" for="permEditTables">
+                                        Editar Tabelas
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permViewTables">
+                                    <label class="form-check-label" for="permViewTables">
+                                        Visualizar Tabelas
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permViewReports">
+                                    <label class="form-check-label" for="permViewReports">
+                                        Visualizar Relatórios
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permDownloadReports">
+                                    <label class="form-check-label" for="permDownloadReports">
+                                        Baixar Relatórios
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" onclick="saveGroup()">
+                        <i class="fas fa-save me-2"></i>Salvar Grupo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Users Modal -->
+    <div class="modal fade" id="groupUsersModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title"><i class="fas fa-users me-2"></i>Usuários do Grupo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="groupUsersGroupId">
+                    <div class="mb-3">
+                        <button class="btn btn-success btn-sm" onclick="showAddUserToGroupModal()">
+                            <i class="fas fa-plus me-1"></i>Adicionar Usuário
+                        </button>
+                    </div>
+                    <div id="groupUsersListContainer">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User to Group Modal -->
+    <div class="modal fade" id="addUserToGroupModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Adicionar Usuário ao Grupo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="addUserSearch" class="form-label">Buscar Usuário</label>
+                        <input type="text" class="form-control" id="addUserSearch" placeholder="Digite para buscar..." onkeyup="filterAvailableUsers()">
+                    </div>
+                    <div id="availableUsersList" style="max-height: 400px; overflow-y: auto;">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- First Time Setup Modal -->
+    <div class="modal fade" id="setupModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-user-shield me-2"></i>Configuração Inicial</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Bem-vindo ao DeltaScope!</strong><br>
+                        Esta é a primeira execução do sistema. Por favor, crie o usuário administrador inicial.
+                    </div>
+                    <form id="setupForm">
+                        <div class="mb-3">
+                            <label for="setupUsername" class="form-label">Usuário Administrador <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="setupUsername" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="setupEmail" class="form-label">Email <span class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="setupEmail" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="setupPassword" class="form-label">Senha <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="setupPassword" required minlength="6">
+                            <small class="form-text text-muted">Mínimo de 6 caracteres</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="setupPasswordConfirm" class="form-label">Confirmar Senha <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control" id="setupPasswordConfirm" required minlength="6">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="createFirstAdmin()">
+                        <i class="fas fa-save me-2"></i>Criar Administrador
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+
+

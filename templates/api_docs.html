@@ -1,0 +1,2732 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeltaScope - Documentação da API</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary-color: #8b5cf6;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --info-color: #3b82f6;
+            --dark-bg: #1e293b;
+            --dark-card: #0f172a;
+            --light-bg: #f8fafc;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --card-shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        * {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .navbar {
+            background: rgba(15, 23, 42, 0.95) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .api-endpoint {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 32px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .api-endpoint:hover {
+            box-shadow: var(--card-shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .api-endpoint h2 {
+            color: var(--dark-bg);
+            font-weight: 700;
+            font-size: 1.875rem;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 3px solid var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .api-endpoint h2 i {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+        }
+
+        .api-endpoint h4 {
+            color: var(--dark-bg);
+            font-weight: 600;
+            font-size: 1.25rem;
+            margin-top: 32px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .api-endpoint h5 {
+            color: #475569;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 12px;
+            font-size: 1rem;
+        }
+
+        .method-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .method-badge:hover {
+            transform: scale(1.05);
+        }
+
+        .method-get { 
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        .method-post { 
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+        .method-put { 
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+        .method-delete { 
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+
+        .endpoint-url {
+            font-family: 'Fira Code', 'Courier New', monospace;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            padding: 10px 16px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-left: 12px;
+            font-weight: 600;
+            color: var(--primary-dark);
+            border: 1px solid #cbd5e1;
+            font-size: 0.95rem;
+        }
+
+        .code-tabs {
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .code-tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .code-tab:hover {
+            background: #f1f5f9;
+            color: var(--primary-color);
+        }
+
+        .code-tab.active {
+            color: var(--primary-color);
+            background: #f1f5f9;
+        }
+
+        .code-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--primary-color);
+            border-radius: 2px 2px 0 0;
+        }
+
+        .code-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .code-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        pre {
+            margin: 0;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #e2e8f0;
+            padding: 24px;
+            border-radius: 12px;
+            overflow-x: auto;
+            border: 1px solid #334155;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        pre code {
+            color: #e2e8f0;
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 10px;
+        }
+
+        .sidebar .card {
+            background: white;
+            border-radius: 16px;
+            border: none;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+        }
+
+        .sidebar .card-title {
+            color: var(--dark-bg);
+            font-weight: 700;
+            font-size: 1.125rem;
+            padding: 20px 20px 0;
+            margin-bottom: 16px;
+        }
+
+        .sidebar .nav-link {
+            color: #64748b;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin: 4px 8px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sidebar .nav-link:hover {
+            color: var(--primary-color);
+            background: #f1f5f9;
+            transform: translateX(4px);
+        }
+
+        .sidebar .nav-link::before {
+            content: '→';
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .sidebar .nav-link:hover::before {
+            opacity: 1;
+        }
+
+        p {
+            color: #475569;
+            line-height: 1.7;
+            margin-bottom: 16px;
+        }
+
+        ul {
+            color: #475569;
+            line-height: 1.8;
+        }
+
+        ul li {
+            margin-bottom: 8px;
+        }
+
+        ul li code {
+            background: #f1f5f9;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: var(--primary-dark);
+            font-weight: 600;
+        }
+
+        .text-warning {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 12px 16px;
+            border-radius: 8px;
+            border-left: 4px solid var(--warning-color);
+            margin-bottom: 20px;
+        }
+
+        .container-fluid {
+            padding: 0 24px;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-outline-light {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-light:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .api-endpoint {
+                padding: 20px;
+            }
+
+            .endpoint-url {
+                display: block;
+                margin-left: 0;
+                margin-top: 12px;
+            }
+
+            .code-tabs {
+                flex-direction: column;
+            }
+
+            .code-tab {
+                width: 100%;
+                border-radius: 8px;
+                margin-bottom: 8px;
+            }
+
+            .code-tab.active::after {
+                display: none;
+            }
+        }
+
+        /* Scrollbar for code blocks */
+        pre::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        pre::-webkit-scrollbar-track {
+            background: #334155;
+            border-radius: 10px;
+        }
+
+        pre::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 10px;
+        }
+
+        /* Badge improvements */
+        .badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-code me-2"></i><span>DeltaScope</span> <span class="text-light opacity-75">API Docs</span>
+            </a>
+            <div>
+                <a href="/" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-home me-1"></i>Voltar ao Sistema
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Sidebar Navigation -->
+            <div class="col-md-3">
+                <div class="card sidebar">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-list-ul me-2 text-primary"></i>Navegação
+                        </h5>
+                        <nav class="nav flex-column">
+                            <a class="nav-link" href="#introduction">
+                                <i class="fas fa-info-circle me-2"></i>Introdução
+                            </a>
+                            <a class="nav-link" href="#authentication">
+                                <i class="fas fa-key me-2"></i>Autenticação
+                            </a>
+                            <a class="nav-link" href="#users">
+                                <i class="fas fa-users me-2"></i>Usuários
+                            </a>
+                            <a class="nav-link" href="#groups">
+                                <i class="fas fa-users-cog me-2"></i>Grupos
+                            </a>
+                            <a class="nav-link" href="#connections">
+                                <i class="fas fa-database me-2"></i>Conexões
+                            </a>
+                            <a class="nav-link" href="#projects">
+                                <i class="fas fa-project-diagram me-2"></i>Projetos
+                            </a>
+                            <a class="nav-link" href="#comparisons">
+                                <i class="fas fa-exchange-alt me-2"></i>Comparações
+                            </a>
+                            <a class="nav-link" href="#dashboard">
+                                <i class="fas fa-chart-line me-2"></i>Dashboard
+                            </a>
+                            <a class="nav-link" href="#tables">
+                                <i class="fas fa-table me-2"></i>Tabelas
+                            </a>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9">
+                <!-- Introduction -->
+                <div id="introduction" class="api-endpoint">
+                    <h2>
+                        <i class="fas fa-info-circle"></i>
+                        <span>Introdução</span>
+                    </h2>
+                    <div class="alert border-0 shadow-sm" style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-left: 4px solid var(--info-color) !important;">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-rocket me-3 mt-1" style="color: var(--info-color); font-size: 1.5rem;"></i>
+                            <div>
+                                <h5 class="alert-heading mb-2" style="color: var(--info-color);">Bem-vindo à API DeltaScope</h5>
+                                <p class="mb-2">A API do DeltaScope fornece acesso completo às funcionalidades do sistema através de endpoints RESTful.</p>
+                                <p class="mb-0"><strong>Endpoint Base:</strong></p>
+                                <div class="endpoint-url mt-2" style="display: inline-block;">http://localhost:5000/api</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+                                <div class="card-body">
+                                    <h5 class="card-title" style="color: var(--success-color);">
+                                        <i class="fas fa-key me-2"></i>Autenticação
+                                    </h5>
+                                    <p class="card-text">A maioria dos endpoints requer autenticação. Após fazer login, você receberá um token:</p>
+                                    <pre class="mt-3"><code>Authorization: Bearer {seu_token}
+X-User-Id: {user_id}</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);">
+                                <div class="card-body">
+                                    <h5 class="card-title" style="color: var(--warning-color);">
+                                        <i class="fas fa-code me-2"></i>Formato de Resposta
+                                    </h5>
+                                    <p class="card-text">Todas as respostas são em formato JSON:</p>
+                                    <pre class="mt-3"><code>{
+  "message": "Descrição do erro"
+}</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Authentication Endpoints -->
+                <div id="authentication" class="api-endpoint">
+                    <h2><i class="fas fa-key me-2"></i>Autenticação</h2>
+
+                    <!-- POST /api/auth/register -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-url">/api/auth/register</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Registra um novo usuário no sistema. Não requer autenticação.</p>
+                        
+                        <h5 class="mt-3">Request Body:</h5>
+                        <pre><code>{
+  "username": "usuario",
+  "email": "usuario@exemplo.com",
+  "password": "senha123"
+}</code></pre>
+
+                        <h5 class="mt-3">Response (201 Created):</h5>
+                        <pre><code>{
+  "message": "User created successfully",
+  "user": {
+    "id": 1,
+    "username": "usuario",
+    "email": "usuario@exemplo.com",
+    "is_admin": false,
+    "is_active": true
+  },
+  "token": "token_gerado_aqui"
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('register', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('register', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('register', 'php')">PHP</button>
+                        </div>
+                        <div id="register-python" class="code-content active">
+                            <pre><code>import requests
+
+url = "http://localhost:5000/api/auth/register"
+data = {
+    "username": "usuario",
+    "email": "usuario@exemplo.com",
+    "password": "senha123"
+}
+
+response = requests.post(url, json=data)
+result = response.json()
+
+if response.status_code == 201:
+    print("Usuário criado:", result['user'])
+    print("Token:", result['token'])
+else:
+    print("Erro:", result['message'])</code></pre>
+                        </div>
+                        <div id="register-curl" class="code-content">
+                            <pre><code>curl -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "usuario",
+    "email": "usuario@exemplo.com",
+    "password": "senha123"
+  }'</code></pre>
+                        </div>
+                        <div id="register-php" class="code-content">
+                            <pre><code>$url = "http://localhost:5000/api/auth/register";
+$data = [
+    "username" => "usuario",
+    "email" => "usuario@exemplo.com",
+    "password" => "senha123"
+];
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+
+$response = curl_exec($ch);
+$result = json_decode($response, true);
+curl_close($ch);
+
+if (isset($result['user'])) {
+    echo "Usuário criado: " . $result['user']['username'];
+    echo "Token: " . $result['token'];
+} else {
+    echo "Erro: " . $result['message'];
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- POST /api/auth/login -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-url">/api/auth/login</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Autentica um usuário e retorna um token de acesso. Não requer autenticação.</p>
+                        
+                        <h5 class="mt-3">Request Body:</h5>
+                        <pre><code>{
+  "username": "usuario",
+  "password": "senha123"
+}</code></pre>
+
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "message": "Login successful",
+  "user": {
+    "id": 1,
+    "username": "usuario",
+    "email": "usuario@exemplo.com",
+    "is_admin": false,
+    "is_active": true
+  },
+  "token": "token_gerado_aqui"
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('login', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('login', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('login', 'php')">PHP</button>
+                        </div>
+                        <div id="login-python" class="code-content active">
+                            <pre><code>import requests
+
+url = "http://localhost:5000/api/auth/login"
+data = {
+    "username": "usuario",
+    "password": "senha123"
+}
+
+response = requests.post(url, json=data)
+result = response.json()
+
+if response.status_code == 200:
+    token = result['token']
+    user_id = result['user']['id']
+    print(f"Token: {token}")
+    print(f"User ID: {user_id}")
+else:
+    print("Erro:", result['message'])</code></pre>
+                        </div>
+                        <div id="login-curl" class="code-content">
+                            <pre><code>curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "usuario",
+    "password": "senha123"
+  }'</code></pre>
+                        </div>
+                        <div id="login-php" class="code-content">
+                            <pre><code>$url = "http://localhost:5000/api/auth/login";
+$data = [
+    "username" => "usuario",
+    "password" => "senha123"
+];
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+
+$response = curl_exec($ch);
+$result = json_decode($response, true);
+curl_close($ch);
+
+if (isset($result['token'])) {
+    $token = $result['token'];
+    $userId = $result['user']['id'];
+    echo "Token: $token\n";
+    echo "User ID: $userId\n";
+} else {
+    echo "Erro: " . $result['message'];
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- POST /api/auth/logout -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-url">/api/auth/logout</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Faz logout do usuário atual, invalidando a sessão.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "message": "Logout successful"
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('logout', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('logout', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('logout', 'php')">PHP</button>
+                        </div>
+                        <div id="logout-python" class="code-content active">
+                            <pre><code>import requests
+
+url = "http://localhost:5000/api/auth/logout"
+headers = {
+    "Authorization": f"Bearer {token}"
+}
+
+response = requests.post(url, headers=headers)
+print(response.json())</code></pre>
+                        </div>
+                        <div id="logout-curl" class="code-content">
+                            <pre><code>curl -X POST http://localhost:5000/api/auth/logout \
+  -H "Authorization: Bearer {token}"</code></pre>
+                        </div>
+                        <div id="logout-php" class="code-content">
+                            <pre><code>$url = "http://localhost:5000/api/auth/logout";
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token"
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+echo $response;</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- GET /api/auth/me -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/auth/me</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Retorna informações do usuário autenticado atual.</p>
+                        
+                        <h5 class="mt-3">Headers:</h5>
+                        <pre><code>Authorization: Bearer {token}</code></pre>
+
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "user": {
+    "id": 1,
+    "username": "usuario",
+    "email": "usuario@exemplo.com",
+    "is_admin": false,
+    "is_active": true
+  }
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('me', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('me', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('me', 'php')">PHP</button>
+                        </div>
+                        <div id="me-python" class="code-content active">
+                            <pre><code>import requests
+
+url = "http://localhost:5000/api/auth/me"
+headers = {
+    "Authorization": f"Bearer {token}"
+}
+
+response = requests.get(url, headers=headers)
+user = response.json()['user']
+print(f"Usuário: {user['username']}")</code></pre>
+                        </div>
+                        <div id="me-curl" class="code-content">
+                            <pre><code>curl -X GET http://localhost:5000/api/auth/me \
+  -H "Authorization: Bearer {token}"</code></pre>
+                        </div>
+                        <div id="me-php" class="code-content">
+                            <pre><code>$url = "http://localhost:5000/api/auth/me";
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token"
+]);
+
+$response = curl_exec($ch);
+$user = json_decode($response, true)['user'];
+curl_close($ch);
+echo "Usuário: " . $user['username'];</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Users Endpoints -->
+                <div id="users" class="api-endpoint">
+                    <h2><i class="fas fa-users me-2"></i>Usuários (Admin Only)</h2>
+                    <p class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Todos os endpoints de usuários requerem autenticação e privilégios de administrador.</p>
+
+                    <!-- GET /api/users/ -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/users/</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Lista todos os usuários cadastrados no sistema. Apenas administradores podem acessar este endpoint.</p>
+                        
+                        <h5 class="mt-3">Headers:</h5>
+                        <pre><code>Authorization: Bearer {token}
+X-User-Id: {user_id}</code></pre>
+
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "email": "admin@exemplo.com",
+      "is_admin": true,
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "username": "usuario",
+      "email": "usuario@exemplo.com",
+      "is_admin": false,
+      "is_active": true
+    }
+  ]
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('list-users', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('list-users', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('list-users', 'php')">PHP</button>
+                        </div>
+                        <div id="list-users-python" class="code-content active">
+                            <pre><code>import requests
+
+url = "http://localhost:5000/api/users/"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id)
+}
+
+response = requests.get(url, headers=headers)
+users = response.json()['users']
+
+for user in users:
+    print(f"{user['username']} - {user['email']}")</code></pre>
+                        </div>
+                        <div id="list-users-curl" class="code-content">
+                            <pre><code>curl -X GET http://localhost:5000/api/users/ \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"</code></pre>
+                        </div>
+                        <div id="list-users-php" class="code-content">
+                            <pre><code>$url = "http://localhost:5000/api/users/";
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId"
+]);
+
+$response = curl_exec($ch);
+$users = json_decode($response, true)['users'];
+curl_close($ch);
+
+foreach ($users as $user) {
+    echo $user['username'] . " - " . $user['email'] . "\n";
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- POST /api/users/ -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-url">/api/users/</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Cria um novo usuário no sistema. Apenas administradores podem criar usuários.</p>
+                        
+                        <h5 class="mt-3">Request Body:</h5>
+                        <pre><code>{
+  "username": "novo_usuario",
+  "email": "novo@exemplo.com",
+  "password": "senha123",
+  "is_admin": false
+}</code></pre>
+
+                        <h5 class="mt-3">Response (201 Created):</h5>
+                        <pre><code>{
+  "message": "User created successfully",
+  "user": {
+    "id": 3,
+    "username": "novo_usuario",
+    "email": "novo@exemplo.com",
+    "is_admin": false,
+    "is_active": true
+  }
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('create-user', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('create-user', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('create-user', 'php')">PHP</button>
+                        </div>
+                        <div id="create-user-python" class="code-content active">
+                            <pre><code>import requests
+
+url = "http://localhost:5000/api/users/"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id),
+    "Content-Type": "application/json"
+}
+data = {
+    "username": "novo_usuario",
+    "email": "novo@exemplo.com",
+    "password": "senha123",
+    "is_admin": False
+}
+
+response = requests.post(url, json=data, headers=headers)
+result = response.json()
+
+if response.status_code == 201:
+    print(f"Usuário criado: {result['user']['username']}")
+else:
+    print(f"Erro: {result['message']}")</code></pre>
+                        </div>
+                        <div id="create-user-curl" class="code-content">
+                            <pre><code>curl -X POST http://localhost:5000/api/users/ \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "novo_usuario",
+    "email": "novo@exemplo.com",
+    "password": "senha123",
+    "is_admin": false
+  }'</code></pre>
+                        </div>
+                        <div id="create-user-php" class="code-content">
+                            <pre><code>$url = "http://localhost:5000/api/users/";
+$data = [
+    "username" => "novo_usuario",
+    "email" => "novo@exemplo.com",
+    "password" => "senha123",
+    "is_admin" => false
+];
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId",
+    "Content-Type: application/json"
+]);
+
+$response = curl_exec($ch);
+$result = json_decode($response, true);
+curl_close($ch);
+
+if (isset($result['user'])) {
+    echo "Usuário criado: " . $result['user']['username'];
+} else {
+    echo "Erro: " . $result['message'];
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- PUT /api/users/<user_id>/password -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-put">PUT</span>
+                            <span class="endpoint-url">/api/users/&lt;user_id&gt;/password</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Altera a senha de um usuário. Apenas administradores podem alterar senhas de outros usuários.</p>
+                        
+                        <h5 class="mt-3">Request Body:</h5>
+                        <pre><code>{
+  "password": "nova_senha123"
+}</code></pre>
+
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "message": "Password changed successfully"
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('change-password', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('change-password', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('change-password', 'php')">PHP</button>
+                        </div>
+                        <div id="change-password-python" class="code-content active">
+                            <pre><code>import requests
+
+user_id = 2
+url = f"http://localhost:5000/api/users/{user_id}/password"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(admin_user_id),
+    "Content-Type": "application/json"
+}
+data = {
+    "password": "nova_senha123"
+}
+
+response = requests.put(url, json=data, headers=headers)
+print(response.json())</code></pre>
+                        </div>
+                        <div id="change-password-curl" class="code-content">
+                            <pre><code>curl -X PUT http://localhost:5000/api/users/2/password \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {admin_user_id}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "password": "nova_senha123"
+  }'</code></pre>
+                        </div>
+                        <div id="change-password-php" class="code-content">
+                            <pre><code>$userId = 2;
+$url = "http://localhost:5000/api/users/$userId/password";
+$data = ["password" => "nova_senha123"];
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $adminUserId",
+    "Content-Type: application/json"
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+echo $response;</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- DELETE /api/users/<user_id> -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-delete">DELETE</span>
+                            <span class="endpoint-url">/api/users/&lt;user_id&gt;</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Deleta um usuário do sistema. O usuário será removido de todos os grupos antes de ser deletado. Um administrador não pode deletar a si mesmo.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "message": "User deleted successfully and removed from all groups"
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('delete-user', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('delete-user', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('delete-user', 'php')">PHP</button>
+                        </div>
+                        <div id="delete-user-python" class="code-content active">
+                            <pre><code>import requests
+
+user_id = 2
+url = f"http://localhost:5000/api/users/{user_id}"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(admin_user_id)
+}
+
+response = requests.delete(url, headers=headers)
+print(response.json())</code></pre>
+                        </div>
+                        <div id="delete-user-curl" class="code-content">
+                            <pre><code>curl -X DELETE http://localhost:5000/api/users/2 \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {admin_user_id}"</code></pre>
+                        </div>
+                        <div id="delete-user-php" class="code-content">
+                            <pre><code>$userId = 2;
+$url = "http://localhost:5000/api/users/$userId";
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $adminUserId"
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+echo $response;</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- PUT /api/users/<user_id>/toggle-active -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-put">PUT</span>
+                            <span class="endpoint-url">/api/users/&lt;user_id&gt;/toggle-active</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Ativa ou desativa um usuário. Usuários desativados não podem fazer login ou usar a API.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "message": "User status updated",
+  "user": {
+    "id": 2,
+    "is_active": false
+  }
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('toggle-active', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('toggle-active', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('toggle-active', 'php')">PHP</button>
+                        </div>
+                        <div id="toggle-active-python" class="code-content active">
+                            <pre><code>import requests
+
+user_id = 2
+url = f"http://localhost:5000/api/users/{user_id}/toggle-active"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(admin_user_id)
+}
+
+response = requests.put(url, headers=headers)
+print(response.json())</code></pre>
+                        </div>
+                        <div id="toggle-active-curl" class="code-content">
+                            <pre><code>curl -X PUT http://localhost:5000/api/users/2/toggle-active \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {admin_user_id}"</code></pre>
+                        </div>
+                        <div id="toggle-active-php" class="code-content">
+                            <pre><code>$userId = 2;
+$url = "http://localhost:5000/api/users/$userId/toggle-active";
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $adminUserId"
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+echo $response;</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Groups Endpoints -->
+                <div id="groups" class="api-endpoint">
+                    <h2><i class="fas fa-users-cog me-2"></i>Grupos (Admin Only)</h2>
+                    <p class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Todos os endpoints de grupos requerem autenticação e privilégios de administrador.</p>
+
+                    <!-- GET /api/groups/ -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/groups/</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Lista todos os grupos de permissões cadastrados no sistema.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "groups": [
+    {
+      "id": 1,
+      "name": "Administradores",
+      "description": "Acesso total ao sistema",
+      "can_create_connections": true,
+      "can_create_projects": true,
+      "can_view_dashboards": true,
+      "can_edit_tables": true,
+      "can_view_tables": true,
+      "can_view_reports": true,
+      "can_download_reports": true,
+      "user_count": 2
+    }
+  ]
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('list-groups', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('list-groups', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('list-groups', 'php')">PHP</button>
+                        </div>
+                        <div id="list-groups-python" class="code-content active">
+                            <pre><code>import requests
+
+url = "http://localhost:5000/api/groups/"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id)
+}
+
+response = requests.get(url, headers=headers)
+groups = response.json()['groups']
+
+for group in groups:
+    print(f"{group['name']} - {group['user_count']} usuários")</code></pre>
+                        </div>
+                        <div id="list-groups-curl" class="code-content">
+                            <pre><code>curl -X GET http://localhost:5000/api/groups/ \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"</code></pre>
+                        </div>
+                        <div id="list-groups-php" class="code-content">
+                            <pre><code>$url = "http://localhost:5000/api/groups/";
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId"
+]);
+
+$response = curl_exec($ch);
+$groups = json_decode($response, true)['groups'];
+curl_close($ch);
+
+foreach ($groups as $group) {
+    echo $group['name'] . " - " . $group['user_count'] . " usuários\n";
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- POST /api/groups/ -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-url">/api/groups/</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Cria um novo grupo de permissões com as configurações especificadas.</p>
+                        
+                        <h5 class="mt-3">Request Body:</h5>
+                        <pre><code>{
+  "name": "Editores",
+  "description": "Podem editar tabelas",
+  "can_create_connections": false,
+  "can_create_projects": false,
+  "can_view_dashboards": true,
+  "can_edit_tables": true,
+  "can_view_tables": true,
+  "can_view_reports": true,
+  "can_download_reports": true
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('create-group', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('create-group', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('create-group', 'php')">PHP</button>
+                        </div>
+                        <div id="create-group-python" class="code-content active">
+                            <pre><code>import requests
+
+url = "http://localhost:5000/api/groups/"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id),
+    "Content-Type": "application/json"
+}
+data = {
+    "name": "Editores",
+    "description": "Podem editar tabelas",
+    "can_create_connections": False,
+    "can_create_projects": False,
+    "can_view_dashboards": True,
+    "can_edit_tables": True,
+    "can_view_tables": True,
+    "can_view_reports": True,
+    "can_download_reports": True
+}
+
+response = requests.post(url, json=data, headers=headers)
+print(response.json())</code></pre>
+                        </div>
+                        <div id="create-group-curl" class="code-content">
+                            <pre><code>curl -X POST http://localhost:5000/api/groups/ \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Editores",
+    "description": "Podem editar tabelas",
+    "can_create_connections": false,
+    "can_create_projects": false,
+    "can_view_dashboards": true,
+    "can_edit_tables": true,
+    "can_view_tables": true,
+    "can_view_reports": true,
+    "can_download_reports": true
+  }'</code></pre>
+                        </div>
+                        <div id="create-group-php" class="code-content">
+                            <pre><code>$url = "http://localhost:5000/api/groups/";
+$data = [
+    "name" => "Editores",
+    "description" => "Podem editar tabelas",
+    "can_create_connections" => false,
+    "can_create_projects" => false,
+    "can_view_dashboards" => true,
+    "can_edit_tables" => true,
+    "can_view_tables" => true,
+    "can_view_reports" => true,
+    "can_download_reports" => true
+];
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId",
+    "Content-Type: application/json"
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+echo $response;</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- POST /api/groups/<group_id>/users/<user_id> -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-url">/api/groups/&lt;group_id&gt;/users/&lt;user_id&gt;</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Adiciona um usuário a um grupo específico.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "message": "User added to group successfully"
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('add-user-group', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('add-user-group', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('add-user-group', 'php')">PHP</button>
+                        </div>
+                        <div id="add-user-group-python" class="code-content active">
+                            <pre><code>import requests
+
+group_id = 1
+user_id = 2
+url = f"http://localhost:5000/api/groups/{group_id}/users/{user_id}"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(admin_user_id)
+}
+
+response = requests.post(url, headers=headers)
+print(response.json())</code></pre>
+                        </div>
+                        <div id="add-user-group-curl" class="code-content">
+                            <pre><code>curl -X POST http://localhost:5000/api/groups/1/users/2 \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {admin_user_id}"</code></pre>
+                        </div>
+                        <div id="add-user-group-php" class="code-content">
+                            <pre><code>$groupId = 1;
+$userId = 2;
+$url = "http://localhost:5000/api/groups/$groupId/users/$userId";
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $adminUserId"
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+echo $response;</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- DELETE /api/groups/<group_id>/users/<user_id> -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-delete">DELETE</span>
+                            <span class="endpoint-url">/api/groups/&lt;group_id&gt;/users/&lt;user_id&gt;</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Remove um usuário de um grupo específico.</p>
+                        
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('remove-user-group', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('remove-user-group', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('remove-user-group', 'php')">PHP</button>
+                        </div>
+                        <div id="remove-user-group-python" class="code-content active">
+                            <pre><code>import requests
+
+group_id = 1
+user_id = 2
+url = f"http://localhost:5000/api/groups/{group_id}/users/{user_id}"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(admin_user_id)
+}
+
+response = requests.delete(url, headers=headers)
+print(response.json())</code></pre>
+                        </div>
+                        <div id="remove-user-group-curl" class="code-content">
+                            <pre><code>curl -X DELETE http://localhost:5000/api/groups/1/users/2 \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {admin_user_id}"</code></pre>
+                        </div>
+                        <div id="remove-user-group-php" class="code-content">
+                            <pre><code>$groupId = 1;
+$userId = 2;
+$url = "http://localhost:5000/api/groups/$groupId/users/$userId";
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "DELETE");
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $adminUserId"
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+echo $response;</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Connections Endpoints -->
+                <div id="connections" class="api-endpoint">
+                    <h2><i class="fas fa-database me-2"></i>Conexões de Banco de Dados</h2>
+
+                    <!-- GET /api/connections -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/connections</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Lista todas as conexões de banco de dados do usuário autenticado.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "connections": [
+    {
+      "id": 1,
+      "name": "Banco Produção",
+      "description": "Banco de produção",
+      "db_type": "mariadb",
+      "created_at": "2024-01-15T10:30:00"
+    }
+  ]
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('list-connections', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('list-connections', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('list-connections', 'php')">PHP</button>
+                        </div>
+                        <div id="list-connections-python" class="code-content active">
+                            <pre><code>import requests
+
+url = "http://localhost:5000/api/connections"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id)
+}
+
+response = requests.get(url, headers=headers)
+connections = response.json()['connections']
+
+for conn in connections:
+    print(f"{conn['name']} ({conn['db_type']})")</code></pre>
+                        </div>
+                        <div id="list-connections-curl" class="code-content">
+                            <pre><code>curl -X GET http://localhost:5000/api/connections \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"</code></pre>
+                        </div>
+                        <div id="list-connections-php" class="code-content">
+                            <pre><code>$url = "http://localhost:5000/api/connections";
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId"
+]);
+
+$response = curl_exec($ch);
+$connections = json_decode($response, true)['connections'];
+curl_close($ch);
+
+foreach ($connections as $conn) {
+    echo $conn['name'] . " (" . $conn['db_type'] . ")\n";
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- POST /api/connections -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-url">/api/connections</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Cria uma nova conexão de banco de dados. As senhas são criptografadas antes de serem salvas.</p>
+                        
+                        <h5 class="mt-3">Request Body (MariaDB/MySQL):</h5>
+                        <pre><code>{
+  "name": "Banco Produção",
+  "description": "Banco de dados de produção",
+  "db_type": "mariadb",
+  "db_config": {
+    "host": "localhost",
+    "port": 3306,
+    "user": "usuario",
+    "password": "senha",
+    "database": "meu_banco"
+  }
+}</code></pre>
+
+                        <h5 class="mt-3">Request Body (SQLite):</h5>
+                        <pre><code>{
+  "name": "Banco Local",
+  "db_type": "sqlite",
+  "db_config": {
+    "path": "/caminho/para/banco.db"
+  }
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('create-connection', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('create-connection', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('create-connection', 'php')">PHP</button>
+                        </div>
+                        <div id="create-connection-python" class="code-content active">
+                            <pre><code>import requests
+
+url = "http://localhost:5000/api/connections"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id),
+    "Content-Type": "application/json"
+}
+
+# Exemplo MariaDB
+data = {
+    "name": "Banco Produção",
+    "description": "Banco de produção",
+    "db_type": "mariadb",
+    "db_config": {
+        "host": "localhost",
+        "port": 3306,
+        "user": "usuario",
+        "password": "senha",
+        "database": "meu_banco"
+    }
+}
+
+response = requests.post(url, json=data, headers=headers)
+print(response.json())</code></pre>
+                        </div>
+                        <div id="create-connection-curl" class="code-content">
+                            <pre><code>curl -X POST http://localhost:5000/api/connections \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Banco Produção",
+    "db_type": "mariadb",
+    "db_config": {
+      "host": "localhost",
+      "port": 3306,
+      "user": "usuario",
+      "password": "senha",
+      "database": "meu_banco"
+    }
+  }'</code></pre>
+                        </div>
+                        <div id="create-connection-php" class="code-content">
+                            <pre><code>$url = "http://localhost:5000/api/connections";
+$data = [
+    "name" => "Banco Produção",
+    "description" => "Banco de produção",
+    "db_type" => "mariadb",
+    "db_config" => [
+        "host" => "localhost",
+        "port" => 3306,
+        "user" => "usuario",
+        "password" => "senha",
+        "database" => "meu_banco"
+    ]
+];
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId",
+    "Content-Type: application/json"
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+echo $response;</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- POST /api/connections/<connection_id>/test -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-url">/api/connections/&lt;connection_id&gt;/test</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Testa a conexão com o banco de dados especificado.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "success": true,
+  "message": "Connection successful"
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('test-connection', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('test-connection', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('test-connection', 'php')">PHP</button>
+                        </div>
+                        <div id="test-connection-python" class="code-content active">
+                            <pre><code>import requests
+
+connection_id = 1
+url = f"http://localhost:5000/api/connections/{connection_id}/test"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id)
+}
+
+response = requests.post(url, headers=headers)
+result = response.json()
+
+if result['success']:
+    print("Conexão OK!")
+else:
+    print(f"Erro: {result['message']}")</code></pre>
+                        </div>
+                        <div id="test-connection-curl" class="code-content">
+                            <pre><code>curl -X POST http://localhost:5000/api/connections/1/test \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"</code></pre>
+                        </div>
+                        <div id="test-connection-php" class="code-content">
+                            <pre><code>$connectionId = 1;
+$url = "http://localhost:5000/api/connections/$connectionId/test";
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId"
+]);
+
+$response = curl_exec($ch);
+$result = json_decode($response, true);
+curl_close($ch);
+
+if ($result['success']) {
+    echo "Conexão OK!";
+} else {
+    echo "Erro: " . $result['message'];
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- GET /api/connections/<connection_id>/tables -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/connections/&lt;connection_id&gt;/tables</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Lista todas as tabelas disponíveis em uma conexão de banco de dados.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "tables": ["usuarios", "produtos", "pedidos"]
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('list-tables', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('list-tables', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('list-tables', 'php')">PHP</button>
+                        </div>
+                        <div id="list-tables-python" class="code-content active">
+                            <pre><code>import requests
+
+connection_id = 1
+url = f"http://localhost:5000/api/connections/{connection_id}/tables"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id)
+}
+
+response = requests.get(url, headers=headers)
+tables = response.json()['tables']
+
+for table in tables:
+    print(f"- {table}")</code></pre>
+                        </div>
+                        <div id="list-tables-curl" class="code-content">
+                            <pre><code>curl -X GET http://localhost:5000/api/connections/1/tables \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"</code></pre>
+                        </div>
+                        <div id="list-tables-php" class="code-content">
+                            <pre><code>$connectionId = 1;
+$url = "http://localhost:5000/api/connections/$connectionId/tables";
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId"
+]);
+
+$response = curl_exec($ch);
+$tables = json_decode($response, true)['tables'];
+curl_close($ch);
+
+foreach ($tables as $table) {
+    echo "- $table\n";
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Projects Endpoints -->
+                <div id="projects" class="api-endpoint">
+                    <h2><i class="fas fa-project-diagram me-2"></i>Projetos</h2>
+
+                    <!-- GET /api/projects -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/projects</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Lista todos os projetos do usuário autenticado.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "projects": [
+    {
+      "id": 1,
+      "name": "Comparação Usuários",
+      "description": "Comparar tabelas de usuários",
+      "source_connection_id": 1,
+      "target_connection_id": 2,
+      "source_table": "usuarios_origem",
+      "target_table": "usuarios_destino"
+    }
+  ]
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('list-projects', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('list-projects', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('list-projects', 'php')">PHP</button>
+                        </div>
+                        <div id="list-projects-python" class="code-content active">
+                            <pre><code>import requests
+
+url = "http://localhost:5000/api/projects"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id)
+}
+
+response = requests.get(url, headers=headers)
+projects = response.json()['projects']
+
+for project in projects:
+    print(f"{project['name']}: {project['source_table']} -> {project['target_table']}")</code></pre>
+                        </div>
+                        <div id="list-projects-curl" class="code-content">
+                            <pre><code>curl -X GET http://localhost:5000/api/projects \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"</code></pre>
+                        </div>
+                        <div id="list-projects-php" class="code-content">
+                            <pre><code>$url = "http://localhost:5000/api/projects";
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId"
+]);
+
+$response = curl_exec($ch);
+$projects = json_decode($response, true)['projects'];
+curl_close($ch);
+
+foreach ($projects as $project) {
+    echo $project['name'] . ": " . $project['source_table'] . " -> " . $project['target_table'] . "\n";
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- POST /api/projects -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-url">/api/projects</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Cria um novo projeto de comparação. O sistema gerará automaticamente os modelos SQLAlchemy para as tabelas selecionadas.</p>
+                        
+                        <h5 class="mt-3">Request Body:</h5>
+                        <pre><code>{
+  "name": "Comparação Usuários",
+  "description": "Comparar tabelas de usuários entre produção e homologação",
+  "source_connection_id": 1,
+  "target_connection_id": 2,
+  "source_table": "usuarios_origem",
+  "target_table": "usuarios_destino"
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('create-project', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('create-project', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('create-project', 'php')">PHP</button>
+                        </div>
+                        <div id="create-project-python" class="code-content active">
+                            <pre><code>import requests
+
+url = "http://localhost:5000/api/projects"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id),
+    "Content-Type": "application/json"
+}
+data = {
+    "name": "Comparação Usuários",
+    "description": "Comparar tabelas de usuários",
+    "source_connection_id": 1,
+    "target_connection_id": 2,
+    "source_table": "usuarios_origem",
+    "target_table": "usuarios_destino"
+}
+
+response = requests.post(url, json=data, headers=headers)
+print(response.json())</code></pre>
+                        </div>
+                        <div id="create-project-curl" class="code-content">
+                            <pre><code>curl -X POST http://localhost:5000/api/projects \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Comparação Usuários",
+    "source_connection_id": 1,
+    "target_connection_id": 2,
+    "source_table": "usuarios_origem",
+    "target_table": "usuarios_destino"
+  }'</code></pre>
+                        </div>
+                        <div id="create-project-php" class="code-content">
+                            <pre><code>$url = "http://localhost:5000/api/projects";
+$data = [
+    "name" => "Comparação Usuários",
+    "description" => "Comparar tabelas de usuários",
+    "source_connection_id" => 1,
+    "target_connection_id" => 2,
+    "source_table" => "usuarios_origem",
+    "target_table" => "usuarios_destino"
+];
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId",
+    "Content-Type: application/json"
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+echo $response;</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparisons Endpoints -->
+                <div id="comparisons" class="api-endpoint">
+                    <h2><i class="fas fa-exchange-alt me-2"></i>Comparações</h2>
+
+                    <!-- POST /api/comparisons/project/<project_id> -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-url">/api/comparisons/project/&lt;project_id&gt;</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Executa uma comparação entre as tabelas origem e destino do projeto especificado. Permite mapear colunas de chave primária diferentes entre as tabelas.</p>
+                        
+                        <h5 class="mt-3">Request Body:</h5>
+                        <pre><code>{
+  "key_mappings": {
+    "id": "user_id",
+    "email": "email_address"
+  }
+}</code></pre>
+                        <p><strong>key_mappings:</strong> Objeto opcional que mapeia nomes de colunas da tabela origem para a tabela destino. Chave = coluna origem, Valor = coluna destino.</p>
+
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "message": "Comparison completed",
+  "comparison_id": 1,
+  "stats": {
+    "total_records": 100,
+    "added": 5,
+    "modified": 10,
+    "deleted": 2
+  }
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('run-comparison', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('run-comparison', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('run-comparison', 'php')">PHP</button>
+                        </div>
+                        <div id="run-comparison-python" class="code-content active">
+                            <pre><code>import requests
+
+project_id = 1
+url = f"http://localhost:5000/api/comparisons/project/{project_id}"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id),
+    "Content-Type": "application/json"
+}
+
+# Mapear chaves primárias diferentes
+data = {
+    "key_mappings": {
+        "id": "user_id",  # coluna origem -> coluna destino
+        "email": "email_address"
+    }
+}
+
+response = requests.post(url, json=data, headers=headers)
+result = response.json()
+
+print(f"Comparação ID: {result['comparison_id']}")
+print(f"Total de registros: {result['stats']['total_records']}")
+print(f"Adicionados: {result['stats']['added']}")
+print(f"Modificados: {result['stats']['modified']}")
+print(f"Deletados: {result['stats']['deleted']}")</code></pre>
+                        </div>
+                        <div id="run-comparison-curl" class="code-content">
+                            <pre><code>curl -X POST http://localhost:5000/api/comparisons/project/1 \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key_mappings": {
+      "id": "user_id",
+      "email": "email_address"
+    }
+  }'</code></pre>
+                        </div>
+                        <div id="run-comparison-php" class="code-content">
+                            <pre><code>$projectId = 1;
+$url = "http://localhost:5000/api/comparisons/project/$projectId";
+$data = [
+    "key_mappings" => [
+        "id" => "user_id",
+        "email" => "email_address"
+    ]
+];
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId",
+    "Content-Type: application/json"
+]);
+
+$response = curl_exec($ch);
+$result = json_decode($response, true);
+curl_close($ch);
+
+echo "Comparação ID: " . $result['comparison_id'] . "\n";
+echo "Total: " . $result['stats']['total_records'] . "\n";</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- GET /api/comparisons/<comparison_id>/results -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/comparisons/&lt;comparison_id&gt;/results</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Obtém os resultados detalhados de uma comparação executada, incluindo todas as diferenças encontradas entre as tabelas.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "comparison_id": 1,
+  "stats": {
+    "total_records": 100,
+    "added": 5,
+    "modified": 10,
+    "deleted": 2
+  },
+  "differences": [
+    {
+      "field_name": "nome",
+      "source_value": "João Silva",
+      "target_value": "João da Silva",
+      "change_type": "modified"
+    }
+  ]
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('get-results', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('get-results', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('get-results', 'php')">PHP</button>
+                        </div>
+                        <div id="get-results-python" class="code-content active">
+                            <pre><code>import requests
+
+comparison_id = 1
+url = f"http://localhost:5000/api/comparisons/{comparison_id}/results"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id)
+}
+
+response = requests.get(url, headers=headers)
+result = response.json()
+
+print(f"Estatísticas: {result['stats']}")
+print(f"\nDiferenças encontradas: {len(result['differences'])}")
+
+for diff in result['differences'][:10]:  # Primeiras 10
+    print(f"\nCampo: {diff['field_name']}")
+    print(f"  Origem: {diff['source_value']}")
+    print(f"  Destino: {diff['target_value']}")
+    print(f"  Tipo: {diff['change_type']}")</code></pre>
+                        </div>
+                        <div id="get-results-curl" class="code-content">
+                            <pre><code>curl -X GET http://localhost:5000/api/comparisons/1/results \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"</code></pre>
+                        </div>
+                        <div id="get-results-php" class="code-content">
+                            <pre><code>$comparisonId = 1;
+$url = "http://localhost:5000/api/comparisons/$comparisonId/results";
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId"
+]);
+
+$response = curl_exec($ch);
+$result = json_decode($response, true);
+curl_close($ch);
+
+echo "Estatísticas: " . json_encode($result['stats']) . "\n";
+echo "Diferenças: " . count($result['differences']) . "\n";</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- GET /api/comparisons/project/<project_id> -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/comparisons/project/&lt;project_id&gt;</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Lista todas as comparações executadas para um projeto específico, incluindo informações do projeto.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "comparisons": [
+    {
+      "id": 1,
+      "project_id": 1,
+      "executed_at": "2024-01-15T10:30:00",
+      "status": "completed",
+      "project": {
+        "name": "Comparação Usuários",
+        "source_table": "usuarios_origem",
+        "target_table": "usuarios_destino"
+      }
+    }
+  ]
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('list-comparisons', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('list-comparisons', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('list-comparisons', 'php')">PHP</button>
+                        </div>
+                        <div id="list-comparisons-python" class="code-content active">
+                            <pre><code>import requests
+
+project_id = 1
+url = f"http://localhost:5000/api/comparisons/project/{project_id}"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id)
+}
+
+response = requests.get(url, headers=headers)
+comparisons = response.json()['comparisons']
+
+for comp in comparisons:
+    print(f"Comparação #{comp['id']} - {comp['executed_at']} - {comp['status']}")</code></pre>
+                        </div>
+                        <div id="list-comparisons-curl" class="code-content">
+                            <pre><code>curl -X GET http://localhost:5000/api/comparisons/project/1 \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"</code></pre>
+                        </div>
+                        <div id="list-comparisons-php" class="code-content">
+                            <pre><code>$projectId = 1;
+$url = "http://localhost:5000/api/comparisons/project/$projectId";
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId"
+]);
+
+$response = curl_exec($ch);
+$comparisons = json_decode($response, true)['comparisons'];
+curl_close($ch);
+
+foreach ($comparisons as $comp) {
+    echo "Comparação #" . $comp['id'] . " - " . $comp['executed_at'] . "\n";
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- GET /api/comparisons -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/comparisons</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Lista todas as comparações de todos os projetos do usuário autenticado.</p>
+                        
+                        <h5 class="mt-3">Query Parameters:</h5>
+                        <ul>
+                            <li><code>project_id</code> (opcional): Filtrar por projeto específico</li>
+                        </ul>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('all-comparisons', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('all-comparisons', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('all-comparisons', 'php')">PHP</button>
+                        </div>
+                        <div id="all-comparisons-python" class="code-content active">
+                            <pre><code>import requests
+
+url = "http://localhost:5000/api/comparisons"
+# Opcional: filtrar por projeto
+# url = "http://localhost:5000/api/comparisons?project_id=1"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id)
+}
+
+response = requests.get(url, headers=headers)
+comparisons = response.json()['comparisons']
+
+print(f"Total de comparações: {len(comparisons)}")</code></pre>
+                        </div>
+                        <div id="all-comparisons-curl" class="code-content">
+                            <pre><code># Todas as comparações
+curl -X GET http://localhost:5000/api/comparisons \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"
+
+# Filtrar por projeto
+curl -X GET "http://localhost:5000/api/comparisons?project_id=1" \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"</code></pre>
+                        </div>
+                        <div id="all-comparisons-php" class="code-content">
+                            <pre><code>$url = "http://localhost:5000/api/comparisons";
+// Opcional: $url .= "?project_id=1";
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId"
+]);
+
+$response = curl_exec($ch);
+$comparisons = json_decode($response, true)['comparisons'];
+curl_close($ch);
+
+echo "Total: " . count($comparisons) . " comparações\n";</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Endpoints -->
+                <div id="dashboard" class="api-endpoint">
+                    <h2><i class="fas fa-chart-line me-2"></i>Dashboard</h2>
+
+                    <!-- GET /api/dashboard/project/<project_id>/stats -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/dashboard/project/&lt;project_id&gt;/stats</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Obtém estatísticas gerais de um projeto, incluindo total de comparações, mudanças e campos modificados. Permite filtrar por período.</p>
+                        
+                        <h5 class="mt-3">Query Parameters:</h5>
+                        <ul>
+                            <li><code>start_date</code> (opcional): Data inicial no formato YYYY-MM-DD</li>
+                            <li><code>end_date</code> (opcional): Data final no formato YYYY-MM-DD</li>
+                        </ul>
+
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "total_comparisons": 10,
+  "total_changes": 150,
+  "modified_fields_count": 25,
+  "last_comparison": "2024-01-15T10:30:00"
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('dashboard-stats', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('dashboard-stats', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('dashboard-stats', 'php')">PHP</button>
+                        </div>
+                        <div id="dashboard-stats-python" class="code-content active">
+                            <pre><code>import requests
+from datetime import datetime, timedelta
+
+project_id = 1
+start_date = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+end_date = datetime.now().strftime('%Y-%m-%d')
+
+url = f"http://localhost:5000/api/dashboard/project/{project_id}/stats"
+params = {
+    "start_date": start_date,
+    "end_date": end_date
+}
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id)
+}
+
+response = requests.get(url, params=params, headers=headers)
+stats = response.json()
+
+print(f"Total de comparações: {stats['total_comparisons']}")
+print(f"Total de mudanças: {stats['total_changes']}")
+print(f"Campos modificados: {stats['modified_fields_count']}")</code></pre>
+                        </div>
+                        <div id="dashboard-stats-curl" class="code-content">
+                            <pre><code>curl -X GET "http://localhost:5000/api/dashboard/project/1/stats?start_date=2024-01-01&end_date=2024-01-31" \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"</code></pre>
+                        </div>
+                        <div id="dashboard-stats-php" class="code-content">
+                            <pre><code>$projectId = 1;
+$startDate = date('Y-m-d', strtotime('-30 days'));
+$endDate = date('Y-m-d');
+
+$url = "http://localhost:5000/api/dashboard/project/$projectId/stats";
+$url .= "?start_date=$startDate&end_date=$endDate";
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId"
+]);
+
+$response = curl_exec($ch);
+$stats = json_decode($response, true);
+curl_close($ch);
+
+echo "Total de comparações: " . $stats['total_comparisons'] . "\n";</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- GET /api/dashboard/project/<project_id>/changes-over-time -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/dashboard/project/&lt;project_id&gt;/changes-over-time</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Obtém dados de mudanças ao longo do tempo para gráficos de linha. Retorna dados agrupados por data e tipo de mudança (added, modified, deleted).</p>
+                        
+                        <h5 class="mt-3">Query Parameters:</h5>
+                        <ul>
+                            <li><code>start_date</code> (opcional): Data inicial (YYYY-MM-DD)</li>
+                            <li><code>end_date</code> (opcional): Data final (YYYY-MM-DD)</li>
+                        </ul>
+
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "data": [
+    {
+      "date": "2024-01-15",
+      "added": 5,
+      "modified": 10,
+      "deleted": 2
+    }
+  ]
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('changes-time', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('changes-time', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('changes-time', 'php')">PHP</button>
+                        </div>
+                        <div id="changes-time-python" class="code-content active">
+                            <pre><code>import requests
+
+project_id = 1
+url = f"http://localhost:5000/api/dashboard/project/{project_id}/changes-over-time"
+params = {"start_date": "2024-01-01", "end_date": "2024-01-31"}
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id)
+}
+
+response = requests.get(url, params=params, headers=headers)
+data = response.json()['data']
+
+for item in data:
+    print(f"{item['date']}: +{item['added']} ~{item['modified']} -{item['deleted']}")</code></pre>
+                        </div>
+                        <div id="changes-time-curl" class="code-content">
+                            <pre><code>curl -X GET "http://localhost:5000/api/dashboard/project/1/changes-over-time?start_date=2024-01-01&end_date=2024-01-31" \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"</code></pre>
+                        </div>
+                        <div id="changes-time-php" class="code-content">
+                            <pre><code>$projectId = 1;
+$url = "http://localhost:5000/api/dashboard/project/$projectId/changes-over-time";
+$url .= "?start_date=2024-01-01&end_date=2024-01-31";
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId"
+]);
+
+$response = curl_exec($ch);
+$data = json_decode($response, true)['data'];
+curl_close($ch);
+
+foreach ($data as $item) {
+    echo $item['date'] . ": +" . $item['added'] . " ~" . $item['modified'] . "\n";
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- GET /api/dashboard/project/<project_id>/field-changes -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/dashboard/project/&lt;project_id&gt;/field-changes</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Obtém dados de mudanças por campo para gráfico de pizza. Retorna os campos mais modificados e suas quantidades.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "field_changes": [
+    {
+      "field_name": "nome",
+      "change_count": 25
+    },
+    {
+      "field_name": "email",
+      "change_count": 15
+    }
+  ]
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('field-changes', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('field-changes', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('field-changes', 'php')">PHP</button>
+                        </div>
+                        <div id="field-changes-python" class="code-content active">
+                            <pre><code>import requests
+
+project_id = 1
+url = f"http://localhost:5000/api/dashboard/project/{project_id}/field-changes"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id)
+}
+
+response = requests.get(url, headers=headers)
+field_changes = response.json()['field_changes']
+
+for field in field_changes:
+    print(f"{field['field_name']}: {field['change_count']} mudanças")</code></pre>
+                        </div>
+                        <div id="field-changes-curl" class="code-content">
+                            <pre><code>curl -X GET http://localhost:5000/api/dashboard/project/1/field-changes \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"</code></pre>
+                        </div>
+                        <div id="field-changes-php" class="code-content">
+                            <pre><code>$projectId = 1;
+$url = "http://localhost:5000/api/dashboard/project/$projectId/field-changes";
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId"
+]);
+
+$response = curl_exec($ch);
+$fieldChanges = json_decode($response, true)['field_changes'];
+curl_close($ch);
+
+foreach ($fieldChanges as $field) {
+    echo $field['field_name'] . ": " . $field['change_count'] . " mudanças\n";
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tables Endpoints -->
+                <div id="tables" class="api-endpoint">
+                    <h2><i class="fas fa-table me-2"></i>Tabelas</h2>
+
+                    <!-- GET /api/tables/data-types -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/tables/data-types</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Retorna a lista de tipos de dados disponíveis para uso ao alterar tipos de colunas.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "data_types": [
+    "INTEGER", "BIGINT", "SMALLINT", "TINYINT",
+    "FLOAT", "DOUBLE", "DECIMAL", "NUMERIC",
+    "VARCHAR", "CHAR", "TEXT",
+    "DATE", "TIME", "DATETIME", "TIMESTAMP",
+    "BOOLEAN", "BLOB", "JSON"
+  ]
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('data-types', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('data-types', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('data-types', 'php')">PHP</button>
+                        </div>
+                        <div id="data-types-python" class="code-content active">
+                            <pre><code>import requests
+
+url = "http://localhost:5000/api/tables/data-types"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id)
+}
+
+response = requests.get(url, headers=headers)
+data_types = response.json()['data_types']
+
+for dtype in data_types:
+    print(f"- {dtype}")</code></pre>
+                        </div>
+                        <div id="data-types-curl" class="code-content">
+                            <pre><code>curl -X GET http://localhost:5000/api/tables/data-types \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"</code></pre>
+                        </div>
+                        <div id="data-types-php" class="code-content">
+                            <pre><code>$url = "http://localhost:5000/api/tables/data-types";
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId"
+]);
+
+$response = curl_exec($ch);
+$dataTypes = json_decode($response, true)['data_types'];
+curl_close($ch);
+
+foreach ($dataTypes as $type) {
+    echo "- $type\n";
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- GET /api/tables/model/<connection_id>/<table_name> -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/tables/model/&lt;connection_id&gt;/&lt;table_name&gt;</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Retorna o código do modelo SQLAlchemy gerado para uma tabela específica.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "model_code": "from app import db\n\nclass UsuariosModel(db.Model):\n    ..."
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('get-model', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('get-model', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('get-model', 'php')">PHP</button>
+                        </div>
+                        <div id="get-model-python" class="code-content active">
+                            <pre><code>import requests
+
+connection_id = 1
+table_name = "usuarios"
+url = f"http://localhost:5000/api/tables/model/{connection_id}/{table_name}"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id)
+}
+
+response = requests.get(url, headers=headers)
+model_code = response.json()['model_code']
+print(model_code)</code></pre>
+                        </div>
+                        <div id="get-model-curl" class="code-content">
+                            <pre><code>curl -X GET "http://localhost:5000/api/tables/model/1/usuarios" \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"</code></pre>
+                        </div>
+                        <div id="get-model-php" class="code-content">
+                            <pre><code>$connectionId = 1;
+$tableName = urlencode("usuarios");
+$url = "http://localhost:5000/api/tables/model/$connectionId/$tableName";
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId"
+]);
+
+$response = curl_exec($ch);
+$result = json_decode($response, true);
+curl_close($ch);
+
+echo $result['model_code'];</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- POST /api/tables/update-column-type -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-url">/api/tables/update-column-type</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Atualiza o tipo de dados de uma coluna em uma tabela. A alteração é aplicada no banco de dados original e o modelo SQLAlchemy correspondente é regenerado automaticamente.</p>
+                        
+                        <h5 class="mt-3">Request Body:</h5>
+                        <pre><code>{
+  "connection_id": 1,
+  "table_name": "usuarios",
+  "column_name": "ativo",
+  "new_type": "BOOLEAN",
+  "nullable": true,
+  "primary_key": false
+}</code></pre>
+
+                        <h5 class="mt-3">Tipos de Dados Suportados:</h5>
+                        <p>INTEGER, BIGINT, SMALLINT, TINYINT, FLOAT, DOUBLE, DECIMAL, NUMERIC, VARCHAR, CHAR, TEXT, DATE, TIME, DATETIME, TIMESTAMP, BOOLEAN, BLOB, JSON</p>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('update-column', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('update-column', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('update-column', 'php')">PHP</button>
+                        </div>
+                        <div id="update-column-python" class="code-content active">
+                            <pre><code>import requests
+
+url = "http://localhost:5000/api/tables/update-column-type"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id),
+    "Content-Type": "application/json"
+}
+data = {
+    "connection_id": 1,
+    "table_name": "usuarios",
+    "column_name": "ativo",
+    "new_type": "BOOLEAN",
+    "nullable": True,
+    "primary_key": False
+}
+
+response = requests.post(url, json=data, headers=headers)
+print(response.json())</code></pre>
+                        </div>
+                        <div id="update-column-curl" class="code-content">
+                            <pre><code>curl -X POST http://localhost:5000/api/tables/update-column-type \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "connection_id": 1,
+    "table_name": "usuarios",
+    "column_name": "ativo",
+    "new_type": "BOOLEAN",
+    "nullable": true,
+    "primary_key": false
+  }'</code></pre>
+                        </div>
+                        <div id="update-column-php" class="code-content">
+                            <pre><code>$url = "http://localhost:5000/api/tables/update-column-type";
+$data = [
+    "connection_id" => 1,
+    "table_name" => "usuarios",
+    "column_name" => "ativo",
+    "new_type" => "BOOLEAN",
+    "nullable" => true,
+    "primary_key" => false
+];
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId",
+    "Content-Type: application/json"
+]);
+
+$response = curl_exec($ch);
+curl_close($ch);
+echo $response;</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-5 py-4" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-6 text-center text-md-start">
+                    <p class="text-light mb-0">
+                        <i class="fas fa-code me-2"></i>
+                        <strong>DeltaScope API</strong> - Documentação completa da API REST
+                    </p>
+                </div>
+                <div class="col-md-6 text-center text-md-end mt-3 mt-md-0">
+                    <p class="text-light mb-0">
+                        <small>Feito com <i class="fas fa-heart text-danger"></i> para desenvolvedores</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+        // Highlight code blocks
+        document.addEventListener('DOMContentLoaded', function() {
+            hljs.highlightAll();
+        });
+
+        // Code tab switching
+        function showCode(endpoint, lang) {
+            // Hide all code contents for this endpoint
+            const contents = document.querySelectorAll(`[id^="${endpoint}-"]`);
+            contents.forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll(`[onclick*="${endpoint}"]`);
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected content
+            document.getElementById(`${endpoint}-${lang}`).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+            
+            // Re-highlight code
+            hljs.highlightAll();
+        }
+
+        // Smooth scroll for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
