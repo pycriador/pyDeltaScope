@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DeltaScope{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-exchange-alt me-2"></i>DeltaScope
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'connections_template.connections_page' %}active{% endif %}" href="/conexoes">
+                            <i class="fas fa-database me-1"></i>Conexões
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'projects_template.projects_page' %}active{% endif %}" href="/projetos">
+                            <i class="fas fa-folder me-1"></i>Projetos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'comparison_template.comparison_page' %}active{% endif %}" href="/comparacao">
+                            <i class="fas fa-code-branch me-1"></i>Comparação
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'dashboard_template.dashboard_page' %}active{% endif %}" href="/dashboard">
+                            <i class="fas fa-chart-bar me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'tables_template.tables_page' %}active{% endif %}" href="/tabelas">
+                            <i class="fas fa-table me-1"></i>Tabelas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'reports_template.reports_page' %}active{% endif %}" href="/relatorios">
+                            <i class="fas fa-file-alt me-1"></i>Relatórios
+                        </a>
+                    </li>
+                    {% if current_user.is_admin %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'users_template.users_page' %}active{% endif %}" href="/usuarios">
+                            <i class="fas fa-users me-1"></i>Usuários
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'groups_template.groups_page' %}active{% endif %}" href="/grupos">
+                            <i class="fas fa-user-friends me-1"></i>Grupos
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+                <div class="navbar-nav">
+                    <span class="navbar-text me-3">Olá, {{ current_user.username }}</span>
+                    <a href="/api-docs" class="btn btn-outline-light btn-sm me-2" target="_blank">
+                        <i class="fas fa-book me-1"></i>API Docs
+                    </a>
+                    <a href="/" class="btn btn-outline-light btn-sm" onclick="sessionStorage.clear(); localStorage.clear();">
+                        <i class="fas fa-sign-out-alt me-1"></i>Sair
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-app-container">
+        {% block content %}{% endblock %}
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
+

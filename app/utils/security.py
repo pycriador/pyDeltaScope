@@ -1,6 +1,6 @@
 from functools import wraps
 from typing import Optional
-from flask import request, jsonify, current_app
+from flask import request, jsonify, current_app, session, redirect, url_for, render_template
 from werkzeug.security import generate_password_hash
 import secrets
 from datetime import datetime, timedelta
@@ -66,6 +66,53 @@ def admin_required(f):
         if not user.is_admin:
             return jsonify({'message': 'Admin privileges required'}), 403
         return f(user, *args, **kwargs)
+    
+    return decorated
+
+
+def login_required_template(f):
+    """Decorator for template routes that require authentication"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        user_id = session.get('user_id')
+        print(f"[AUTH] login_required_template - user_id from session: {user_id}")
+        
+        if not user_id:
+            print("[AUTH] No user_id in session, redirecting to /")
+            return redirect('/')
+        
+        try:
+            user = User.query.get(int(user_id))
+            print(f"[AUTH] User found: {user.username if user else 'None'}, Active: {user.is_active if user else 'N/A'}")
+            if not user or not user.is_active:
+                print("[AUTH] User not found or inactive, clearing session")
+                session.clear()
+                return redirect('/')
+        except (ValueError, TypeError) as e:
+            print(f"[AUTH] Error getting user: {e}")
+            session.clear()
+            return redirect('/')
+        
+        print(f"[AUTH] Authentication successful for {user.username}")
+        return f(user, *args, **kwargs)
+    
+    return decorated
+
+
+def admin_required_template(f):
+    """Decorator for template routes that require admin privileges"""
+    @wraps(f)
+    @login_required_template
+    def decorated(user, *args, **kwargs):
+        if not user or not user.is_admin:
+            return render_template('error.html', message='Acesso negado. Apenas administradores podem acessar esta página.'), 403
+        try:
+            return f(user, *args, **kwargs)
+        except Exception as e:
+            import traceback
+            print(f"Error in {f.__name__}: {str(e)}")
+            print(traceback.format_exc())
+            return render_template('error.html', message=f'Erro ao carregar página: {str(e)}'), 500
     
     return decorated
 

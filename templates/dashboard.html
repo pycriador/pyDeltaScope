@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="dashboardSection">
+    <h2 class="mb-4"><i class="fas fa-chart-bar me-2"></i>Dashboard</h2>
+
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-folder me-2"></i>Selecione um Projeto</h5>
+        </div>
+        <div class="card-body">
+            {% if projects %}
+            <form method="GET" action="/dashboard">
+                <div class="mb-3">
+                    <label for="projectSelect" class="form-label">Projeto</label>
+                    <select class="form-select" id="projectSelect" name="project_id" onchange="this.form.submit()">
+                        <option value="">Selecione um projeto...</option>
+                        {% for project in projects %}
+                        <option value="{{ project.id }}" {% if selected_project and selected_project.id == project.id %}selected{% endif %}>
+                            {{ project.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+
+            {% if selected_project %}
+            <div class="mt-4">
+                <h5>Estatísticas do Projeto: {{ selected_project.name }}</h5>
+                <div class="row mt-3">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <h6>Total de Comparações</h6>
+                                <h3 id="totalComparisons">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <h6>Total de Mudanças</h6>
+                                <h3 id="totalChanges">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <h6>Campos Modificados</h6>
+                                <h3 id="modifiedFields">-</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body">
+                                <h6>Última Comparação</h6>
+                                <small id="lastComparison">-</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div id="chartsContainer">
+                        <p class="text-muted">Carregando gráficos...</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Nenhum projeto encontrado. <a href="/projetos/novo" class="alert-link">Crie um projeto</a> primeiro para ver o dashboard.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if selected_project %}
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script>
+// Load dashboard stats via API
+fetch('/api/dashboard/project/{{ selected_project.id }}/stats')
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('totalComparisons').textContent = data.total_comparisons || 0;
+        document.getElementById('totalChanges').textContent = data.total_changes || 0;
+        document.getElementById('modifiedFields').textContent = data.modified_fields_count || 0;
+        if (data.last_comparison) {
+            document.getElementById('lastComparison').textContent = new Date(data.last_comparison).toLocaleString('pt-BR');
+        }
+    })
+    .catch(error => console.error('Error loading stats:', error));
+</script>
+{% endif %}
+{% endblock %}
+

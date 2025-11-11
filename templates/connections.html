@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Conexões - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="connectionsSection">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-database me-2"></i>Conexões de Banco de Dados</h2>
+        <button class="btn btn-primary" onclick="window.location.href='/conexoes/novo'">
+            <i class="fas fa-plus me-1"></i>Nova Conexão
+        </button>
+    </div>
+
+    {% if connections %}
+    <div class="row">
+        {% for conn in connections %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header bg-{{ 'success' if conn.db_type == 'sqlite' else 'primary' }} text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-{{ 'database' if conn.db_type == 'sqlite' else 'server' }} me-2"></i>
+                        {{ conn.name }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ conn.description or 'Sem descrição' }}</p>
+                    <div class="mb-2">
+                        <span class="badge bg-info">{{ conn.db_type.upper() }}</span>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar me-1"></i>
+                            Criado em: {{ conn.created_at.strftime('%d/%m/%Y') if conn.created_at else '-' }}
+                        </small>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="btn-group w-100" role="group">
+                        <a href="/api/connections/{{ conn.id }}/test" class="btn btn-sm btn-info" title="Testar Conexão">
+                            <i class="fas fa-vial"></i>
+                        </a>
+                        <a href="/conexoes/{{ conn.id }}/editar" class="btn btn-sm btn-primary" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a href="/api/connections/{{ conn.id }}" class="btn btn-sm btn-danger" 
+                           onclick="return confirm('Tem certeza que deseja deletar a conexão {{ conn.name }}?');" 
+                           title="Deletar">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        Nenhuma conexão encontrada. <a href="/conexoes/novo" class="alert-link">Crie uma nova conexão</a> para começar.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

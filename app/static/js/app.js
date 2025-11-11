@@ -116,10 +116,27 @@ function showConfirmation(title, message) {
     });
 }
 
+// Helper function to check if we're on a template page
+function isTemplatePage() {
+    // Template pages don't have mainApp element
+    return !document.getElementById('mainApp');
+}
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
-    // Load theme preference
+    // Load theme preference (always safe to do)
     loadTheme();
+    
+    // If we're on a template page, don't run ANY JavaScript code
+    if (isTemplatePage()) {
+        // Template pages are fully server-rendered - no JavaScript needed
+        // All functionality is handled server-side via Flask
+        console.log('[TEMPLATE PAGE] Detected template page - skipping ALL JavaScript initialization');
+        return; // Exit early - don't run ANY code
+    }
+    
+    // We're on the SPA page - run normal SPA initialization
+    console.log('[SPA PAGE] Detected SPA page - running SPA initialization');
     checkAuth();
     setupEventListeners();
 });
@@ -155,8 +172,13 @@ function updateThemeIcon(isDark) {
     }
 }
 
-// Check authentication status
+// Check authentication status (only for SPA page)
 async function checkAuth() {
+    // Don't run on template pages
+    if (isTemplatePage()) {
+        return;
+    }
+    
     // First check if setup is needed - this MUST be checked before anything else
     let needsSetup = false;
     
@@ -191,19 +213,52 @@ async function checkAuth() {
     const userStr = localStorage.getItem('currentUser');
     
     if (token && userStr) {
-        authToken = token;
-        currentUser = JSON.parse(userStr);
-        showMainApp();
-        // Load data but don't show connections section automatically
-        loadConnections();
-        loadProjects();
+        try {
+            authToken = token;
+            currentUser = JSON.parse(userStr);
+            
+            // Validate that currentUser is a valid object
+            if (!currentUser || typeof currentUser !== 'object') {
+                throw new Error('Invalid user data');
+            }
+            
+            // We're on the SPA page
+            showMainApp();
+            // Load data but don't show connections section automatically
+            loadConnections();
+            loadProjects();
+            // Load users and groups if user is admin
+            if (currentUser && currentUser.is_admin) {
+                loadUsers();
+                loadGroups();
+            }
+        } catch (error) {
+            // If there's an error parsing user data, clear storage and show login
+            console.error('Error parsing user data:', error);
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            authToken = null;
+            currentUser = null;
+            showLogin();
+        }
     } else {
         showLogin();
     }
 }
 
-// Setup event listeners
+// Setup event listeners for template pages (minimal, safe listeners)
+function setupTemplateEventListeners() {
+    // Only setup listeners that are safe and don't interfere with template pages
+    // Most functionality is handled server-side for template pages
+}
+
+// Setup event listeners for SPA page
 function setupEventListeners() {
+    // Only run if we're on SPA page
+    if (isTemplatePage()) {
+        return;
+    }
+    
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
     const sourceDbType = document.getElementById('sourceDbType');
@@ -254,10 +309,16 @@ function setupEventListeners() {
 
 // Show login section
 function showLogin() {
-    document.getElementById('loginSection').style.display = 'block';
-    document.getElementById('registerSection').style.display = 'none';
-    document.getElementById('mainApp').style.display = 'none';
-    document.getElementById('setupModal').style.display = 'none';
+    const loginSection = document.getElementById('loginSection');
+    const registerSection = document.getElementById('registerSection');
+    const mainApp = document.getElementById('mainApp');
+    const setupModal = document.getElementById('setupModal');
+    
+    if (loginSection) loginSection.style.display = 'block';
+    if (registerSection) registerSection.style.display = 'none';
+    if (mainApp) mainApp.style.display = 'none';
+    if (setupModal) setupModal.style.display = 'none';
+    
     // Hide navbar on login page
     const navbar = document.querySelector('.navbar');
     if (navbar) {
@@ -366,9 +427,14 @@ async function createFirstAdmin() {
 
 // Show register section
 function showRegister() {
-    document.getElementById('loginSection').style.display = 'none';
-    document.getElementById('registerSection').style.display = 'block';
-    document.getElementById('mainApp').style.display = 'none';
+    const loginSection = document.getElementById('loginSection');
+    const registerSection = document.getElementById('registerSection');
+    const mainApp = document.getElementById('mainApp');
+    
+    if (loginSection) loginSection.style.display = 'none';
+    if (registerSection) registerSection.style.display = 'block';
+    if (mainApp) mainApp.style.display = 'none';
+    
     // Hide navbar on register page
     const navbar = document.querySelector('.navbar');
     if (navbar) {
@@ -376,31 +442,57 @@ function showRegister() {
     }
 }
 
-// Show main application
+// Show main application (only for SPA page)
 function showMainApp() {
-    document.getElementById('loginSection').style.display = 'none';
-    document.getElementById('registerSection').style.display = 'none';
-    document.getElementById('mainApp').style.display = 'block';
-    document.getElementById('userInfo').textContent = `Olá, ${currentUser.username}`;
+    // Don't run on template pages
+    if (isTemplatePage()) {
+        return;
+    }
+    
+    const loginSection = document.getElementById('loginSection');
+    const registerSection = document.getElementById('registerSection');
+    const mainApp = document.getElementById('mainApp');
+    
+    // Only manipulate SPA elements if they exist
+    if (loginSection) {
+        loginSection.style.display = 'none';
+    }
+    if (registerSection) {
+        registerSection.style.display = 'none';
+    }
+    if (mainApp) {
+        mainApp.style.display = 'block';
+    }
+    
+    // Update user info if element exists
+    const userInfo = document.getElementById('userInfo');
+    if (userInfo && currentUser) {
+        userInfo.textContent = `Olá, ${currentUser.username}`;
+    }
+    
     // Show navbar in main app
     const navbar = document.querySelector('.navbar');
     if (navbar) {
         navbar.style.display = 'flex';
     }
     
-    // Show/hide admin menu items
-    if (currentUser.is_admin) {
-        document.getElementById('adminUsersNav').style.display = 'block';
-        document.getElementById('adminGroupsNav').style.display = 'block';
-    } else {
-        document.getElementById('adminUsersNav').style.display = 'none';
-        document.getElementById('adminGroupsNav').style.display = 'none';
+    // Show/hide admin menu items (only if elements exist)
+    const adminUsersNav = document.getElementById('adminUsersNav');
+    const adminGroupsNav = document.getElementById('adminGroupsNav');
+    if (adminUsersNav && adminGroupsNav && currentUser) {
+        if (currentUser.is_admin) {
+            adminUsersNav.style.display = 'block';
+            adminGroupsNav.style.display = 'block';
+        } else {
+            adminUsersNav.style.display = 'none';
+            adminGroupsNav.style.display = 'none';
+        }
     }
     
     // Check if this is first login (no section in URL)
     const currentPath = window.location.pathname;
     const hasSection = ['/conexoes', '/projetos', '/comparacao', '/dashboard', '/tabelas', '/relatorios', '/usuarios', '/grupos'].some(path => currentPath.includes(path));
-    
+
     if (!hasSection) {
         // Show welcome screen on first login
         showWelcomeScreen();
@@ -435,6 +527,11 @@ function showWelcomeScreen() {
 
 // Navigate to section with URL update
 function navigateToSection(section, updateHistory = true) {
+    // Don't run on template pages
+    if (isTemplatePage()) {
+        return;
+    }
+    
     // Hide welcome screen
     const welcomeSection = document.getElementById('welcomeSection');
     if (welcomeSection) {
@@ -443,6 +540,11 @@ function navigateToSection(section, updateHistory = true) {
     
     // Show the selected section
     showSection(section);
+    
+    // Scroll to top of page when navigating to users or groups sections
+    if (section === 'users' || section === 'groups') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
     
     // Map section names to URL paths
     const sectionPaths = {
@@ -498,8 +600,13 @@ function getSectionFromPath(path) {
     return null;
 }
 
-// Handle browser back/forward buttons
+// Handle browser back/forward buttons (only for SPA page)
 window.addEventListener('popstate', function(event) {
+    // Don't interfere with template pages
+    if (isTemplatePage()) {
+        return;
+    }
+    
     if (event.state && event.state.section) {
         if (event.state.section === 'welcome') {
             showWelcomeScreen();
@@ -541,10 +648,21 @@ async function handleLogin(e) {
         if (response.ok) {
             authToken = data.token;
             currentUser = data.user;
-            localStorage.setItem('authToken', authToken);
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            try {
+                localStorage.setItem('authToken', authToken);
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            } catch (storageError) {
+                console.error('Error saving to localStorage:', storageError);
+                // Continue anyway - session-based auth will handle it
+            }
             showMainApp();
+            loadConnections();
             loadProjects();
+            // Load users and groups if user is admin
+            if (currentUser && currentUser.is_admin) {
+                loadUsers();
+                loadGroups();
+            }
             // Show welcome screen on first login
             showWelcomeScreen();
         } else {
@@ -586,8 +704,12 @@ async function handleRegister(e) {
 
 // Logout
 function logout() {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('currentUser');
+    try {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('currentUser');
+    } catch (error) {
+        console.error('Error clearing localStorage:', error);
+    }
     authToken = null;
     currentUser = null;
     showLogin();
@@ -623,19 +745,31 @@ function showSection(section) {
         welcomeSection.style.display = 'none';
     }
     
-    // Hide all sections
-    document.getElementById('connectionsSection').style.display = 'none';
-    document.getElementById('projectsSection').style.display = 'none';
-    document.getElementById('comparisonSection').style.display = 'none';
-    document.getElementById('dashboardSection').style.display = 'none';
-    document.getElementById('tablesSection').style.display = 'none';
-    document.getElementById('reportsSection').style.display = 'none';
-    if (document.getElementById('usersSection')) {
-        document.getElementById('usersSection').style.display = 'none';
+    // Only manipulate sections if we're on the SPA page (not template pages)
+    const mainApp = document.getElementById('mainApp');
+    if (!mainApp) {
+        // We're on a template page, don't manipulate sections
+        return;
     }
-    if (document.getElementById('groupsSection')) {
-        document.getElementById('groupsSection').style.display = 'none';
-    }
+    
+    // Hide all sections (only on SPA page)
+    const sectionsToHide = [
+        'connectionsSection',
+        'projectsSection',
+        'comparisonSection',
+        'dashboardSection',
+        'tablesSection',
+        'reportsSection',
+        'usersSection',
+        'groupsSection'
+    ];
+    
+    sectionsToHide.forEach(sectionId => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+            element.style.display = 'none';
+        }
+    });
     
     // Show selected section
     if (section === 'connections') {
@@ -777,19 +911,8 @@ function selectProjectForComparison(projectId) {
         selectedCard.classList.add('border-primary', 'border-3');
     }
     
-    // Load project for comparison
-    loadProjectForComparison(projectId, loadingModal).finally(() => {
-        // Ensure loading modal is hidden
-        setTimeout(() => {
-            const modal = bootstrap.Modal.getInstance(loadingModalEl);
-            if (modal) {
-                modal.hide();
-            }
-            // Also remove backdrop if it exists
-            const backdrops = document.querySelectorAll('.modal-backdrop');
-            backdrops.forEach(backdrop => backdrop.remove());
-        }, 100);
-    });
+    // Load project for comparison - modal will be hidden inside loadProjectForComparison
+    loadProjectForComparison(projectId, loadingModal);
 }
 
 // Render projects
@@ -1019,7 +1142,7 @@ function updateSourceDbConfig() {
         container.innerHTML = `
             <div class="mb-2">
                 <label class="form-label">Caminho do arquivo</label>
-                <input type="text" class="form-control" id="sourceDbPath" placeholder="ex: /path/to/database.db">
+                <input type="text" class="form-control" id="sourceDbPath" placeholder="instance/deltascope.db">
             </div>
         `;
     } else {
@@ -1056,7 +1179,7 @@ function updateTargetDbConfig() {
         container.innerHTML = `
             <div class="mb-2">
                 <label class="form-label">Caminho do arquivo</label>
-                <input type="text" class="form-control" id="targetDbPath" placeholder="ex: /path/to/database.db">
+                <input type="text" class="form-control" id="targetDbPath" placeholder="instance/deltascope.db">
             </div>
         `;
     } else {
@@ -1225,6 +1348,20 @@ async function loadProjectForComparison(projectId, loadingModalInstance = null) 
             })
         ]);
         
+        // Hide loading modal immediately after data is loaded
+        if (loadingModal) {
+            loadingModal.hide();
+            // Force cleanup of backdrop
+            setTimeout(() => {
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                backdrops.forEach(backdrop => {
+                    if (!document.querySelector('.modal.show')) {
+                        backdrop.remove();
+                    }
+                });
+            }, 150);
+        }
+        
         // Show project comparison info
         document.getElementById('projectComparisonInfo').style.display = 'block';
         
@@ -1239,20 +1376,18 @@ async function loadProjectForComparison(projectId, loadingModalInstance = null) 
     } catch (error) {
         console.error('Error loading project for comparison:', error);
         showError('Erro ao carregar informações do projeto: ' + error.message);
-    } finally {
-        // Always hide loading modal when done
+        // Hide loading modal on error
         if (loadingModal) {
             loadingModal.hide();
+            setTimeout(() => {
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                backdrops.forEach(backdrop => {
+                    if (!document.querySelector('.modal.show')) {
+                        backdrop.remove();
+                    }
+                });
+            }, 150);
         }
-        // Clean up any lingering backdrops
-        setTimeout(() => {
-            const backdrops = document.querySelectorAll('.modal-backdrop');
-            backdrops.forEach(backdrop => {
-                if (!document.querySelector('.modal.show')) {
-                    backdrop.remove();
-                }
-            });
-        }, 300);
     }
 }
 
@@ -1663,24 +1798,38 @@ async function runComparison() {
             document.getElementById('loadingDetails').textContent = 'Carregando resultados detalhados...';
             
             // Load detailed results
-            await loadComparisonResults(data.comparison.id);
-            
-            // Hide loading modal
-            loadingModal.hide();
-            
-            // Scroll to results
-            document.getElementById('comparisonResults').scrollIntoView({ behavior: 'smooth' });
+            try {
+                await loadComparisonResults(data.comparison.id);
+                
+                // Scroll to results
+                setTimeout(() => {
+                    document.getElementById('comparisonResults').scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            } catch (loadError) {
+                console.error('Error loading comparison results:', loadError);
+                showError('Erro ao carregar resultados detalhados: ' + loadError.message);
+            }
         } else {
-            loadingModal.hide();
-            showError(data.message);
+            showError(data.message || 'Erro ao executar comparação');
         }
     } catch (error) {
-        const errorLoadingModal = bootstrap.Modal.getInstance(document.getElementById('loadingModal'));
-        if (errorLoadingModal) {
-            errorLoadingModal.hide();
-        }
+        console.error('Error running comparison:', error);
         showError('Erro ao executar comparação: ' + error.message);
     } finally {
+        // Always hide loading modal when done
+        if (loadingModal) {
+            loadingModal.hide();
+            // Clean up backdrop
+            setTimeout(() => {
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                backdrops.forEach(backdrop => {
+                    if (!document.querySelector('.modal.show')) {
+                        backdrop.remove();
+                    }
+                });
+            }, 150);
+        }
+        
         btn.disabled = false;
         // Reset selected mappings and clear checkboxes
         selectedPrimaryKeyMappings = [];
@@ -2616,7 +2765,7 @@ function updateConnectionDbConfig() {
         container.innerHTML = `
             <div class="mb-2">
                 <label class="form-label">Caminho do arquivo</label>
-                <input type="text" class="form-control" id="connectionDbPath" placeholder="ex: /path/to/database.db" required>
+                <input type="text" class="form-control" id="connectionDbPath" placeholder="instance/deltascope.db" required>
             </div>
         `;
     } else {
@@ -2839,7 +2988,7 @@ function updateEditConnectionDbConfig() {
         container.innerHTML = `
             <div class="mb-2">
                 <label class="form-label">Caminho do arquivo</label>
-                <input type="text" class="form-control" id="editConnectionDbPath" placeholder="ex: /path/to/database.db" required>
+                <input type="text" class="form-control" id="editConnectionDbPath" placeholder="instance/deltascope.db" required>
             </div>
         `;
     } else {

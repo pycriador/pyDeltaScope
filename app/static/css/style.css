@@ -30,7 +30,8 @@ body.dark-theme {
     margin: 0 auto;
 }
 
-.main-app-container > div[id$="Section"]:not(#welcomeSection) {
+/* Sections in template pages (server-rendered) */
+.main-app-container > div[id$="Section"] {
     background: white;
     border-radius: 16px;
     padding: 2.5rem;
@@ -852,18 +853,21 @@ body:has(.login-container) {
 .welcome-title {
     font-size: 3rem;
     font-weight: 700;
-    color: #1e293b;
     margin-bottom: 1rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #ffffff 0%, #f0f4ff 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    filter: drop-shadow(0 2px 4px rgba(255, 255, 255, 0.3));
 }
 
 .welcome-subtitle {
     font-size: 1.25rem;
-    color: #64748b;
+    color: #ffffff;
     margin-bottom: 3rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    font-weight: 500;
 }
 
 .welcome-features {
@@ -946,24 +950,30 @@ body:has(.login-container) {
 }
 
 .welcome-actions .btn-outline-primary {
-    border: 2px solid #667eea;
-    color: #667eea;
+    border: 2px solid #ffffff;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
 }
 
 .welcome-actions .btn-outline-primary:hover {
-    background: #667eea;
-    color: white;
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border-color: #ffffff;
     transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3);
 }
 
 .welcome-help {
-    color: #94a3b8;
+    color: #ffffff;
     font-size: 0.9rem;
     margin: 0;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .welcome-help i {
-    color: #667eea;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 /* Responsive Welcome Screen */
@@ -1237,10 +1247,12 @@ body.dark-theme .welcome-title {
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    filter: drop-shadow(0 2px 4px rgba(129, 140, 248, 0.3));
 }
 
 body.dark-theme .welcome-subtitle {
-    color: #94a3b8;
+    color: #cbd5e1;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 body.dark-theme .welcome-feature-card {
@@ -1261,7 +1273,24 @@ body.dark-theme .welcome-feature-card p {
 }
 
 body.dark-theme .welcome-help {
-    color: #64748b;
+    color: #94a3b8;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .welcome-help i {
+    color: #818cf8;
+}
+
+body.dark-theme .welcome-actions .btn-outline-primary {
+    border: 2px solid #818cf8;
+    color: #818cf8;
+    background: rgba(129, 140, 248, 0.1);
+}
+
+body.dark-theme .welcome-actions .btn-outline-primary:hover {
+    background: rgba(129, 140, 248, 0.2);
+    color: #ffffff;
+    border-color: #818cf8;
 }
 
 /* Theme Toggle Button */

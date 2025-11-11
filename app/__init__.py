@@ -66,19 +66,30 @@ def create_app(config_name='default'):
     app.register_blueprint(groups_bp, url_prefix='/api/groups')
     app.register_blueprint(setup_bp, url_prefix='/api/setup')
     
-    # Register root route and SPA routes
+    # Register root route (SPA for login/register)
     @app.route('/')
-    @app.route('/conexoes')
-    @app.route('/projetos')
-    @app.route('/comparacao')
-    @app.route('/dashboard')
-    @app.route('/tabelas')
-    @app.route('/relatorios')
-    @app.route('/usuarios')
-    @app.route('/grupos')
     def index():
         from flask import render_template
         return render_template('index.html')
+    
+    # Register template-based routes for all pages
+    from app.routes.connections_template import connections_template_bp
+    from app.routes.projects_template import projects_template_bp
+    from app.routes.comparison_template import comparison_template_bp
+    from app.routes.dashboard_template import dashboard_template_bp
+    from app.routes.tables_template import tables_template_bp
+    from app.routes.reports_template import reports_template_bp
+    from app.routes.users_template import users_template_bp
+    from app.routes.groups_template import groups_template_bp
+    
+    app.register_blueprint(connections_template_bp)
+    app.register_blueprint(projects_template_bp)
+    app.register_blueprint(comparison_template_bp)
+    app.register_blueprint(dashboard_template_bp)
+    app.register_blueprint(tables_template_bp)
+    app.register_blueprint(reports_template_bp)
+    app.register_blueprint(users_template_bp)
+    app.register_blueprint(groups_template_bp)
     
     # Register API documentation route
     from app.routes.api_docs import api_docs_bp

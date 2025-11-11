@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Tabelas - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="tablesSection">
+    <h2 class="mb-4"><i class="fas fa-table me-2"></i>Gerenciar Tabelas</h2>
+
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-database me-2"></i>Selecione uma Conexão</h5>
+        </div>
+        <div class="card-body">
+            {% if connections %}
+            <div class="mb-3">
+                <label for="connectionSelect" class="form-label">Conexão</label>
+                <select class="form-select" id="connectionSelect" onchange="loadTables(this.value)">
+                    <option value="">Selecione uma conexão...</option>
+                    {% for conn in connections %}
+                    <option value="{{ conn.id }}">{{ conn.name }} ({{ conn.db_type.upper() }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div id="tablesListContainer">
+                <p class="text-muted">Selecione uma conexão para ver as tabelas</p>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Nenhuma conexão encontrada. <a href="/conexoes/novo" class="alert-link">Crie uma conexão</a> primeiro.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function loadTables(connectionId) {
+    if (!connectionId) {
+        document.getElementById('tablesListContainer').innerHTML = '<p class="text-muted">Selecione uma conexão para ver as tabelas</p>';
+        return;
+    }
+
+    document.getElementById('tablesListContainer').innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+
+    fetch('/api/connections/' + connectionId + '/tables', {
+        headers: {
+            'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || ''),
+            'X-User-Id': '{{ current_user.id }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.tables && data.tables.length > 0) {
+            let html = '<div class="table-responsive"><table class="table table-hover"><thead><tr><th>Nome da Tabela</th><th>Ações</th></tr></thead><tbody>';
+            data.tables.forEach(table => {
+                html += `<tr>
+                    <td>${table}</td>
+                    <td>
+                        <a href="/api/connections/${connectionId}/tables/${table}/info" class="btn btn-sm btn-info">
+                            <i class="fas fa-info-circle"></i> Informações
+                        </a>
+                    </td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+            document.getElementById('tablesListContainer').innerHTML = html;
+        } else {
+            document.getElementById('tablesListContainer').innerHTML = '<div class="alert alert-info">Nenhuma tabela encontrada nesta conexão.</div>';
+        }
+    })
+    .catch(error => {
+        document.getElementById('tablesListContainer').innerHTML = '<div class="alert alert-danger">Erro ao carregar tabelas: ' + error.message + '</div>';
+    });
+}
+</script>
+{% endblock %}
+

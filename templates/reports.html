@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Relatórios - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="reportsSection">
+    <h2 class="mb-4"><i class="fas fa-file-alt me-2"></i>Relatórios</h2>
+
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-folder me-2"></i>Selecione um Projeto</h5>
+        </div>
+        <div class="card-body">
+            {% if projects %}
+            <div class="mb-3">
+                <label for="projectSelect" class="form-label">Projeto</label>
+                <select class="form-select" id="projectSelect" onchange="loadReports(this.value)">
+                    <option value="">Selecione um projeto...</option>
+                    {% for project in projects %}
+                    <option value="{{ project.id }}">{{ project.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div id="reportsListContainer">
+                <p class="text-muted">Selecione um projeto para ver os relatórios</p>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Nenhum projeto encontrado. <a href="/projetos/novo" class="alert-link">Crie um projeto</a> primeiro para ver relatórios.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function loadReports(projectId) {
+    if (!projectId) {
+        document.getElementById('reportsListContainer').innerHTML = '<p class="text-muted">Selecione um projeto para ver os relatórios</p>';
+        return;
+    }
+
+    document.getElementById('reportsListContainer').innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+
+    fetch('/api/comparisons/project/' + projectId, {
+        headers: {
+            'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || ''),
+            'X-User-Id': '{{ current_user.id }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.comparisons && data.comparisons.length > 0) {
+            let html = '<div class="table-responsive"><table class="table table-hover"><thead><tr><th>ID</th><th>Data</th><th>Status</th><th>Diferenças</th><th>Ações</th></tr></thead><tbody>';
+            data.comparisons.forEach(comparison => {
+                html += `<tr>
+                    <td>${comparison.id}</td>
+                    <td>${new Date(comparison.executed_at).toLocaleString('pt-BR')}</td>
+                    <td><span class="badge bg-${comparison.status === 'completed' ? 'success' : 'warning'}">${comparison.status}</span></td>
+                    <td>${comparison.total_differences || 0}</td>
+                    <td>
+                        <a href="/api/comparisons/${comparison.id}/results" class="btn btn-sm btn-info">
+                            <i class="fas fa-eye"></i> Ver Detalhes
+                        </a>
+                    </td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+            document.getElementById('reportsListContainer').innerHTML = html;
+        } else {
+            document.getElementById('reportsListContainer').innerHTML = '<div class="alert alert-info">Nenhum relatório encontrado para este projeto.</div>';
+        }
+    })
+    .catch(error => {
+        document.getElementById('reportsListContainer').innerHTML = '<div class="alert alert-danger">Erro ao carregar relatórios: ' + error.message + '</div>';
+    });
+}
+</script>
+{% endblock %}
+
