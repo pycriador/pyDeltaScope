@@ -83,6 +83,21 @@ O **DeltaScope** é uma aplicação web desenvolvida em Flask que permite compar
 - ✅ Identificação de registros adicionados, modificados e deletados
 - ✅ Visualização de resultados detalhados
 - ✅ Exportação de resultados (CSV, JSON, Excel/TXT)
+- ✅ Execução via URL com parâmetros de chaves primárias
+
+### Agendamento de Tarefas (CRON)
+- ✅ Criação de tarefas agendadas para comparações automáticas
+- ✅ Tipos de agendamento:
+  - Preset: 15min, 1h, 6h, 12h, diário
+  - Intervalo: minutos personalizados
+  - CRON: expressões CRON customizadas
+- ✅ Seleção visual de colunas origem e destino
+- ✅ Mapeamento automático de chaves primárias
+- ✅ Execução manual de tarefas agendadas
+- ✅ Histórico de execuções (sucesso/falha)
+- ✅ Ativação/desativação de tarefas
+- ✅ Execução automática em background
+- ✅ Proteção contra execuções duplicadas simultâneas
 
 ### Tabelas
 - ✅ Visualização de tabelas por conexão
@@ -107,7 +122,11 @@ O **DeltaScope** é uma aplicação web desenvolvida em Flask que permite compar
 ### Relatórios
 - ✅ Visualização de comparações executadas
 - ✅ Detalhes de resultados por comparação
-- ✅ Exportação de dados
+- ✅ Exportação de dados (CSV, JSON, TXT)
+- ✅ Filtro por projeto via URL
+- ✅ Identificação de execução manual vs agendada
+- ✅ Deleção de relatórios individuais
+- ✅ Deleção em massa por projeto
 
 ### Interface
 - ✅ Design moderno e responsivo
@@ -560,12 +579,13 @@ Mapeia tabelas para seus arquivos de modelo SQLAlchemy gerados.
 - `/projetos/novo` - Criar novo projeto
 - `/projetos/<id>/editar` - Editar projeto
 - `/comparacao` - Seleção de projeto para comparação
-- `/comparacao/<id>/execution` - Execução de comparação
-- `/relatorios` - Visualização de relatórios
+- `/comparacao/<id>/execution` - Execução de comparação (suporta parâmetros de URL)
+- `/relatorios` - Visualização de relatórios (suporta filtro por `project_id`)
 - `/relatorios/<id>/resultados` - Resultados detalhados de comparação
-- `/dashboard` - Dashboard com gráficos e estatísticas
-- `/tabelas` - Visualização de tabelas
+- `/dashboard` - Dashboard com gráficos e estatísticas (suporta filtros por URL)
+- `/tabelas` - Visualização de tabelas (suporta filtro por `connection_id`)
 - `/tabelas/<connection_id>/edit/<table_name>` - Edição de colunas de tabela
+- `/agendamentos` - Gerenciamento de tarefas agendadas
 
 ## 🔌 API Endpoints
 
@@ -974,8 +994,176 @@ Listar todas as comparações do usuário.
 #### `GET /api/comparisons/<comparison_id>/results`
 Obter resultados detalhados de uma comparação.
 
+#### `DELETE /api/comparisons/<comparison_id>`
+Deletar uma comparação específica e seus resultados.
+
+**Response (200):**
+```json
+{
+  "message": "Comparison deleted successfully"
+}
+```
+
+#### `DELETE /api/comparisons/project/<project_id>`
+Deletar todas as comparações de um projeto.
+
+**Response (200):**
+```json
+{
+  "message": "All comparisons for project \"Nome do Projeto\" deleted successfully",
+  "deleted_count": 5,
+  "project_id": 1,
+  "project_name": "Nome do Projeto"
+}
+```
+
 #### `POST /api/comparisons/project/<project_id>/send-changes`
 Enviar mudanças para API externa.
+
+### Agendamento de Tarefas
+
+#### `GET /api/scheduled-tasks`
+Listar todas as tarefas agendadas do usuário.
+
+**Headers:**
+```
+Authorization: Bearer {token}
+X-User-Id: {user_id}
+```
+
+**Response (200):**
+```json
+{
+  "tasks": [
+    {
+      "id": 1,
+      "name": "Comparação Diária",
+      "description": "Executa comparação todos os dias",
+      "project_id": 1,
+      "project_name": "Projeto Teste",
+      "schedule_type": "preset",
+      "schedule_value": "daily",
+      "key_mappings": {
+        "id": "user_id",
+        "email": "email_address"
+      },
+      "is_active": true,
+      "last_run_at": "2024-01-15T10:00:00",
+      "next_run_at": "2024-01-16T00:00:00",
+      "last_run_status": "success",
+      "total_runs": 10,
+      "successful_runs": 9,
+      "failed_runs": 1
+    }
+  ]
+}
+```
+
+#### `GET /api/scheduled-tasks/<task_id>`
+Obter detalhes de uma tarefa agendada específica.
+
+#### `POST /api/scheduled-tasks`
+Criar nova tarefa agendada.
+
+**Request:**
+```json
+{
+  "name": "Comparação a cada 15 minutos",
+  "description": "Executa comparação a cada 15 minutos",
+  "project_id": 1,
+  "schedule_type": "preset",
+  "schedule_value": "15min",
+  "key_mappings": {
+    "id": "user_id",
+    "email": "email_address"
+  },
+  "is_active": true
+}
+```
+
+**Tipos de Agendamento (`schedule_type`):**
+- `preset`: Valores pré-definidos (`schedule_value`: `15min`, `1hour`, `6hours`, `12hours`, `daily`)
+- `interval`: Intervalo em minutos (`schedule_value`: número de minutos, ex: `30`)
+- `cron`: Expressão CRON (`schedule_value`: expressão CRON, ex: `0 0 * * *` para diário à meia-noite)
+
+**Response (201):**
+```json
+{
+  "message": "Scheduled task created successfully",
+  "task": {
+    "id": 1,
+    "name": "Comparação a cada 15 minutos",
+    "next_run_at": "2024-01-15T10:15:00",
+    "is_active": true
+  }
+}
+```
+
+#### `PUT /api/scheduled-tasks/<task_id>`
+Atualizar tarefa agendada.
+
+**Request:**
+```json
+{
+  "name": "Comparação Atualizada",
+  "schedule_type": "cron",
+  "schedule_value": "0 */6 * * *",
+  "key_mappings": {
+    "id": "user_id"
+  },
+  "is_active": true
+}
+```
+
+#### `DELETE /api/scheduled-tasks/<task_id>`
+Deletar tarefa agendada.
+
+**Response (200):**
+```json
+{
+  "message": "Scheduled task deleted successfully"
+}
+```
+
+#### `PUT /api/scheduled-tasks/<task_id>/toggle`
+Ativar/desativar tarefa agendada.
+
+**Response (200):**
+```json
+{
+  "message": "Scheduled task toggled successfully",
+  "task": {
+    "id": 1,
+    "is_active": false
+  }
+}
+```
+
+#### `POST /api/scheduled-tasks/<task_id>/run-now`
+Executar tarefa agendada manualmente (redireciona para página de execução).
+
+**Response (200):**
+```json
+{
+  "message": "Redirecting to execution page",
+  "redirect_url": "/comparacao/1/execution?source_key=id&target_key=user_id"
+}
+```
+
+#### `GET /api/scheduled-tasks/project/<project_id>/columns`
+Obter colunas das tabelas origem e destino de um projeto.
+
+**Response (200):**
+```json
+{
+  "source_columns": ["id", "nome", "email"],
+  "target_columns": ["user_id", "name", "email_address"],
+  "source_primary_keys": ["id"],
+  "target_primary_keys": ["user_id"],
+  "source_table": "usuarios",
+  "target_table": "users"
+}
+```
 
 ### Dashboard
 
@@ -1189,10 +1377,57 @@ O sistema suporta filtros diretamente na URL para facilitar compartilhamento e b
 /relatorios
 ```
 
+**Com Filtro por Projeto:**
+```
+/relatorios?project_id=1
+```
+
+**Parâmetros:**
+- `project_id` (opcional): ID do projeto para filtrar relatórios
+
 **Resultados de Comparação:**
 ```
 /relatorios/<comparison_id>/resultados
 ```
+
+**Comportamento:**
+- Ao acessar com `project_id`, o projeto é selecionado automaticamente
+- Os relatórios são carregados automaticamente para o projeto selecionado
+- A URL pode ser compartilhada para acesso direto aos relatórios de um projeto
+
+### Execução de Comparação
+
+**URL Base:**
+```
+/comparacao/<project_id>/execution
+```
+
+**Com Mapeamento de Chaves Primárias:**
+```
+/comparacao/1/execution?source_key=id&target_key=user_id&source_key=email&target_key=email_address
+```
+
+**Parâmetros:**
+- `source_key` (múltiplos): Nome da coluna na tabela origem
+- `target_key` (múltiplos): Nome da coluna correspondente na tabela destino
+
+**Exemplos:**
+```
+# Mapeamento simples (uma chave)
+/comparacao/1/execution?source_key=id&target_key=user_id
+
+# Mapeamento múltiplo (chaves compostas)
+/comparacao/1/execution?source_key=id&target_key=user_id&source_key=email&target_key=email_address
+
+# Mapeamento com 3 chaves
+/comparacao/1/execution?source_key=id&target_key=user_id&source_key=code&target_key=product_code&source_key=date&target_key=created_date
+```
+
+**Comportamento:**
+- Ao acessar com parâmetros `source_key` e `target_key`, as chaves são mapeadas automaticamente
+- As checkboxes correspondentes são marcadas automaticamente
+- A comparação pode ser executada automaticamente após carregar as colunas (se configurado)
+- Útil para execução de tarefas agendadas ou compartilhamento de links de comparação específica
 
 ## 👥 Gerenciamento de Usuários
 

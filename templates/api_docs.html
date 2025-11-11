@@ -439,11 +439,17 @@
                             <a class="nav-link" href="#comparisons">
                                 <i class="fas fa-exchange-alt me-2"></i>Comparações
                             </a>
+                            <a class="nav-link" href="#scheduled-tasks">
+                                <i class="fas fa-clock me-2"></i>Agendamento
+                            </a>
                             <a class="nav-link" href="#dashboard">
                                 <i class="fas fa-chart-line me-2"></i>Dashboard
                             </a>
                             <a class="nav-link" href="#tables">
                                 <i class="fas fa-table me-2"></i>Tabelas
+                            </a>
+                            <a class="nav-link" href="#url-filters">
+                                <i class="fas fa-link me-2"></i>Filtros por URL
                             </a>
                         </nav>
                     </div>
@@ -2217,6 +2223,315 @@ echo "Total: " . count($comparisons) . " comparações\n";</code></pre>
                     </div>
                 </div>
 
+                <!-- Scheduled Tasks Endpoints -->
+                <div id="scheduled-tasks" class="api-endpoint">
+                    <h2><i class="fas fa-clock me-2"></i>Agendamento de Tarefas</h2>
+                    <p>O sistema permite criar tarefas agendadas (CRON) para executar comparações automaticamente em intervalos definidos.</p>
+
+                    <!-- GET /api/scheduled-tasks -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/scheduled-tasks</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Lista todas as tarefas agendadas do usuário autenticado.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "tasks": [
+    {
+      "id": 1,
+      "name": "Comparação Diária",
+      "description": "Executa comparação todos os dias",
+      "project_id": 1,
+      "project_name": "Projeto Teste",
+      "schedule_type": "preset",
+      "schedule_value": "daily",
+      "key_mappings": {
+        "id": "user_id",
+        "email": "email_address"
+      },
+      "is_active": true,
+      "last_run_at": "2024-01-15T10:00:00",
+      "next_run_at": "2024-01-16T00:00:00",
+      "last_run_status": "success",
+      "total_runs": 10,
+      "successful_runs": 9,
+      "failed_runs": 1
+    }
+  ]
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('list-tasks', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('list-tasks', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('list-tasks', 'php')">PHP</button>
+                        </div>
+                        <div id="list-tasks-python" class="code-content active">
+                            <pre><code>import requests
+
+url = "http://localhost:5000/api/scheduled-tasks"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id)
+}
+
+response = requests.get(url, headers=headers)
+tasks = response.json()['tasks']
+
+for task in tasks:
+    print(f"Tarefa: {task['name']}")
+    print(f"Próxima execução: {task['next_run_at']}")
+    print(f"Status: {task['last_run_status']}")
+    print("---")</code></pre>
+                        </div>
+                        <div id="list-tasks-curl" class="code-content">
+                            <pre><code>curl -X GET http://localhost:5000/api/scheduled-tasks \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"</code></pre>
+                        </div>
+                        <div id="list-tasks-php" class="code-content">
+                            <pre><code>$url = "http://localhost:5000/api/scheduled-tasks";
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId"
+]);
+
+$response = curl_exec($ch);
+$tasks = json_decode($response, true)['tasks'];
+curl_close($ch);
+
+foreach ($tasks as $task) {
+    echo "Tarefa: " . $task['name'] . "\n";
+    echo "Próxima execução: " . $task['next_run_at'] . "\n";
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- POST /api/scheduled-tasks -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-url">/api/scheduled-tasks</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Cria uma nova tarefa agendada.</p>
+                        
+                        <h5 class="mt-3">Request Body:</h5>
+                        <pre><code>{
+  "name": "Comparação a cada 15 minutos",
+  "description": "Executa comparação a cada 15 minutos",
+  "project_id": 1,
+  "schedule_type": "preset",
+  "schedule_value": "15min",
+  "key_mappings": {
+    "id": "user_id",
+    "email": "email_address"
+  },
+  "is_active": true
+}</code></pre>
+
+                        <h5 class="mt-3">Tipos de Agendamento:</h5>
+                        <ul>
+                            <li><code>preset</code>: Valores pré-definidos
+                                <ul>
+                                    <li><code>15min</code>: A cada 15 minutos</li>
+                                    <li><code>1hour</code>: A cada 1 hora</li>
+                                    <li><code>6hours</code>: A cada 6 horas</li>
+                                    <li><code>12hours</code>: A cada 12 horas</li>
+                                    <li><code>daily</code>: Uma vez por dia (meia-noite UTC)</li>
+                                </ul>
+                            </li>
+                            <li><code>interval</code>: Intervalo em minutos (ex: <code>"30"</code> para 30 minutos)</li>
+                            <li><code>cron</code>: Expressão CRON (ex: <code>"0 0 * * *"</code> para diário à meia-noite)</li>
+                        </ul>
+
+                        <h5 class="mt-3">Response (201 Created):</h5>
+                        <pre><code>{
+  "message": "Scheduled task created successfully",
+  "task": {
+    "id": 1,
+    "name": "Comparação a cada 15 minutos",
+    "next_run_at": "2024-01-15T10:15:00",
+    "is_active": true
+  }
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('create-task', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('create-task', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('create-task', 'php')">PHP</button>
+                        </div>
+                        <div id="create-task-python" class="code-content active">
+                            <pre><code>import requests
+
+url = "http://localhost:5000/api/scheduled-tasks"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id),
+    "Content-Type": "application/json"
+}
+data = {
+    "name": "Comparação Diária",
+    "description": "Executa comparação todos os dias",
+    "project_id": 1,
+    "schedule_type": "preset",
+    "schedule_value": "daily",
+    "key_mappings": {
+        "id": "user_id",
+        "email": "email_address"
+    },
+    "is_active": True
+}
+
+response = requests.post(url, json=data, headers=headers)
+result = response.json()
+
+if response.status_code == 201:
+    print(f"Tarefa criada: {result['task']['name']}")
+    print(f"Próxima execução: {result['task']['next_run_at']}")
+else:
+    print(f"Erro: {result['message']}")</code></pre>
+                        </div>
+                        <div id="create-task-curl" class="code-content">
+                            <pre><code>curl -X POST http://localhost:5000/api/scheduled-tasks \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Comparação Diária",
+    "description": "Executa comparação todos os dias",
+    "project_id": 1,
+    "schedule_type": "preset",
+    "schedule_value": "daily",
+    "key_mappings": {
+      "id": "user_id",
+      "email": "email_address"
+    },
+    "is_active": true
+  }'</code></pre>
+                        </div>
+                        <div id="create-task-php" class="code-content">
+                            <pre><code>$url = "http://localhost:5000/api/scheduled-tasks";
+$data = [
+    "name" => "Comparação Diária",
+    "description" => "Executa comparação todos os dias",
+    "project_id" => 1,
+    "schedule_type" => "preset",
+    "schedule_value" => "daily",
+    "key_mappings" => [
+        "id" => "user_id",
+        "email" => "email_address"
+    ],
+    "is_active" => true
+];
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId",
+    "Content-Type: application/json"
+]);
+
+$response = curl_exec($ch);
+$result = json_decode($response, true);
+curl_close($ch);
+
+if (isset($result['task'])) {
+    echo "Tarefa criada: " . $result['task']['name'];
+} else {
+    echo "Erro: " . $result['message'];
+}</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- GET /api/scheduled-tasks/project/<project_id>/columns -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/scheduled-tasks/project/&lt;project_id&gt;/columns</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Obtém as colunas das tabelas origem e destino de um projeto, incluindo chaves primárias. Útil para configurar o mapeamento de chaves.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "source_columns": ["id", "nome", "email"],
+  "target_columns": ["user_id", "name", "email_address"],
+  "source_primary_keys": ["id"],
+  "target_primary_keys": ["user_id"],
+  "source_table": "usuarios",
+  "target_table": "users"
+}</code></pre>
+
+                        <div class="code-tabs mt-3">
+                            <button class="code-tab active" onclick="showCode('get-columns', 'python')">Python</button>
+                            <button class="code-tab" onclick="showCode('get-columns', 'curl')">cURL</button>
+                            <button class="code-tab" onclick="showCode('get-columns', 'php')">PHP</button>
+                        </div>
+                        <div id="get-columns-python" class="code-content active">
+                            <pre><code>import requests
+
+project_id = 1
+url = f"http://localhost:5000/api/scheduled-tasks/project/{project_id}/columns"
+headers = {
+    "Authorization": f"Bearer {token}",
+    "X-User-Id": str(user_id)
+}
+
+response = requests.get(url, headers=headers)
+columns = response.json()
+
+print(f"Colunas origem: {columns['source_columns']}")
+print(f"Colunas destino: {columns['target_columns']}")
+print(f"PKs origem: {columns['source_primary_keys']}")
+print(f"PKs destino: {columns['target_primary_keys']}")</code></pre>
+                        </div>
+                        <div id="get-columns-curl" class="code-content">
+                            <pre><code>curl -X GET http://localhost:5000/api/scheduled-tasks/project/1/columns \
+  -H "Authorization: Bearer {token}" \
+  -H "X-User-Id: {user_id}"</code></pre>
+                        </div>
+                        <div id="get-columns-php" class="code-content">
+                            <pre><code>$projectId = 1;
+$url = "http://localhost:5000/api/scheduled-tasks/project/$projectId/columns";
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer $token",
+    "X-User-Id: $userId"
+]);
+
+$response = curl_exec($ch);
+$columns = json_decode($response, true);
+curl_close($ch);
+
+echo "Colunas origem: " . implode(", ", $columns['source_columns']) . "\n";
+echo "Colunas destino: " . implode(", ", $columns['target_columns']) . "\n";</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- POST /api/scheduled-tasks/<task_id>/run-now -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-url">/api/scheduled-tasks/&lt;task_id&gt;/run-now</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Executa uma tarefa agendada manualmente. Retorna uma URL de redirecionamento para a página de execução com os parâmetros de mapeamento já configurados.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "message": "Redirecting to execution page",
+  "redirect_url": "/comparacao/1/execution?source_key=id&target_key=user_id"
+}</code></pre>
+                    </div>
+                </div>
+
                 <!-- Dashboard Endpoints -->
                 <div id="dashboard" class="api-endpoint">
                     <h2><i class="fas fa-chart-line me-2"></i>Dashboard</h2>
@@ -2663,6 +2978,147 @@ echo $response;</code></pre>
         </div>
     </div>
 
+    <!-- URL Filters Section -->
+    <div class="container-fluid mt-5 mb-5">
+        <div id="url-filters" class="api-endpoint">
+            <h2>
+                <i class="fas fa-link me-2"></i>
+                Filtros por URL
+            </h2>
+            <p>O DeltaScope suporta filtros diretamente na URL para facilitar compartilhamento, bookmarking e execução automatizada de comparações.</p>
+            
+            <div class="mb-4">
+                <h4><i class="fas fa-chart-line me-2"></i>Dashboard</h4>
+                <p>Você pode filtrar o dashboard diretamente pela URL:</p>
+                
+                <h5 class="mt-3">URL Base:</h5>
+                <pre><code>/dashboard</code></pre>
+                
+                <h5 class="mt-3">Com Filtros:</h5>
+                <pre><code>/dashboard?project_id=1&start_date=2024-01-01T00:00&end_date=2024-01-31T23:59</code></pre>
+                
+                <h5 class="mt-3">Parâmetros:</h5>
+                <ul>
+                    <li><code>project_id</code> (opcional): ID do projeto a visualizar</li>
+                    <li><code>start_date</code> (opcional): Data de início (formato: <code>YYYY-MM-DDTHH:mm</code>)</li>
+                    <li><code>end_date</code> (opcional): Data de fim (formato: <code>YYYY-MM-DDTHH:mm</code>)</li>
+                </ul>
+                
+                <h5 class="mt-3">Exemplos:</h5>
+                <pre><code># Dashboard com projeto específico
+/dashboard?project_id=1
+
+# Dashboard com período específico
+/dashboard?project_id=1&start_date=2024-01-01T00:00&end_date=2024-01-31T23:59
+
+# Dashboard apenas com data de início
+/dashboard?project_id=1&start_date=2024-01-15T08:00</code></pre>
+                
+                <h5 class="mt-3">Comportamento:</h5>
+                <ul>
+                    <li>Ao acessar uma URL com parâmetros, os campos são preenchidos automaticamente</li>
+                    <li>Se houver <code>project_id</code> na URL, o dashboard carrega automaticamente</li>
+                    <li>Ao alterar filtros, a URL é atualizada automaticamente (sem recarregar a página)</li>
+                    <li>A URL pode ser compartilhada e manterá os filtros aplicados</li>
+                </ul>
+            </div>
+            
+            <div class="mb-4">
+                <h4><i class="fas fa-table me-2"></i>Tabelas</h4>
+                <p>Você pode pré-selecionar uma conexão:</p>
+                
+                <h5 class="mt-3">URL Base:</h5>
+                <pre><code>/tabelas</code></pre>
+                
+                <h5 class="mt-3">Com Conexão Selecionada:</h5>
+                <pre><code>/tabelas?connection_id=1</code></pre>
+                
+                <h5 class="mt-3">Parâmetros:</h5>
+                <ul>
+                    <li><code>connection_id</code> (opcional): ID da conexão a visualizar</li>
+                </ul>
+                
+                <h5 class="mt-3">Comportamento:</h5>
+                <ul>
+                    <li>Ao acessar com <code>connection_id</code>, a conexão é selecionada automaticamente</li>
+                    <li>As tabelas são carregadas automaticamente</li>
+                    <li>Ao voltar de uma página de edição, a conexão permanece selecionada</li>
+                </ul>
+            </div>
+            
+            <div class="mb-4">
+                <h4><i class="fas fa-file-alt me-2"></i>Relatórios</h4>
+                <p>Você pode filtrar relatórios por projeto:</p>
+                
+                <h5 class="mt-3">URL Base:</h5>
+                <pre><code>/relatorios</code></pre>
+                
+                <h5 class="mt-3">Com Filtro por Projeto:</h5>
+                <pre><code>/relatorios?project_id=1</code></pre>
+                
+                <h5 class="mt-3">Parâmetros:</h5>
+                <ul>
+                    <li><code>project_id</code> (opcional): ID do projeto para filtrar relatórios</li>
+                </ul>
+                
+                <h5 class="mt-3">Resultados de Comparação:</h5>
+                <pre><code>/relatorios/&lt;comparison_id&gt;/resultados</code></pre>
+                
+                <h5 class="mt-3">Comportamento:</h5>
+                <ul>
+                    <li>Ao acessar com <code>project_id</code>, o projeto é selecionado automaticamente</li>
+                    <li>Os relatórios são carregados automaticamente para o projeto selecionado</li>
+                    <li>A URL pode ser compartilhada para acesso direto aos relatórios de um projeto</li>
+                </ul>
+            </div>
+            
+            <div class="mb-4">
+                <h4><i class="fas fa-exchange-alt me-2"></i>Execução de Comparação</h4>
+                <p>Você pode executar comparações com mapeamento de chaves primárias diretamente pela URL:</p>
+                
+                <h5 class="mt-3">URL Base:</h5>
+                <pre><code>/comparacao/&lt;project_id&gt;/execution</code></pre>
+                
+                <h5 class="mt-3">Com Mapeamento de Chaves Primárias:</h5>
+                <pre><code>/comparacao/1/execution?source_key=id&target_key=user_id&source_key=email&target_key=email_address</code></pre>
+                
+                <h5 class="mt-3">Parâmetros:</h5>
+                <ul>
+                    <li><code>source_key</code> (múltiplos): Nome da coluna na tabela origem</li>
+                    <li><code>target_key</code> (múltiplos): Nome da coluna correspondente na tabela destino</li>
+                </ul>
+                
+                <h5 class="mt-3">Exemplos:</h5>
+                <pre><code># Mapeamento simples (uma chave)
+/comparacao/1/execution?source_key=id&target_key=user_id
+
+# Mapeamento múltiplo (chaves compostas)
+/comparacao/1/execution?source_key=id&target_key=user_id&source_key=email&target_key=email_address
+
+# Mapeamento com 3 chaves
+/comparacao/1/execution?source_key=id&target_key=user_id&source_key=code&target_key=product_code&source_key=date&target_key=created_date</code></pre>
+                
+                <h5 class="mt-3">Comportamento:</h5>
+                <ul>
+                    <li>Ao acessar com parâmetros <code>source_key</code> e <code>target_key</code>, as chaves são mapeadas automaticamente</li>
+                    <li>As checkboxes correspondentes são marcadas automaticamente</li>
+                    <li>A comparação pode ser executada automaticamente após carregar as colunas (se configurado)</li>
+                    <li>Útil para execução de tarefas agendadas ou compartilhamento de links de comparação específica</li>
+                </ul>
+                
+                <div class="alert border-0 shadow-sm mt-3" style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-left: 4px solid var(--info-color) !important;">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-info-circle me-3 mt-1" style="color: var(--info-color); font-size: 1.5rem;"></i>
+                        <div>
+                            <h5 class="alert-heading mb-2" style="color: var(--info-color);">Dica: Tarefas Agendadas</h5>
+                            <p class="mb-0">Quando você executa uma tarefa agendada manualmente, o sistema automaticamente constrói uma URL com os parâmetros de mapeamento configurados na tarefa, facilitando a execução e o debug.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Browser Tips Section -->
     <div class="container-fluid mt-5 mb-5">
         <div class="api-endpoint">
@@ -2670,48 +3126,6 @@ echo $response;</code></pre>
                 <i class="fas fa-lightbulb"></i>
                 Dicas de Navegador e Funcionalidades
             </h2>
-            
-            <div class="mb-4">
-                <h4><i class="fas fa-link me-2"></i>Filtros por URL</h4>
-                <p>O DeltaScope suporta filtros diretamente na URL para facilitar compartilhamento e bookmarking.</p>
-                
-                <h5>Dashboard</h5>
-                <p>Você pode filtrar o dashboard diretamente pela URL:</p>
-                <ul>
-                    <li><strong>URL Base:</strong> <code>/dashboard</code></li>
-                    <li><strong>Com Projeto:</strong> <code>/dashboard?project_id=1</code></li>
-                    <li><strong>Com Período:</strong> <code>/dashboard?project_id=1&start_date=2024-01-01T00:00&end_date=2024-01-31T23:59</code></li>
-                </ul>
-                
-                <p><strong>Parâmetros disponíveis:</strong></p>
-                <ul>
-                    <li><code>project_id</code> - ID do projeto a visualizar</li>
-                    <li><code>start_date</code> - Data de início (formato: YYYY-MM-DDTHH:mm)</li>
-                    <li><code>end_date</code> - Data de fim (formato: YYYY-MM-DDTHH:mm)</li>
-                </ul>
-                
-                <p><strong>Exemplos práticos:</strong></p>
-                <ul>
-                    <li>Dashboard do projeto 1: <code>/dashboard?project_id=1</code></li>
-                    <li>Dashboard de janeiro/2024: <code>/dashboard?project_id=1&start_date=2024-01-01T00:00&end_date=2024-01-31T23:59</code></li>
-                    <li>Dashboard apenas com data início: <code>/dashboard?project_id=1&start_date=2024-01-15T08:00</code></li>
-                </ul>
-                
-                <p><strong>Comportamento:</strong></p>
-                <ul>
-                    <li>Ao acessar uma URL com parâmetros, os campos são preenchidos automaticamente</li>
-                    <li>Se houver <code>project_id</code> na URL, o dashboard carrega automaticamente</li>
-                    <li>Ao alterar filtros, a URL é atualizada automaticamente (sem recarregar a página)</li>
-                    <li>A URL pode ser compartilhada e manterá os filtros aplicados</li>
-                </ul>
-                
-                <h5>Tabelas</h5>
-                <p>Você pode pré-selecionar uma conexão:</p>
-                <ul>
-                    <li><code>/tabelas?connection_id=1</code></li>
-                </ul>
-                <p>Ao voltar de uma página de edição, a conexão permanece selecionada automaticamente.</p>
-            </div>
             
             <div class="mb-4">
                 <h4><i class="fas fa-user-plus me-2"></i>Cadastro de Usuário</h4>
