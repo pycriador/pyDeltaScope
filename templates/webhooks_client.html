@@ -1,0 +1,1163 @@
+{% extends "base.html" %}
+
+{% block title %}Cliente HTTP - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="webhooksClientSection">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-paper-plane me-2"></i>Cliente HTTP</h2>
+        <div>
+            <a href="/webhooks/payloads" class="btn btn-outline-primary me-2">
+                <i class="fas fa-database me-2"></i>Gerenciar Payloads
+            </a>
+            <a href="/webhooks/params" class="btn btn-outline-secondary">
+                <i class="fas fa-link me-2"></i>Gerenciar Parâmetros
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Panel: Request Configuration -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Configuração da Requisição</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Load/Save Saved Config - FIRST SECTION -->
+                    <div class="mb-4 pb-3 border-bottom">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0 fw-bold"><i class="fas fa-bookmark me-2"></i>Configurações Salvas:</label>
+                            <button type="button" class="btn btn-sm btn-success" onclick="showSaveConfigModal()">
+                                <i class="fas fa-save me-1"></i>Salvar Configuração
+                            </button>
+                        </div>
+                        <div class="input-group">
+                            <select class="form-select" id="savedConfigSelect">
+                                <option value="">Selecione uma configuração salva ou configure manualmente abaixo...</option>
+                            </select>
+                            <button type="button" class="btn btn-outline-primary" id="editConfigBtn" onclick="editSelectedConfig()" style="display: none;" title="Editar configuração selecionada">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted mt-1 d-block">
+                            <i class="fas fa-info-circle me-1"></i>Carregue uma configuração salva ou preencha os campos abaixo para criar uma nova requisição
+                        </small>
+                    </div>
+
+                    <!-- Method and URL -->
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <select class="form-select" id="httpMethod" style="max-width: 120px;">
+                                <option value="GET">GET</option>
+                                <option value="POST" selected>POST</option>
+                                <option value="PUT">PUT</option>
+                                <option value="PATCH">PATCH</option>
+                                <option value="DELETE">DELETE</option>
+                            </select>
+                            <input type="text" class="form-control" id="requestUrl" placeholder="https://api.exemplo.com/webhook" value="">
+                        </div>
+                    </div>
+
+                    <!-- Query Parameters -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">Parâmetros de Query (opcional)</label>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-info me-2" onclick="loadParams()">
+                                    <i class="fas fa-download me-1"></i>Carregar Parâmetros
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearParams()">
+                                    <i class="fas fa-times me-1"></i>Limpar
+                                </button>
+                            </div>
+                        </div>
+                        <textarea class="form-control font-monospace" id="requestParams" rows="6" placeholder='{"key": "value", "key2": "value2"}'></textarea>
+                        <small class="text-muted mt-1 d-block">
+                            <i class="fas fa-lightbulb me-1"></i>Parâmetros serão adicionados à URL como query string (?key=value&key2=value2). Use namespaces: <code>{% raw %}{{comparison.id}}{% endraw %}</code>
+                        </small>
+                    </div>
+
+                    <!-- Headers -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0"><i class="fas fa-heading me-2"></i>Headers</label>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-list me-1"></i>Adicionar Padrão
+                                </button>
+                                <ul class="dropdown-menu" id="headerPresetsDropdown">
+                                    <li><a class="dropdown-item" href="#" onclick="addPresetHeader('Content-Type', 'application/json'); return false;">Content-Type: application/json</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="addPresetHeader('Content-Type', 'application/xml'); return false;">Content-Type: application/xml</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="addPresetHeader('Content-Type', 'application/x-www-form-urlencoded'); return false;">Content-Type: application/x-www-form-urlencoded</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="addPresetHeader('Accept', 'application/json'); return false;">Accept: application/json</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="addPresetHeader('Accept', 'application/xml'); return false;">Accept: application/xml</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="addPresetHeader('Accept', '*/*'); return false;">Accept: */*</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" onclick="addPresetHeader('User-Agent', 'DeltaScope/1.0'); return false;">User-Agent: DeltaScope/1.0</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="addPresetHeader('X-Requested-With', 'XMLHttpRequest'); return false;">X-Requested-With: XMLHttpRequest</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="addPresetHeader('X-API-Version', '1.0'); return false;">X-API-Version: 1.0</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" onclick="addPresetHeader('Cache-Control', 'no-cache'); return false;">Cache-Control: no-cache</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="addPresetHeader('Pragma', 'no-cache'); return false;">Pragma: no-cache</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" onclick="addPresetHeader('Origin', window.location.origin); return false;">Origin: (atual)</a></li>
+                                    <li><a class="dropdown-item" href="#" onclick="addPresetHeader('Referer', window.location.href); return false;">Referer: (atual)</a></li>
+                                </ul>
+                                <button type="button" class="btn btn-outline-primary" onclick="addHeader()">
+                                    <i class="fas fa-plus me-1"></i>Personalizado
+                                </button>
+                            </div>
+                        </div>
+                        <div id="headersContainer">
+                            <div class="header-row mb-2">
+                                <div class="input-group">
+                                    <input type="text" class="form-control header-key" placeholder="Chave" value="Content-Type">
+                                    <input type="text" class="form-control header-value" placeholder="Valor" value="application/json">
+                                    <button type="button" class="btn btn-outline-danger" onclick="removeHeader(this)">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Authentication -->
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-key me-2"></i>Autenticação</label>
+                        <select class="form-select" id="authType">
+                            <option value="none">Nenhuma</option>
+                            <option value="bearer">Bearer Token</option>
+                            <option value="basic">Basic Auth</option>
+                            <option value="api_key">API Key</option>
+                        </select>
+                    </div>
+
+                    <!-- Auth Config -->
+                    <div id="authConfigContainer" style="display: none;">
+                        <div id="bearerAuth" style="display: none;" class="mb-2">
+                            <input type="text" class="form-control" id="bearerToken" placeholder="Token">
+                        </div>
+                        <div id="basicAuth" style="display: none;">
+                            <div class="mb-2">
+                                <input type="text" class="form-control mb-2" id="basicUsername" placeholder="Usuário">
+                                <input type="password" class="form-control" id="basicPassword" placeholder="Senha">
+                            </div>
+                        </div>
+                        <div id="apiKeyAuth" style="display: none;">
+                            <div class="mb-2">
+                                <input type="text" class="form-control mb-2" id="apiKeyName" placeholder="Nome da Chave (ex: X-API-Key)">
+                                <input type="text" class="form-control" id="apiKeyValue" placeholder="Valor da Chave">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0"><i class="fas fa-code me-2"></i>Body (JSON)</label>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadPayload()">
+                                    <i class="fas fa-download me-1"></i>Carregar Payload
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-info" onclick="formatJSON()">
+                                    <i class="fas fa-indent me-1"></i>Formatar
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-success" onclick="showNamespaceExamples()" title="Ver exemplos de namespaces">
+                                    <i class="fas fa-info-circle me-1"></i>Namespaces
+                                </button>
+                            </div>
+                        </div>
+                        <textarea class="form-control font-monospace" id="requestBody" rows="12" placeholder='{"key": "{% raw %}{{comparison.id}}{% endraw %}", "field": "{% raw %}{{difference.field_name}}{% endraw %}"}'></textarea>
+                        <small class="text-muted mt-1 d-block">
+                            <i class="fas fa-lightbulb me-1"></i>Use namespaces para substituir valores: <code>{% raw %}{{comparison.id}}{% endraw %}</code>, <code>{% raw %}{{difference.field_name}}{% endraw %}</code>, <code>{% raw %}{{difference.source_value}}{% endraw %}</code>
+                        </small>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-primary" onclick="sendRequest()">
+                            <i class="fas fa-paper-plane me-2"></i>Enviar Requisição
+                        </button>
+                        <button type="button" class="btn btn-outline-success" onclick="showSaveConfigModal()">
+                            <i class="fas fa-save me-2"></i>Salvar Configuração
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Response -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-reply me-2"></i>Resposta</h5>
+                </div>
+                <div class="card-body">
+                    <div id="responseContainer">
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-arrow-left fa-3x mb-3"></i>
+                            <p>Envie uma requisição para ver a resposta aqui</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para salvar configuração -->
+<div class="modal fade" id="saveConfigModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Salvar Configuração</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="saveConfigForm">
+                    <input type="hidden" id="saveConfigId">
+                    <div class="mb-3">
+                        <label class="form-label">Nome *</label>
+                        <input type="text" class="form-control" id="saveConfigName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descrição</label>
+                        <textarea class="form-control" id="saveConfigDescription" rows="2"></textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <small>A configuração será salva com todas as credenciais criptografadas de forma segura.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmSaveConfig()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para carregar payload -->
+<div class="modal fade" id="loadPayloadModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Carregar Payload Salvo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <select class="form-select mb-3" id="payloadSelect">
+                    <option value="">Selecione um payload...</option>
+                </select>
+                <div id="payloadPreview"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmLoadPayload()">Carregar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para carregar parâmetros -->
+<div class="modal fade" id="loadParamsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Carregar Parâmetros Salvos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <select class="form-select mb-3" id="paramsSelect">
+                    <option value="">Selecione um parâmetro...</option>
+                </select>
+                <div id="paramsPreview"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmLoadParams()">Carregar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para exemplos de namespaces -->
+<div class="modal fade" id="namespaceExamplesModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-code me-2"></i>Namespaces Disponíveis</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-primary"><i class="fas fa-exchange-alt me-2"></i>Namespace: <code>comparison</code></h6>
+                        <ul class="list-unstyled ms-3">
+                            <li><code>{% raw %}{{comparison.id}}{% endraw %}</code> - ID da comparação</li>
+                            <li><code>{% raw %}{{comparison.project_id}}{% endraw %}</code> - ID do projeto</li>
+                            <li><code>{% raw %}{{comparison.executed_at}}{% endraw %}</code> - Data/hora de execução</li>
+                            <li><code>{% raw %}{{comparison.status}}{% endraw %}</code> - Status (pending, running, completed, failed)</li>
+                            <li><code>{% raw %}{{comparison.total_differences}}{% endraw %}</code> - Total de diferenças</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-success"><i class="fas fa-exclamation-triangle me-2"></i>Namespace: <code>difference</code> ou <code>result</code></h6>
+                        <ul class="list-unstyled ms-3">
+                            <li><code>{% raw %}{{difference.id}}{% endraw %}</code> - ID da diferença</li>
+                            <li><code>{% raw %}{{difference.record_id}}{% endraw %}</code> - ID do registro</li>
+                            <li><code>{% raw %}{{difference.field_name}}{% endraw %}</code> - Nome do campo</li>
+                            <li><code>{% raw %}{{difference.source_value}}{% endraw %}</code> - Valor origem</li>
+                            <li><code>{% raw %}{{difference.target_value}}{% endraw %}</code> - Valor destino</li>
+                            <li><code>{% raw %}{{difference.change_type}}{% endraw %}</code> - Tipo (added, modified, deleted)</li>
+                            <li><code>{% raw %}{{difference.detected_at}}{% endraw %}</code> - Data/hora de detecção</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <h6 class="mb-3"><i class="fas fa-file-code me-2"></i>Exemplos de Templates:</h6>
+                
+                <div class="accordion" id="templateExamplesAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#exampleBasic">
+                                Exemplo Básico
+                            </button>
+                        </h2>
+                        <div id="exampleBasic" class="accordion-collapse collapse show" data-bs-parent="#templateExamplesAccordion">
+                            <div class="accordion-body">
+                                <pre class="bg-light p-3 rounded"><code>{% raw %}{
+  "comparison_id": "{{comparison.id}}",
+  "project_id": "{{comparison.project_id}}",
+  "total_differences": "{{comparison.total_differences}}",
+  "status": "{{comparison.status}}"
+}{% endraw %}</code></pre>
+                                <button class="btn btn-sm btn-primary mt-2" onclick="loadNamespaceExample('basic')">
+                                    <i class="fas fa-download me-1"></i>Usar este exemplo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#exampleDetail">
+                                Exemplo Detalhado
+                            </button>
+                        </h2>
+                        <div id="exampleDetail" class="accordion-collapse collapse" data-bs-parent="#templateExamplesAccordion">
+                            <div class="accordion-body">
+                                <pre class="bg-light p-3 rounded"><code>{% raw %}{
+  "comparison": {
+    "id": "{{comparison.id}}",
+    "project_id": "{{comparison.project_id}}",
+    "executed_at": "{{comparison.executed_at}}",
+    "total_differences": "{{comparison.total_differences}}"
+  },
+  "difference": {
+    "id": "{{difference.id}}",
+    "record_id": "{{difference.record_id}}",
+    "field_name": "{{difference.field_name}}",
+    "source_value": "{{difference.source_value}}",
+    "target_value": "{{difference.target_value}}",
+    "change_type": "{{difference.change_type}}",
+    "detected_at": "{{difference.detected_at}}"
+  }
+}{% endraw %}</code></pre>
+                                <button class="btn btn-sm btn-primary mt-2" onclick="loadNamespaceExample('detail')">
+                                    <i class="fas fa-download me-1"></i>Usar este exemplo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#exampleWebhook">
+                                Exemplo Notificação Webhook
+                            </button>
+                        </h2>
+                        <div id="exampleWebhook" class="accordion-collapse collapse" data-bs-parent="#templateExamplesAccordion">
+                            <div class="accordion-body">
+                                <pre class="bg-light p-3 rounded"><code>{% raw %}{
+  "event": "comparison.difference.detected",
+  "timestamp": "{{difference.detected_at}}",
+  "data": {
+    "comparison_id": "{{comparison.id}}",
+    "project_id": "{{comparison.project_id}}",
+    "record_id": "{{difference.record_id}}",
+    "field": "{{difference.field_name}}",
+    "old_value": "{{difference.source_value}}",
+    "new_value": "{{difference.target_value}}",
+    "change_type": "{{difference.change_type}}"
+  }
+}{% endraw %}</code></pre>
+                                <button class="btn btn-sm btn-primary mt-2" onclick="loadNamespaceExample('webhook')">
+                                    <i class="fas fa-download me-1"></i>Usar este exemplo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+// Use different variable name to avoid conflict with app.js
+const WEBHOOKS_API_BASE = '/api/webhooks';
+const AUTH_TOKEN = '{{ session.token|safe }}';
+const USER_ID = parseInt('{{ current_user.id }}');
+
+// Get auth headers for DeltaScope API calls
+function getAuthHeaders() {
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    if (AUTH_TOKEN) {
+        headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+    }
+    if (USER_ID) {
+        headers['X-User-Id'] = USER_ID;
+    }
+    return headers;
+}
+
+// Functions that need to be available immediately (called from HTML onclick)
+function loadPayload() {
+    const modal = new bootstrap.Modal(document.getElementById('loadPayloadModal'));
+    modal.show();
+}
+
+function showNamespaceExamples() {
+    const modal = new bootstrap.Modal(document.getElementById('namespaceExamplesModal'));
+    modal.show();
+}
+
+function showSaveConfigModal() {
+    const configId = $('#saveConfigId').val();
+    if (configId) {
+        // Editing existing config - load its name and description
+        loadConfigDetails(configId);
+    } else {
+        // New config - clear fields
+        $('#saveConfigName').val('');
+        $('#saveConfigDescription').val('');
+    }
+    const modal = new bootstrap.Modal(document.getElementById('saveConfigModal'));
+    modal.show();
+}
+
+async function loadConfigDetails(configId) {
+    try {
+        const response = await fetch(`${WEBHOOKS_API_BASE}/configs/${configId}`, {
+            headers: getAuthHeaders()
+        });
+        const config = await response.json();
+        $('#saveConfigName').val(config.name);
+        $('#saveConfigDescription').val(config.description || '');
+    } catch (error) {
+        console.error('Error loading config details:', error);
+    }
+}
+
+async function confirmSaveConfig() {
+    const name = $('#saveConfigName').val().trim();
+    if (!name) {
+        alert('Por favor, informe o nome da configuração');
+        return;
+    }
+    
+    const url = $('#requestUrl').val().trim();
+    if (!url) {
+        alert('Por favor, informe a URL');
+        return;
+    }
+    
+    // Collect configuration data
+    const method = $('#httpMethod').val();
+    const headers = getHeaders();
+    const authType = $('#authType').val();
+    
+    // Collect auth config (credentials will be encrypted on server)
+    const authConfig = {};
+    if (authType === 'bearer') {
+        const token = $('#bearerToken').val().trim();
+        if (token) {
+            authConfig.token = token;
+        }
+    } else if (authType === 'basic') {
+        const username = $('#basicUsername').val().trim();
+        const password = $('#basicPassword').val().trim();
+        if (username) authConfig.username = username;
+        if (password) authConfig.password = password;
+    } else if (authType === 'api_key') {
+        const keyName = $('#apiKeyName').val().trim();
+        const keyValue = $('#apiKeyValue').val().trim();
+        if (keyName) authConfig.key_name = keyName;
+        if (keyValue) authConfig.key_value = keyValue;
+    }
+    
+    // Get current payload from body textarea
+    const payloadText = $('#requestBody').val().trim();
+    let defaultPayload = '';
+    if (payloadText) {
+        try {
+            // Validate JSON
+            JSON.parse(payloadText);
+            defaultPayload = payloadText;
+        } catch (e) {
+            // If not valid JSON, still save as text
+            defaultPayload = payloadText;
+        }
+    }
+    
+    const configData = {
+        name: name,
+        description: $('#saveConfigDescription').val().trim(),
+        url: url,
+        method: method,
+        headers: headers,
+        auth_type: authType,
+        auth_config: authConfig,
+        default_payload: defaultPayload,
+        is_active: true
+    };
+    
+    // Use currentConfigId if available, otherwise check hidden field
+    const configId = currentConfigId || $('#saveConfigId').val();
+    const url_api = configId 
+        ? `${WEBHOOKS_API_BASE}/configs/${configId}`
+        : `${WEBHOOKS_API_BASE}/configs`;
+    const method_api = configId ? 'PUT' : 'POST';
+    
+    try {
+        const response = await fetch(url_api, {
+            method: method_api,
+            headers: getAuthHeaders(),
+            body: JSON.stringify(configData)
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Erro ao salvar configuração');
+        }
+        
+        bootstrap.Modal.getInstance(document.getElementById('saveConfigModal')).hide();
+        
+        // Clear current config ID if it was a new config
+        if (!configId) {
+            currentConfigId = null;
+            $('#saveConfigId').val('');
+        }
+        
+        // Reload configs list
+        await loadSavedConfigs();
+        
+        // Select the saved config in the dropdown
+        if (data.config && data.config.id) {
+            $('#savedConfigSelect').val(data.config.id);
+            $('#editConfigBtn').show();
+        }
+        
+        // Show success message
+        const alertDiv = $('<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+            '<i class="fas fa-check-circle me-2"></i>Configuração salva com sucesso! As credenciais foram criptografadas de forma segura.' +
+            '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+            '</div>');
+        $('#webhooksClientSection').prepend(alertDiv);
+        setTimeout(() => alertDiv.alert('close'), 5000);
+    } catch (error) {
+        alert('Erro ao salvar configuração: ' + error.message);
+    }
+}
+
+function formatJSON() {
+    const textarea = $('#requestBody');
+    const text = textarea.val().trim();
+    if (!text) return;
+    
+    try {
+        const json = JSON.parse(text);
+        textarea.val(JSON.stringify(json, null, 2));
+    } catch (e) {
+        alert('JSON inválido: ' + e.message);
+    }
+}
+
+function addHeader() {
+    const container = $('#headersContainer');
+    const newRow = $(`
+        <div class="header-row mb-2">
+            <div class="input-group">
+                <input type="text" class="form-control header-key" placeholder="Chave">
+                <input type="text" class="form-control header-value" placeholder="Valor">
+                <button type="button" class="btn btn-outline-danger" onclick="removeHeader(this)">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    `);
+    container.append(newRow);
+}
+
+function addPresetHeader(key, value) {
+    // Check if header already exists
+    let exists = false;
+    $('.header-row').each(function() {
+        const existingKey = $(this).find('.header-key').val().trim();
+        if (existingKey.toLowerCase() === key.toLowerCase()) {
+            exists = true;
+            // Update existing header value
+            $(this).find('.header-value').val(value);
+            return false; // break loop
+        }
+    });
+    
+    if (!exists) {
+        // Add new header
+        const container = $('#headersContainer');
+        const newRow = $(`
+            <div class="header-row mb-2">
+                <div class="input-group">
+                    <input type="text" class="form-control header-key" placeholder="Chave" value="${escapeHtml(key)}">
+                    <input type="text" class="form-control header-value" placeholder="Valor" value="${escapeHtml(value)}">
+                    <button type="button" class="btn btn-outline-danger" onclick="removeHeader(this)">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        `);
+        container.append(newRow);
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function removeHeader(btn) {
+    $(btn).closest('.header-row').remove();
+}
+
+function updateAuthConfig() {
+    const authType = $('#authType').val();
+    $('#authConfigContainer').toggle(authType !== 'none');
+    $('#bearerAuth').toggle(authType === 'bearer');
+    $('#basicAuth').toggle(authType === 'basic');
+    $('#apiKeyAuth').toggle(authType === 'api_key');
+}
+
+// Load saved configs on page load
+$(document).ready(function() {
+    loadSavedConfigs();
+    loadSavedPayloads();
+    
+    $('#authType').on('change', function() {
+        updateAuthConfig();
+    });
+    
+    updateAuthConfig();
+});
+
+function getHeaders() {
+    const headers = {};
+    $('.header-row').each(function() {
+        const key = $(this).find('.header-key').val().trim();
+        const value = $(this).find('.header-value').val().trim();
+        if (key && value) {
+            headers[key] = value;
+        }
+    });
+    return headers;
+}
+
+function getAuthHeadersForRequest() {
+    const authType = $('#authType').val();
+    const headers = {};
+    
+    if (authType === 'bearer') {
+        const token = $('#bearerToken').val().trim();
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+    } else if (authType === 'basic') {
+        const username = $('#basicUsername').val().trim();
+        const password = $('#basicPassword').val().trim();
+        if (username && password) {
+            const credentials = btoa(`${username}:${password}`);
+            headers['Authorization'] = `Basic ${credentials}`;
+        }
+    } else if (authType === 'api_key') {
+        const keyName = $('#apiKeyName').val().trim();
+        const keyValue = $('#apiKeyValue').val().trim();
+        if (keyName && keyValue) {
+            headers[keyName] = keyValue;
+        }
+    }
+    
+    return headers;
+}
+
+async function sendRequest() {
+    const method = $('#httpMethod').val();
+    let url = $('#requestUrl').val().trim();
+    
+    if (!url) {
+        alert('Por favor, informe a URL');
+        return;
+    }
+    
+    // Process query parameters
+    const paramsText = $('#requestParams').val().trim();
+    if (paramsText) {
+        try {
+            const params = JSON.parse(paramsText);
+            const queryString = Object.keys(params)
+                .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+                .join('&');
+            if (queryString) {
+                url += (url.includes('?') ? '&' : '?') + queryString;
+            }
+        } catch (e) {
+            alert('JSON inválido nos parâmetros: ' + e.message);
+            return;
+        }
+    }
+    
+    const headers = getHeaders();
+    const authHeaders = getAuthHeadersForRequest();
+    Object.assign(headers, authHeaders);
+    
+    let body = null;
+    if (['POST', 'PUT', 'PATCH'].includes(method)) {
+        const bodyText = $('#requestBody').val().trim();
+        if (bodyText) {
+            try {
+                body = JSON.parse(bodyText);
+            } catch (e) {
+                alert('JSON inválido no body: ' + e.message);
+                return;
+            }
+        }
+    }
+    
+    const responseContainer = $('#responseContainer');
+    responseContainer.html('<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2">Enviando requisição...</p></div>');
+    
+    try {
+        const response = await fetch(`${WEBHOOKS_API_BASE}/send`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                url: url,
+                method: method,
+                headers: headers,
+                payload: body
+            })
+        });
+        
+        const data = await response.json();
+        
+        let html = `
+            <div class="mb-3">
+                <strong>Status:</strong> 
+                <span class="badge bg-${data.status_code < 400 ? 'success' : 'danger'}">${data.status_code}</span>
+            </div>
+        `;
+        
+        if (data.headers) {
+            html += '<div class="mb-3"><strong>Headers da Resposta:</strong><pre class="bg-light p-2 rounded small">';
+            for (const [key, value] of Object.entries(data.headers)) {
+                html += `${key}: ${value}\n`;
+            }
+            html += '</pre></div>';
+        }
+        
+        html += '<div><strong>Resposta:</strong><pre class="bg-light p-3 rounded">';
+        try {
+            const jsonResponse = JSON.parse(data.response);
+            html += JSON.stringify(jsonResponse, null, 2);
+        } catch (e) {
+            html += data.response;
+        }
+        html += '</pre></div>';
+        
+        responseContainer.html(html);
+    } catch (error) {
+        responseContainer.html(`
+            <div class="alert alert-danger">
+                <strong>Erro:</strong> ${error.message}
+            </div>
+        `);
+    }
+}
+
+function loadNamespaceExample(type) {
+    // Use placeholder prefix to avoid Jinja2 processing
+    const ph = '{' + '{';
+    const phEnd = '}' + '}';
+    let template = '';
+    
+    if (type === 'basic') {
+        template = '{\n' +
+  '  "comparison_id": "' + ph + 'comparison.id' + phEnd + '",\n' +
+  '  "project_id": "' + ph + 'comparison.project_id' + phEnd + '",\n' +
+  '  "total_differences": "' + ph + 'comparison.total_differences' + phEnd + '",\n' +
+  '  "status": "' + ph + 'comparison.status' + phEnd + '"\n' +
+'}';
+    } else if (type === 'detail') {
+        template = '{\n' +
+  '  "comparison": {\n' +
+  '    "id": "' + ph + 'comparison.id' + phEnd + '",\n' +
+  '    "project_id": "' + ph + 'comparison.project_id' + phEnd + '",\n' +
+  '    "executed_at": "' + ph + 'comparison.executed_at' + phEnd + '",\n' +
+  '    "total_differences": "' + ph + 'comparison.total_differences' + phEnd + '"\n' +
+  '  },\n' +
+  '  "difference": {\n' +
+  '    "id": "' + ph + 'difference.id' + phEnd + '",\n' +
+  '    "record_id": "' + ph + 'difference.record_id' + phEnd + '",\n' +
+  '    "field_name": "' + ph + 'difference.field_name' + phEnd + '",\n' +
+  '    "source_value": "' + ph + 'difference.source_value' + phEnd + '",\n' +
+  '    "target_value": "' + ph + 'difference.target_value' + phEnd + '",\n' +
+  '    "change_type": "' + ph + 'difference.change_type' + phEnd + '",\n' +
+  '    "detected_at": "' + ph + 'difference.detected_at' + phEnd + '"\n' +
+  '  }\n' +
+'}';
+    } else if (type === 'webhook') {
+        template = '{\n' +
+  '  "event": "comparison.difference.detected",\n' +
+  '  "timestamp": "' + ph + 'difference.detected_at' + phEnd + '",\n' +
+  '  "data": {\n' +
+  '    "comparison_id": "' + ph + 'comparison.id' + phEnd + '",\n' +
+  '    "project_id": "' + ph + 'comparison.project_id' + phEnd + '",\n' +
+  '    "record_id": "' + ph + 'difference.record_id' + phEnd + '",\n' +
+  '    "field": "' + ph + 'difference.field_name' + phEnd + '",\n' +
+  '    "old_value": "' + ph + 'difference.source_value' + phEnd + '",\n' +
+  '    "new_value": "' + ph + 'difference.target_value' + phEnd + '",\n' +
+  '    "change_type": "' + ph + 'difference.change_type' + phEnd + '"\n' +
+  '  }\n' +
+'}';
+    }
+    
+    if (template) {
+        $('#requestBody').val(template);
+        bootstrap.Modal.getInstance(document.getElementById('namespaceExamplesModal')).hide();
+        formatJSON();
+    }
+}
+
+async function loadSavedConfigs() {
+    try {
+        const response = await fetch(`${WEBHOOKS_API_BASE}/configs`, {
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        
+        const select = $('#savedConfigSelect');
+        select.empty().append('<option value="">Selecione uma configuração...</option>');
+        
+        data.configs.forEach(config => {
+            select.append(`<option value="${config.id}">${config.name}</option>`);
+        });
+        
+        select.on('change', function() {
+            const configId = $(this).val();
+            if (configId) {
+                loadConfig(configId);
+                $('#editConfigBtn').show();
+            } else {
+                $('#editConfigBtn').hide();
+                $('#saveConfigId').val('');
+            }
+        });
+    } catch (error) {
+        console.error('Error loading configs:', error);
+    }
+}
+
+let currentConfigId = null;
+
+async function loadConfig(configId) {
+    try {
+        const response = await fetch(`${WEBHOOKS_API_BASE}/configs/${configId}`, {
+            headers: getAuthHeaders()
+        });
+        const config = await response.json();
+        
+        currentConfigId = configId;
+        $('#saveConfigId').val(configId);
+        
+        $('#httpMethod').val(config.method);
+        $('#requestUrl').val(config.url);
+        $('#authType').val(config.auth_type || 'none');
+        updateAuthConfig();
+        
+        // Load auth config with decrypted credentials (since we use to_dict_with_credentials)
+        if (config.auth_config) {
+            if (config.auth_type === 'bearer') {
+                $('#bearerToken').val(config.auth_config.token || '');
+            } else if (config.auth_type === 'basic') {
+                $('#basicUsername').val(config.auth_config.username || '');
+                $('#basicPassword').val(config.auth_config.password || '');
+            } else if (config.auth_type === 'api_key') {
+                $('#apiKeyName').val(config.auth_config.key_name || '');
+                $('#apiKeyValue').val(config.auth_config.key_value || '');
+            }
+        }
+        
+        // Load headers
+        $('#headersContainer').empty();
+        if (config.headers && Object.keys(config.headers).length > 0) {
+            for (const [key, value] of Object.entries(config.headers)) {
+                if (key.toLowerCase() !== 'authorization') {
+                    addHeader();
+                    const rows = $('#headersContainer .header-row');
+                    const lastRow = rows.last();
+                    lastRow.find('.header-key').val(key);
+                    lastRow.find('.header-value').val(value);
+                }
+            }
+        } else {
+            // Add default Content-Type header if no headers
+            addHeader();
+            const rows = $('#headersContainer .header-row');
+            const lastRow = rows.last();
+            lastRow.find('.header-key').val('Content-Type');
+            lastRow.find('.header-value').val('application/json');
+        }
+        
+        // Load default payload
+        if (config.default_payload) {
+            try {
+                // Try to format JSON if valid
+                const parsed = JSON.parse(config.default_payload);
+                $('#requestBody').val(JSON.stringify(parsed, null, 2));
+            } catch (e) {
+                // If not valid JSON, use as is
+                $('#requestBody').val(config.default_payload);
+            }
+        } else {
+            $('#requestBody').val('');
+        }
+    } catch (error) {
+        alert('Erro ao carregar configuração: ' + error.message);
+    }
+}
+
+function editSelectedConfig() {
+    const configId = $('#savedConfigSelect').val();
+    if (!configId) {
+        alert('Selecione uma configuração primeiro');
+        return;
+    }
+    
+    // Load config and then show save modal with data pre-filled
+    loadConfig(configId).then(() => {
+        // Get config name from select
+        const configName = $('#savedConfigSelect option:selected').text();
+        $('#saveConfigName').val(configName);
+        
+        // Try to get description from API (would need another call, but for now just show modal)
+        const modal = new bootstrap.Modal(document.getElementById('saveConfigModal'));
+        modal.show();
+    });
+}
+
+function loadExample(type) {
+    let example = {};
+    if (type === 'comparison') {
+        example = {
+            comparison_id: 1,
+            project_id: 1,
+            total_differences: 5,
+            executed_at: new Date().toISOString(),
+            differences: [
+                {
+                    record_id: "123",
+                    field_name: "nome",
+                    source_value: "João",
+                    target_value: "João Silva",
+                    change_type: "modified"
+                }
+            ]
+        };
+    } else if (type === 'aggregated') {
+        example = {
+            project_id: 1,
+            date: new Date().toISOString().split('T')[0],
+            summary: {
+                added: 10,
+                modified: 5,
+                deleted: 2
+            },
+            changes: []
+        };
+    }
+    
+    $('#requestBody').val(JSON.stringify(example, null, 2));
+}
+
+async function loadSavedPayloads() {
+    try {
+        const response = await fetch(`${WEBHOOKS_API_BASE}/payloads`, {
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        
+        const select = $('#payloadSelect');
+        select.empty().append('<option value="">Selecione um payload...</option>');
+        
+        data.payloads.forEach(payload => {
+            select.append(`<option value="${payload.id}">${payload.name}</option>`);
+        });
+        
+        select.on('change', function() {
+            const payloadId = $(this).val();
+            if (payloadId) {
+                previewPayload(payloadId);
+            } else {
+                $('#payloadPreview').empty();
+            }
+        });
+    } catch (error) {
+        console.error('Error loading payloads:', error);
+    }
+}
+
+async function previewPayload(payloadId) {
+    try {
+        const response = await fetch(`${WEBHOOKS_API_BASE}/payloads/${payloadId}`, {
+            headers: getAuthHeaders()
+        });
+        const payload = await response.json();
+        
+        const preview = $('#payloadPreview');
+        const payloadContent = escapeHtml(payload.payload_example || payload.payload_template || '');
+        preview.html(
+            '<div class="mb-2"><strong>' + escapeHtml(payload.name) + '</strong></div>' +
+            (payload.description ? '<div class="mb-2 text-muted">' + escapeHtml(payload.description) + '</div>' : '') +
+            '<pre class="bg-light p-3 rounded"><code>' + payloadContent + '</code></pre>'
+        );
+    } catch (error) {
+        $('#payloadPreview').html('<div class="alert alert-danger">Erro ao carregar payload</div>');
+    }
+}
+
+function confirmLoadPayload() {
+    const payloadId = $('#payloadSelect').val();
+    if (!payloadId) {
+        alert('Selecione um payload');
+        return;
+    }
+    
+    previewPayload(payloadId).then(() => {
+        const payload = JSON.parse($('#payloadPreview pre code').text());
+        $('#requestBody').val(JSON.stringify(payload, null, 2));
+        bootstrap.Modal.getInstance(document.getElementById('loadPayloadModal')).hide();
+    });
+}
+
+// Functions for loading params
+function loadParams() {
+    const modal = new bootstrap.Modal(document.getElementById('loadParamsModal'));
+    modal.show();
+    loadSavedParams();
+}
+
+function clearParams() {
+    $('#requestParams').val('');
+}
+
+async function loadSavedParams() {
+    try {
+        const response = await fetch(`${WEBHOOKS_API_BASE}/params`, {
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        
+        const select = $('#paramsSelect');
+        select.empty();
+        select.append('<option value="">Selecione um parâmetro...</option>');
+        
+        if (data.params && data.params.length > 0) {
+            data.params.forEach(param => {
+                select.append(`<option value="${param.id}">${escapeHtml(param.name)}</option>`);
+            });
+            
+            select.on('change', function() {
+                const paramId = $(this).val();
+                if (paramId) {
+                    previewParams(paramId);
+                } else {
+                    $('#paramsPreview').empty();
+                }
+            });
+        } else {
+            select.append('<option value="">Nenhum parâmetro cadastrado</option>');
+        }
+    } catch (error) {
+        console.error('Error loading params:', error);
+        alert('Erro ao carregar parâmetros: ' + error.message);
+    }
+}
+
+function confirmLoadParams() {
+    const paramId = $('#paramsSelect').val();
+    if (!paramId) {
+        alert('Selecione um parâmetro');
+        return;
+    }
+    
+    previewParams(paramId).then(param => {
+        if (param.params_template) {
+            try {
+                const parsed = JSON.parse(param.params_template);
+                $('#requestParams').val(JSON.stringify(parsed, null, 2));
+            } catch (e) {
+                $('#requestParams').val(param.params_template);
+            }
+        } else {
+            $('#requestParams').val('');
+        }
+        bootstrap.Modal.getInstance(document.getElementById('loadParamsModal')).hide();
+    });
+}
+
+async function previewParams(paramId) {
+    try {
+        const response = await fetch(`${WEBHOOKS_API_BASE}/params/${paramId}`, {
+            headers: getAuthHeaders()
+        });
+        const param = await response.json();
+        
+        const preview = $('#paramsPreview');
+        const paramContent = escapeHtml(param.params_template || '');
+        preview.html(
+            '<div class="mb-2"><strong>' + escapeHtml(param.name) + '</strong></div>' +
+            (param.description ? '<div class="mb-2 text-muted">' + escapeHtml(param.description) + '</div>' : '') +
+            '<pre class="bg-light p-3 rounded"><code>' + paramContent + '</code></pre>'
+        );
+        
+        return param;
+    } catch (error) {
+        $('#paramsPreview').html('<div class="alert alert-danger">Erro ao carregar parâmetro</div>');
+        throw error;
+    }
+}
+</script>
+{% endblock scripts %}
+

@@ -442,6 +442,9 @@
                             <a class="nav-link" href="#scheduled-tasks">
                                 <i class="fas fa-clock me-2"></i>Agendamento
                             </a>
+                            <a class="nav-link" href="#webhooks">
+                                <i class="fas fa-paper-plane me-2"></i>Webhooks
+                            </a>
                             <a class="nav-link" href="#dashboard">
                                 <i class="fas fa-chart-line me-2"></i>Dashboard
                             </a>
@@ -2529,6 +2532,353 @@ echo "Colunas destino: " . implode(", ", $columns['target_columns']) . "\n";</co
   "message": "Redirecting to execution page",
   "redirect_url": "/comparacao/1/execution?source_key=id&target_key=user_id"
 }</code></pre>
+                    </div>
+                </div>
+
+                <!-- Webhooks Endpoints -->
+                <div id="webhooks" class="api-endpoint">
+                    <h2><i class="fas fa-paper-plane me-2"></i>Webhooks e Cliente HTTP</h2>
+                    <p>O DeltaScope inclui um cliente HTTP integrado (tipo Postman) para enviar requisições HTTP para servidores externos, com suporte a templates de payload usando namespaces para substituir valores dinamicamente.</p>
+
+                    <!-- Namespaces Section -->
+                    <div class="alert alert-info mt-4">
+                        <h5 class="alert-heading"><i class="fas fa-code me-2"></i>Namespaces Disponíveis</h5>
+                        <p>Os templates de payload suportam placeholders no formato <code>{{namespace.key}}</code> que são substituídos automaticamente pelos valores reais quando o webhook é enviado.</p>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <h6 class="text-primary"><i class="fas fa-exchange-alt me-2"></i>Namespace: <code>comparison</code></h6>
+                                <ul class="small">
+                                    <li><code>{% raw %}{{comparison.id}}{% endraw %}</code> - ID da comparação</li>
+                                    <li><code>{% raw %}{{comparison.project_id}}{% endraw %}</code> - ID do projeto</li>
+                                    <li><code>{% raw %}{{comparison.executed_at}}{% endraw %}</code> - Data/hora de execução (ISO format)</li>
+                                    <li><code>{% raw %}{{comparison.status}}{% endraw %}</code> - Status (pending, running, completed, failed)</li>
+                                    <li><code>{% raw %}{{comparison.total_differences}}{% endraw %}</code> - Total de diferenças encontradas</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-success"><i class="fas fa-exclamation-triangle me-2"></i>Namespace: <code>difference</code> ou <code>result</code></h6>
+                                <ul class="small">
+                                    <li><code>{% raw %}{{difference.id}}{% endraw %}</code> - ID da diferença/resultado</li>
+                                    <li><code>{% raw %}{{difference.comparison_id}}{% endraw %}</code> - ID da comparação</li>
+                                    <li><code>{% raw %}{{difference.record_id}}{% endraw %}</code> - ID do registro (chave primária)</li>
+                                    <li><code>{% raw %}{{difference.field_name}}{% endraw %}</code> - Nome do campo alterado</li>
+                                    <li><code>{% raw %}{{difference.source_value}}{% endraw %}</code> - Valor na origem</li>
+                                    <li><code>{% raw %}{{difference.target_value}}{% endraw %}</code> - Valor no destino</li>
+                                    <li><code>{% raw %}{{difference.change_type}}{% endraw %}</code> - Tipo de mudança (added, modified, deleted)</li>
+                                    <li><code>{% raw %}{{difference.detected_at}}{% endraw %}</code> - Data/hora de detecção (ISO format)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Template Examples -->
+                    <div class="mt-4">
+                        <h5><i class="fas fa-file-code me-2"></i>Exemplos de Templates</h5>
+                        
+                        <div class="accordion" id="webhookExamplesAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#exampleBasicWebhook">
+                                        Exemplo Básico
+                                    </button>
+                                </h2>
+                                <div id="exampleBasicWebhook" class="accordion-collapse collapse show" data-bs-parent="#webhookExamplesAccordion">
+                                    <div class="accordion-body">
+                                        <pre><code>{% raw %}{
+  "comparison_id": "{{comparison.id}}",
+  "project_id": "{{comparison.project_id}}",
+  "total_differences": "{{comparison.total_differences}}",
+  "status": "{{comparison.status}}"
+}{% endraw %}</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#exampleDetailWebhook">
+                                        Exemplo Detalhado
+                                    </button>
+                                </h2>
+                                <div id="exampleDetailWebhook" class="accordion-collapse collapse" data-bs-parent="#webhookExamplesAccordion">
+                                    <div class="accordion-body">
+                                        <pre><code>{% raw %}{
+  "comparison": {
+    "id": "{{comparison.id}}",
+    "project_id": "{{comparison.project_id}}",
+    "executed_at": "{{comparison.executed_at}}",
+    "total_differences": "{{comparison.total_differences}}"
+  },
+  "difference": {
+    "id": "{{difference.id}}",
+    "record_id": "{{difference.record_id}}",
+    "field_name": "{{difference.field_name}}",
+    "source_value": "{{difference.source_value}}",
+    "target_value": "{{difference.target_value}}",
+    "change_type": "{{difference.change_type}}",
+    "detected_at": "{{difference.detected_at}}"
+  }
+}{% endraw %}</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#exampleNotificationWebhook">
+                                        Exemplo Notificação Webhook
+                                    </button>
+                                </h2>
+                                <div id="exampleNotificationWebhook" class="accordion-collapse collapse" data-bs-parent="#webhookExamplesAccordion">
+                                    <div class="accordion-body">
+                                        <pre><code>{% raw %}{
+  "event": "comparison.difference.detected",
+  "timestamp": "{{difference.detected_at}}",
+  "data": {
+    "comparison_id": "{{comparison.id}}",
+    "project_id": "{{comparison.project_id}}",
+    "record_id": "{{difference.record_id}}",
+    "field": "{{difference.field_name}}",
+    "old_value": "{{difference.source_value}}",
+    "new_value": "{{difference.target_value}}",
+    "change_type": "{{difference.change_type}}"
+  }
+}{% endraw %}</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GET /api/webhooks/configs -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/webhooks/configs</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Lista todas as configurações de webhook do usuário autenticado.</p>
+                        
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "configs": [
+    {
+      "id": 1,
+      "name": "Webhook Produção",
+      "description": "Envia notificações para API de produção",
+      "url": "https://api.exemplo.com/webhook",
+      "method": "POST",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "auth_type": "bearer",
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00"
+    }
+  ]
+}</code></pre>
+                    </div>
+
+                    <!-- POST /api/webhooks/configs -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-url">/api/webhooks/configs</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Cria uma nova configuração de webhook. As credenciais de autenticação são criptografadas antes de serem armazenadas.</p>
+                        
+                        <h5 class="mt-3">Request:</h5>
+                        <pre><code>{
+  "name": "Webhook Produção",
+  "description": "Envia notificações para API de produção",
+  "url": "https://api.exemplo.com/webhook",
+  "method": "POST",
+  "headers": {
+    "Content-Type": "application/json",
+    "X-Custom-Header": "valor"
+  },
+  "auth_type": "bearer",
+  "auth_config": {
+    "token": "seu_token_aqui"
+  },
+  "default_payload": "{\"event\": \"comparison.detected\", \"comparison_id\": \"{% raw %}{{comparison.id}}{% endraw %}\"}",
+  "is_active": true
+}</code></pre>
+
+                        <h5 class="mt-3">Tipos de Autenticação:</h5>
+                        <ul>
+                            <li><code>none</code> - Sem autenticação</li>
+                            <li><code>bearer</code> - Bearer Token (requer <code>token</code> em <code>auth_config</code>)</li>
+                            <li><code>basic</code> - Basic Auth (requer <code>username</code> e <code>password</code> em <code>auth_config</code>)</li>
+                            <li><code>api_key</code> - API Key (requer <code>key_name</code> e <code>key_value</code> em <code>auth_config</code>)</li>
+                        </ul>
+
+                        <div class="alert alert-warning mt-3">
+                            <i class="fas fa-lock me-2"></i><strong>Segurança:</strong> Todas as credenciais (<code>token</code>, <code>password</code>, <code>key_value</code>) são criptografadas usando Fernet antes de serem armazenadas no banco de dados.
+                        </div>
+                    </div>
+
+                    <!-- POST /api/webhooks/send -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-url">/api/webhooks/send</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Envia uma requisição HTTP manualmente através do cliente HTTP integrado. Suporta processamento de templates com namespaces.</p>
+                        
+                        <h5 class="mt-3">Request:</h5>
+                        <pre><code>{
+  "url": "https://api.exemplo.com/webhook",
+  "method": "POST",
+  "headers": {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer token123"
+  },
+  "payload": {
+    "event": "test",
+    "comparison_id": "{% raw %}{{comparison.id}}{% endraw %}",
+    "field": "{% raw %}{{difference.field_name}}{% endraw %}"
+  }
+}</code></pre>
+
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "message": "Request sent successfully",
+  "status_code": 200,
+  "response": "{\"success\": true}",
+  "headers": {
+    "Content-Type": "application/json"
+  }
+}</code></pre>
+                    </div>
+
+                    <!-- POST /api/webhooks/process-template -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-url">/api/webhooks/process-template</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Processa um template de payload substituindo os placeholders pelos valores fornecidos. Útil para testar templates antes de enviar.</p>
+                        
+                        <h5 class="mt-3">Request:</h5>
+                        <pre><code>{
+  "template": "{\"comparison_id\": \"{% raw %}{{comparison.id}}{% endraw %}\", \"field\": \"{% raw %}{{difference.field_name}}{% endraw %}\"}",
+  "comparison": {
+    "id": 1,
+    "project_id": 1,
+    "total_differences": 5
+  },
+  "difference": {
+    "id": 10,
+    "field_name": "nome",
+    "source_value": "João",
+    "target_value": "João Silva"
+  }
+}</code></pre>
+
+                        <h5 class="mt-3">Response (200 OK):</h5>
+                        <pre><code>{
+  "processed": {
+    "comparison_id": "1",
+    "field": "nome"
+  }
+}</code></pre>
+                    </div>
+
+                    <!-- GET /api/webhooks/payloads -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-get">GET</span>
+                            <span class="endpoint-url">/api/webhooks/payloads</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Lista todos os templates de payload salvos pelo usuário.</p>
+                    </div>
+
+                    <!-- POST /api/webhooks/payloads -->
+                    <div class="mt-4">
+                        <h4>
+                            <span class="method-badge method-post">POST</span>
+                            <span class="endpoint-url">/api/webhooks/payloads</span>
+                        </h4>
+                        <p><strong>Descrição:</strong> Cria um novo template de payload para reutilização.</p>
+                        
+                        <h5 class="mt-3">Request:</h5>
+                        <pre><code>{
+  "name": "Notificação de Diferença",
+  "description": "Template para notificar diferenças detectadas",
+  "payload_template": "{\"event\": \"difference.detected\", \"comparison_id\": \"{% raw %}{{comparison.id}}{% endraw %}\", \"field\": \"{% raw %}{{difference.field_name}}{% endraw %}\"}",
+  "payload_example": "{\"event\": \"difference.detected\", \"comparison_id\": \"1\", \"field\": \"nome\"}"
+}</code></pre>
+                    </div>
+
+                    <!-- Envio em Massa de Diferenças -->
+                    <div class="mt-4">
+                        <h4><i class="fas fa-paper-plane me-2"></i>Envio em Massa de Diferenças para Webhook</h4>
+                        <p><strong>Descrição:</strong> Funcionalidade integrada na página de resultados de comparação que permite enviar todas as diferenças encontradas para um webhook configurado em loop sequencial.</p>
+                        
+                        <div class="alert alert-info mt-3">
+                            <h5 class="alert-heading"><i class="fas fa-info-circle me-2"></i>Como Funciona</h5>
+                            <ol class="mb-0">
+                                <li>Acesse a página de resultados de uma comparação executada: <code>/relatorios/&lt;comparison_id&gt;/resultados</code></li>
+                                <li>Clique no botão <strong>"Enviar Todas as Diferenças para Webhook"</strong></li>
+                                <li>Configure o envio:
+                                    <ul>
+                                        <li>Selecione um webhook previamente configurado</li>
+                                        <li>Escolha filtrar por campo específico (ex: "username") ou enviar todos os campos</li>
+                                        <li>Escolha enviar no Body (Payload) ou Parâmetros (Query String)</li>
+                                        <li>Escolha qual valor enviar: Origem ou Destino</li>
+                                    </ul>
+                                </li>
+                                <li>O sistema enviará em loop:
+                                    <ul>
+                                        <li>Se você selecionar o campo "username" e houver 5 diferenças nesse campo, serão enviadas 5 requisições</li>
+                                        <li>Cada requisição usa o mesmo payload template do webhook configurado</li>
+                                        <li>Os namespaces <code>{% raw %}{{comparison.*}}{% endraw %}</code>, <code>{% raw %}{{difference.*}}{% endraw %}</code> e <code>{% raw %}{{project.*}}{% endraw %}</code> são substituídos automaticamente</li>
+                                        <li>As requisições são enviadas sequencialmente (uma por vez) com delay de 100ms entre elas</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                        </div>
+
+                        <h5 class="mt-4">Exemplo de Uso</h5>
+                        <p>Suponha que você tenha:</p>
+                        <ul>
+                            <li>Uma comparação com ID 16</li>
+                            <li>5 diferenças no campo "username"</li>
+                            <li>Um webhook configurado com o payload template:</li>
+                        </ul>
+                        <pre><code>{% raw %}{
+  "event": "field.changed",
+  "comparison_id": "{{comparison.id}}",
+  "field_name": "{{difference.field_name}}",
+  "record_id": "{{difference.record_id}}",
+  "old_value": "{{difference.source_value}}",
+  "new_value": "{{difference.target_value}}",
+  "change_type": "{{difference.change_type}}"
+}{% endraw %}</code></pre>
+                        
+                        <p>Ao clicar em "Enviar Todas as Diferenças para Webhook" e selecionar:</p>
+                        <ul>
+                            <li><strong>Webhook:</strong> "Meu Webhook"</li>
+                            <li><strong>Campo:</strong> "username"</li>
+                            <li><strong>Enviar em:</strong> Body (Payload)</li>
+                            <li><strong>Valor:</strong> Origem</li>
+                        </ul>
+                        
+                        <p>O sistema enviará 5 requisições HTTP, uma para cada diferença encontrada no campo "username", substituindo os placeholders com os dados específicos de cada diferença.</p>
+
+                        <h5 class="mt-4">Recursos Disponíveis</h5>
+                        <ul>
+                            <li>✅ <strong>Barra de progresso em tempo real:</strong> Mostra o progresso do envio (ex: "3 / 5")</li>
+                            <li>✅ <strong>Log detalhado:</strong> Exibe o resultado de cada envio (sucesso ou erro)</li>
+                            <li>✅ <strong>Filtro por campo:</strong> Permite enviar apenas diferenças de um campo específico</li>
+                            <li>✅ <strong>Processamento de templates:</strong> Suporta todos os namespaces disponíveis</li>
+                            <li>✅ <strong>Envio sequencial:</strong> Evita sobrecarregar o servidor de destino</li>
+                            <li>✅ <strong>Resumo final:</strong> Mostra total de sucessos e erros ao final</li>
+                        </ul>
+
+                        <h5 class="mt-4">URL da Página</h5>
+                        <pre><code>/relatorios/&lt;comparison_id&gt;/resultados</code></pre>
                     </div>
                 </div>
 

@@ -1,0 +1,508 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Parâmetros - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="webhooksParamsSection">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-link me-2"></i>Gerenciar Parâmetros</h2>
+        <div>
+            <a href="/webhooks" class="btn btn-outline-primary me-2">
+                <i class="fas fa-paper-plane me-2"></i>Cliente HTTP
+            </a>
+            <a href="/webhooks/payloads" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-database me-2"></i>Gerenciar Payloads
+            </a>
+            <button class="btn btn-primary" onclick="showCreateModal()">
+                <i class="fas fa-plus me-2"></i>Novo Parâmetro
+            </button>
+        </div>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-list me-2"></i>Parâmetros Cadastrados</h5>
+        </div>
+        <div class="card-body">
+            <div id="paramsListContainer">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Carregando parâmetros...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Examples Section -->
+    <div class="card shadow mt-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Exemplos de Parâmetros</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <h6>Filtro por Projeto</h6>
+                    <pre class="bg-light p-3 rounded small"><code>{% raw %}{
+  "project_id": "{{comparison.project_id}}",
+  "status": "completed"
+}{% endraw %}</code></pre>
+                    <small class="text-muted d-block mb-2">Resultado: ?project_id=1&status=completed</small>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadExample('project_filter')">Usar como Template</button>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h6>Filtro por Data</h6>
+                    <pre class="bg-light p-3 rounded small"><code>{% raw %}{
+  "start_date": "{{comparison.executed_at}}",
+  "end_date": "{{comparison.executed_at}}",
+  "format": "iso"
+}{% endraw %}</code></pre>
+                    <small class="text-muted d-block mb-2">Resultado: ?start_date=2024-01-15&end_date=2024-01-15&format=iso</small>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadExample('date_filter')">Usar como Template</button>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h6>Notificação com IDs</h6>
+                    <pre class="bg-light p-3 rounded small"><code>{% raw %}{
+  "comparison_id": "{{comparison.id}}",
+  "record_id": "{{difference.record_id}}",
+  "action": "notify"
+}{% endraw %}</code></pre>
+                    <small class="text-muted d-block mb-2">Resultado: ?comparison_id=7&record_id=123&action=notify</small>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadExample('notification')">Usar como Template</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Create/Edit Params -->
+<div class="modal fade" id="paramsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paramsModalTitle">Novo Parâmetro</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="paramsForm">
+                    <input type="hidden" id="paramsId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nome *</label>
+                        <input type="text" class="form-control" id="paramsName" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Descrição</label>
+                        <textarea class="form-control" id="paramsDescription" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">Template JSON *</label>
+                            <button type="button" class="btn btn-sm btn-outline-info" onclick="formatParamsJSON()">
+                                <i class="fas fa-indent me-1"></i>Formatar
+                            </button>
+                        </div>
+                        <textarea class="form-control font-monospace" id="paramsTemplate" rows="10" required placeholder='{"key": "{% raw %}{{value}}{% endraw %}"}'></textarea>
+                        <small class="text-muted">Use {% raw %}{{placeholders}}{% endraw %} para valores dinâmicos. Os parâmetros serão convertidos para query string (?key=value&key2=value2)</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">Exemplo JSON (opcional)</label>
+                            <button type="button" class="btn btn-sm btn-outline-info" onclick="formatExampleJSON()">
+                                <i class="fas fa-indent me-1"></i>Formatar
+                            </button>
+                        </div>
+                        <textarea class="form-control font-monospace" id="paramsExample" rows="10" placeholder='{"key": "valor_exemplo"}'></textarea>
+                        <small class="text-muted">Exemplo preenchido com valores de demonstração</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveParams()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+// Use different variable name to avoid conflict with app.js
+const WEBHOOKS_API_BASE = '/api/webhooks';
+
+let currentParamsId = null;
+
+const AUTH_TOKEN = '{{ session.token|safe }}';
+const USER_ID = parseInt('{{ current_user.id }}');
+
+function getAuthHeaders() {
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    if (AUTH_TOKEN) {
+        headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+    }
+    if (USER_ID) {
+        headers['X-User-Id'] = USER_ID;
+    }
+    return headers;
+}
+
+function showCreateModal() {
+    currentParamsId = null;
+    $('#paramsModalTitle').text('Novo Parâmetro');
+    $('#paramsForm')[0].reset();
+    $('#paramsId').val('');
+    const modal = new bootstrap.Modal(document.getElementById('paramsModal'));
+    modal.show();
+}
+
+$(document).ready(function() {
+    loadParams();
+});
+
+async function loadParams() {
+    const container = $('#paramsListContainer');
+    
+    try {
+        // Add timeout to prevent hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        const response = await fetch(`${WEBHOOKS_API_BASE}/params`, {
+            headers: getAuthHeaders(),
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        // Ensure params is an array
+        const params = Array.isArray(data.params) ? data.params : [];
+        
+        if (params.length > 0) {
+            let html = '<div class="row">';
+            params.forEach(param => {
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">${escapeHtml(param.name)}</h5>
+                                <p class="card-text text-muted">${escapeHtml(param.description || 'Sem descrição')}</p>
+                                
+                                <div class="mb-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        Criado em: ${new Date(param.created_at).toLocaleDateString('pt-BR')}
+                                    </small>
+                                </div>
+                                
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button class="btn btn-info" onclick="viewParams(${param.id})" title="Visualizar">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-primary" onclick="editParams(${param.id})" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-danger" onclick="deleteParams(${param.id})" title="Deletar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.html(html);
+        } else {
+            container.html(`
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>Nenhum parâmetro cadastrado. Clique em "Novo Parâmetro" para criar um.
+                </div>
+            `);
+        }
+    } catch (error) {
+        console.error('Error loading params:', error);
+        
+        // If it's an abort error (timeout), show timeout message
+        if (error.name === 'AbortError') {
+            container.html(`
+                <div class="alert alert-warning">
+                    <i class="fas fa-clock me-2"></i>Timeout ao carregar parâmetros. Verifique sua conexão e tente novamente.
+                </div>
+            `);
+        } else {
+            container.html(`
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>Erro ao carregar parâmetros: ${error.message}
+                </div>
+            `);
+        }
+    }
+}
+
+async function editParams(paramId) {
+    try {
+        const response = await fetch(`${WEBHOOKS_API_BASE}/params/${paramId}`, {
+            headers: getAuthHeaders()
+        });
+        const param = await response.json();
+        
+        currentParamsId = paramId;
+        $('#paramsModalTitle').text('Editar Parâmetro');
+        $('#paramsId').val(param.id);
+        $('#paramsName').val(param.name);
+        $('#paramsDescription').val(param.description || '');
+        $('#paramsTemplate').val(param.params_template);
+        $('#paramsExample').val(param.params_example || '');
+        
+        const modal = new bootstrap.Modal(document.getElementById('paramsModal'));
+        modal.show();
+    } catch (error) {
+        alert('Erro ao carregar parâmetro: ' + error.message);
+    }
+}
+
+async function viewParams(paramId) {
+    try {
+        const response = await fetch(`${WEBHOOKS_API_BASE}/params/${paramId}`, {
+            headers: getAuthHeaders()
+        });
+        const param = await response.json();
+        
+        let html = `
+            <div class="card">
+                <div class="card-header">
+                    <h5>${escapeHtml(param.name)}</h5>
+                </div>
+                <div class="card-body">
+                    ${param.description ? `<p>${escapeHtml(param.description)}</p>` : ''}
+                    <h6>Template:</h6>
+                    <pre class="bg-light p-3 rounded"><code>${escapeHtml(param.params_template)}</code></pre>
+                    ${param.params_example ? `
+                        <h6 class="mt-3">Exemplo:</h6>
+                        <pre class="bg-light p-3 rounded"><code>${escapeHtml(param.params_example)}</code></pre>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        
+        // Show in modal or alert
+        const modal = new bootstrap.Modal(document.createElement('div'));
+        modal._element.className = 'modal fade';
+        modal._element.innerHTML = `
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Visualizar Parâmetro</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">${html}</div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal._element);
+        modal.show();
+        modal._element.addEventListener('hidden.bs.modal', () => {
+            document.body.removeChild(modal._element);
+        });
+    } catch (error) {
+        alert('Erro ao visualizar parâmetro: ' + error.message);
+    }
+}
+
+async function saveParams() {
+    const name = $('#paramsName').val().trim();
+    const template = $('#paramsTemplate').val().trim();
+    
+    if (!name || !template) {
+        alert('Preencha todos os campos obrigatórios');
+        return;
+    }
+    
+    // Validate JSON
+    try {
+        JSON.parse(template);
+    } catch (e) {
+        alert('Template JSON inválido: ' + e.message);
+        return;
+    }
+    
+    const example = $('#paramsExample').val().trim();
+    if (example) {
+        try {
+            JSON.parse(example);
+        } catch (e) {
+            alert('Exemplo JSON inválido: ' + e.message);
+            return;
+        }
+    }
+    
+    const payload = {
+        name: name,
+        description: $('#paramsDescription').val().trim(),
+        params_template: template,
+        params_example: example || ''
+    };
+    
+    try {
+        const url = currentParamsId 
+            ? `${WEBHOOKS_API_BASE}/params/${currentParamsId}`
+            : `${WEBHOOKS_API_BASE}/params`;
+        const method = currentParamsId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeaders()
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Erro ao salvar parâmetro');
+        }
+        
+        bootstrap.Modal.getInstance(document.getElementById('paramsModal')).hide();
+        loadParams();
+        
+        // Show success notification
+        const alert = $('<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+            '<i class="fas fa-check-circle me-2"></i>Parâmetro salvo com sucesso!' +
+            '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+            '</div>');
+        $('#webhooksParamsSection').prepend(alert);
+        setTimeout(() => alert.alert('close'), 3000);
+    } catch (error) {
+        alert('Erro ao salvar parâmetro: ' + error.message);
+    }
+}
+
+async function deleteParams(paramId) {
+    if (!confirm('Tem certeza que deseja deletar este parâmetro?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${WEBHOOKS_API_BASE}/params/${paramId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Erro ao deletar parâmetro');
+        }
+        
+        loadParams();
+        
+        // Show success notification
+        const alert = $('<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+            '<i class="fas fa-check-circle me-2"></i>Parâmetro deletado com sucesso!' +
+            '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+            '</div>');
+        $('#webhooksParamsSection').prepend(alert);
+        setTimeout(() => alert.alert('close'), 3000);
+    } catch (error) {
+        alert('Erro ao deletar parâmetro: ' + error.message);
+    }
+}
+
+function formatParamsJSON() {
+    const textarea = $('#paramsTemplate');
+    const text = textarea.val().trim();
+    if (!text) return;
+    
+    try {
+        const json = JSON.parse(text);
+        textarea.val(JSON.stringify(json, null, 2));
+    } catch (e) {
+        alert('JSON inválido: ' + e.message);
+    }
+}
+
+function formatExampleJSON() {
+    const textarea = $('#paramsExample');
+    const text = textarea.val().trim();
+    if (!text) return;
+    
+    try {
+        const json = JSON.parse(text);
+        textarea.val(JSON.stringify(json, null, 2));
+    } catch (e) {
+        alert('JSON inválido: ' + e.message);
+    }
+}
+
+function loadExample(type) {
+    const ph = '{' + '{';
+    const phEnd = '}' + '}';
+    let template = '';
+    let example = '';
+    
+    if (type === 'project_filter') {
+        template = '{\n' +
+            '  "project_id": "' + ph + 'comparison.project_id' + phEnd + '",\n' +
+            '  "status": "completed"\n' +
+            '}';
+        example = '{\n' +
+            '  "project_id": "1",\n' +
+            '  "status": "completed"\n' +
+            '}';
+    } else if (type === 'date_filter') {
+        template = '{\n' +
+            '  "start_date": "' + ph + 'comparison.executed_at' + phEnd + '",\n' +
+            '  "end_date": "' + ph + 'comparison.executed_at' + phEnd + '",\n' +
+            '  "format": "iso"\n' +
+            '}';
+        example = '{\n' +
+            '  "start_date": "2024-01-15T10:30:00",\n' +
+            '  "end_date": "2024-01-15T10:30:00",\n' +
+            '  "format": "iso"\n' +
+            '}';
+    } else if (type === 'notification') {
+        template = '{\n' +
+            '  "comparison_id": "' + ph + 'comparison.id' + phEnd + '",\n' +
+            '  "record_id": "' + ph + 'difference.record_id' + phEnd + '",\n' +
+            '  "action": "notify"\n' +
+            '}';
+        example = '{\n' +
+            '  "comparison_id": "7",\n' +
+            '  "record_id": "123",\n' +
+            '  "action": "notify"\n' +
+            '}';
+    }
+    
+    if (template) {
+        $('#paramsTemplate').val(template);
+        $('#paramsExample').val(example);
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{% endblock scripts %}
+

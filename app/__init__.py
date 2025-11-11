@@ -56,6 +56,7 @@ def create_app(config_name='default'):
     from app.routes.groups import groups_bp
     from app.routes.setup import setup_bp
     from app.routes.scheduled_tasks import scheduled_tasks_bp
+    from app.routes.webhooks import webhooks_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(connections_bp, url_prefix='/api/connections')
@@ -67,6 +68,7 @@ def create_app(config_name='default'):
     app.register_blueprint(groups_bp, url_prefix='/api/groups')
     app.register_blueprint(setup_bp, url_prefix='/api/setup')
     app.register_blueprint(scheduled_tasks_bp, url_prefix='/api/scheduled-tasks')
+    app.register_blueprint(webhooks_bp, url_prefix='/api/webhooks')
     
     # Register root route - redirect to login if not authenticated, otherwise redirect to home
     @app.route('/')
@@ -96,6 +98,7 @@ def create_app(config_name='default'):
     from app.routes.users_template import users_template_bp
     from app.routes.groups_template import groups_template_bp
     from app.routes.scheduled_tasks_template import scheduled_tasks_template_bp
+    from app.routes.webhooks_template import webhooks_template_bp
     
     app.register_blueprint(connections_template_bp)
     app.register_blueprint(projects_template_bp)
@@ -106,6 +109,7 @@ def create_app(config_name='default'):
     app.register_blueprint(users_template_bp)
     app.register_blueprint(groups_template_bp)
     app.register_blueprint(scheduled_tasks_template_bp)
+    app.register_blueprint(webhooks_template_bp)
     
     # Register API documentation route
     from app.routes.api_docs import api_docs_bp

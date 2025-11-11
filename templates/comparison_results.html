@@ -64,13 +64,13 @@
         </div>
     </div>
     
-    <!-- Export Buttons -->
+    <!-- Export and Webhook Buttons -->
     <div class="card shadow mb-4">
         <div class="card-header bg-success text-white">
             <h5 class="mb-0"><i class="fas fa-download me-2"></i>Exportar Resultados</h5>
         </div>
         <div class="card-body">
-            <div class="btn-group" role="group">
+            <div class="btn-group me-2" role="group">
                 <button type="button" class="btn btn-success" onclick="exportToJSON()">
                     <i class="fas fa-file-code me-2"></i>Exportar JSON
                 </button>
@@ -81,6 +81,9 @@
                     <i class="fas fa-file-alt me-2"></i>Exportar TXT
                 </button>
             </div>
+            <button type="button" class="btn btn-primary" onclick="openBulkWebhookModal()">
+                <i class="fas fa-paper-plane me-2"></i>Enviar Todas as Diferenças para Webhook
+            </button>
         </div>
     </div>
     
@@ -157,6 +160,96 @@
                 Nenhuma diferença encontrada entre as tabelas.
             </div>
             {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal para enviar todas as diferenças para webhook -->
+<div class="modal fade" id="bulkWebhookModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-paper-plane me-2"></i>Enviar Todas as Diferenças para Webhook</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="bulkWebhookForm">
+                    <!-- Webhook Selection -->
+                    <div class="mb-3">
+                        <label class="form-label">Webhook Configurado *</label>
+                        <select class="form-select" id="bulkWebhookConfigSelect" required>
+                            <option value="">Carregando webhooks...</option>
+                        </select>
+                        <small class="text-muted">Selecione um webhook previamente configurado</small>
+                    </div>
+                    
+                    <!-- Field Filter -->
+                    <div class="mb-3">
+                        <label class="form-label">Filtrar por Campo</label>
+                        <select class="form-select" id="bulkFieldFilter">
+                            <option value="">Todos os campos</option>
+                        </select>
+                        <small class="text-muted">Selecione um campo específico ou envie todos</small>
+                    </div>
+                    
+                    <!-- Send Type -->
+                    <div class="mb-3">
+                        <label class="form-label">Enviar em *</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="bulkSendType" id="bulkSendTypeBody" value="body" checked>
+                            <label class="btn btn-outline-primary" for="bulkSendTypeBody">
+                                <i class="fas fa-code me-2"></i>Body (Payload)
+                            </label>
+                            <input type="radio" class="btn-check" name="bulkSendType" id="bulkSendTypeParams" value="params">
+                            <label class="btn btn-outline-primary" for="bulkSendTypeParams">
+                                <i class="fas fa-link me-2"></i>Parâmetros (Query String)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Value Selection -->
+                    <div class="mb-3">
+                        <label class="form-label">Valor a Enviar *</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="bulkValueType" id="bulkValueTypeSource" value="source" checked>
+                            <label class="btn btn-outline-info" for="bulkValueTypeSource">
+                                Valor Origem
+                            </label>
+                            <input type="radio" class="btn-check" name="bulkValueType" id="bulkValueTypeTarget" value="target">
+                            <label class="btn btn-outline-info" for="bulkValueTypeTarget">
+                                Valor Destino
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Info -->
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Como funciona:</strong> O sistema enviará uma requisição para cada diferença encontrada. 
+                        Se você selecionar um campo específico (ex: "username"), serão enviadas todas as diferenças desse campo em loop.
+                        O payload será processado com os namespaces <code>{% raw %}{{comparison.*}}{% endraw %}</code>, 
+                        <code>{% raw %}{{difference.*}}{% endraw %}</code> e <code>{% raw %}{{project.*}}{% endraw %}</code>.
+                    </div>
+                    
+                    <!-- Progress -->
+                    <div id="bulkWebhookProgress" style="display: none;">
+                        <div class="mb-2">
+                            <strong>Progresso:</strong> <span id="bulkProgressText">0 / 0</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" id="bulkProgressBar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-2" id="bulkProgressLog" style="max-height: 200px; overflow-y: auto; font-size: 0.9em;">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="sendBulkWebhooks()" id="bulkSendBtn">
+                    <i class="fas fa-paper-plane me-2"></i>Enviar Todas
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -254,6 +347,250 @@
         link.href = URL.createObjectURL(blob);
         link.download = `comparison_${COMPARISON_ID}_${new Date().getTime()}.txt`;
         link.click();
+    }
+    
+    // Webhook functionality
+    const WEBHOOKS_API_BASE = '/api/webhooks';
+    const AUTH_TOKEN = '{{ session.token|safe }}';
+    const USER_ID = parseInt('{{ current_user.id }}');
+    
+    function getAuthHeaders() {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        if (AUTH_TOKEN) {
+            headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+        }
+        if (USER_ID) {
+            headers['X-User-Id'] = USER_ID;
+        }
+        return headers;
+    }
+    
+    let webhookConfigs = [];
+    
+    async function openBulkWebhookModal() {
+        const modal = new bootstrap.Modal(document.getElementById('bulkWebhookModal'));
+        modal.show();
+        
+        // Reset progress
+        $('#bulkWebhookProgress').hide();
+        $('#bulkProgressBar').css('width', '0%').removeClass('bg-success bg-danger bg-warning').addClass('progress-bar-animated');
+        $('#bulkProgressLog').empty();
+        $('#bulkSendBtn').prop('disabled', false);
+        
+        // Load webhook configs
+        await loadBulkWebhookConfigs();
+        
+        // Load field filter options
+        loadFieldFilterOptions();
+    }
+    
+    function loadFieldFilterOptions() {
+        // Get unique field names from results
+        const fieldNames = [...new Set(COMPARISON_DATA.results.map(r => r.field_name))].sort();
+        const select = $('#bulkFieldFilter');
+        select.empty();
+        select.append('<option value="">Todos os campos</option>');
+        
+        fieldNames.forEach(fieldName => {
+            const count = COMPARISON_DATA.results.filter(r => r.field_name === fieldName).length;
+            select.append(`<option value="${fieldName}">${fieldName} (${count} diferença${count > 1 ? 's' : ''})</option>`);
+        });
+    }
+    
+    async function loadBulkWebhookConfigs() {
+        try {
+            const response = await fetch(`${WEBHOOKS_API_BASE}/configs`, {
+                headers: getAuthHeaders()
+            });
+            const data = await response.json();
+            
+            webhookConfigs = data.configs || [];
+            const select = $('#bulkWebhookConfigSelect');
+            select.empty();
+            
+            if (webhookConfigs.length > 0) {
+                select.append('<option value="">Selecione um webhook...</option>');
+                webhookConfigs.forEach(config => {
+                    select.append(`<option value="${config.id}">${config.name}</option>`);
+                });
+            } else {
+                select.append('<option value="">Nenhum webhook configurado</option>');
+            }
+        } catch (error) {
+            console.error('Error loading webhook configs:', error);
+            $('#bulkWebhookConfigSelect').html('<option value="">Erro ao carregar webhooks</option>');
+        }
+    }
+    
+    async function sendBulkWebhooks() {
+        const configId = $('#bulkWebhookConfigSelect').val();
+        if (!configId) {
+            alert('Selecione um webhook');
+            return;
+        }
+        
+        const config = webhookConfigs.find(c => c.id == configId);
+        if (!config) {
+            alert('Webhook não encontrado');
+            return;
+        }
+        
+        const fieldFilter = $('#bulkFieldFilter').val();
+        const sendType = $('input[name="bulkSendType"]:checked').val();
+        const valueType = $('input[name="bulkValueType"]:checked').val();
+        
+        // Filter results by field if specified
+        let resultsToSend = COMPARISON_DATA.results;
+        if (fieldFilter) {
+            resultsToSend = resultsToSend.filter(r => r.field_name === fieldFilter);
+        }
+        
+        if (resultsToSend.length === 0) {
+            alert('Nenhuma diferença encontrada para enviar');
+            return;
+        }
+        
+        // Show progress
+        $('#bulkWebhookProgress').show();
+        $('#bulkSendBtn').prop('disabled', true);
+        const progressBar = $('#bulkProgressBar');
+        const progressText = $('#bulkProgressText');
+        const progressLog = $('#bulkProgressLog');
+        
+        let successCount = 0;
+        let errorCount = 0;
+        
+        // Build project data once
+        const projectData = {
+            id: COMPARISON_DATA.project_id,
+            name: {{ project.name|tojson|safe }}
+        };
+        
+        const comparisonData = {
+            id: COMPARISON_DATA.id,
+            project_id: COMPARISON_DATA.project_id,
+            executed_at: COMPARISON_DATA.executed_at,
+            status: COMPARISON_DATA.status,
+            total_differences: COMPARISON_DATA.total_differences
+        };
+        
+        // Send each result in sequence
+        for (let i = 0; i < resultsToSend.length; i++) {
+            const result = resultsToSend[i];
+            const progress = ((i + 1) / resultsToSend.length) * 100;
+            
+            progressBar.css('width', progress + '%');
+            progressText.text(`${i + 1} / ${resultsToSend.length}`);
+            
+            try {
+                // Build difference data
+                const differenceData = {
+                    id: result.id,
+                    comparison_id: result.comparison_id || COMPARISON_DATA.id,
+                    record_id: result.record_id,
+                    field_name: result.field_name,
+                    source_value: result.source_value,
+                    target_value: result.target_value,
+                    change_type: result.change_type,
+                    detected_at: result.detected_at
+                };
+                
+                let url = config.url;
+                let payload = null;
+                
+                if (sendType === 'body') {
+                    // Use template if available
+                    if (config.default_payload) {
+                        const templateResponse = await fetch(`${WEBHOOKS_API_BASE}/process-template`, {
+                            method: 'POST',
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({
+                                template: config.default_payload,
+                                comparison: comparisonData,
+                                difference: differenceData,
+                                project: projectData
+                            })
+                        });
+                        const templateResult = await templateResponse.json();
+                        payload = templateResult.processed || {};
+                    } else {
+                        // Build payload from difference data
+                        payload = {
+                            record_id: result.record_id,
+                            field_name: result.field_name,
+                            change_type: result.change_type,
+                            detected_at: result.detected_at,
+                            value: valueType === 'source' ? result.source_value : result.target_value
+                        };
+                    }
+                } else {
+                    // Build query params
+                    const params = {
+                        record_id: result.record_id,
+                        field_name: result.field_name,
+                        change_type: result.change_type,
+                        detected_at: result.detected_at,
+                        value: valueType === 'source' ? result.source_value : result.target_value
+                    };
+                    const queryString = Object.keys(params)
+                        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+                        .join('&');
+                    if (queryString) {
+                        url += (url.includes('?') ? '&' : '?') + queryString;
+                    }
+                }
+                
+                // Send webhook
+                const response = await fetch(`${WEBHOOKS_API_BASE}/send`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        url: url,
+                        method: config.method || 'POST',
+                        headers: config.headers || {},
+                        payload: payload
+                    })
+                });
+                
+                const responseData = await response.json();
+                
+                if (response.ok) {
+                    successCount++;
+                    progressLog.append(`<div class="text-success"><i class="fas fa-check-circle me-1"></i>Enviado: ${result.field_name} (ID: ${result.record_id})</div>`);
+                } else {
+                    errorCount++;
+                    progressLog.append(`<div class="text-danger"><i class="fas fa-times-circle me-1"></i>Erro: ${result.field_name} (ID: ${result.record_id}) - ${responseData.message || 'Erro desconhecido'}</div>`);
+                }
+                
+                // Scroll to bottom
+                progressLog.scrollTop(progressLog[0].scrollHeight);
+                
+                // Small delay between requests to avoid overwhelming the server
+                if (i < resultsToSend.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            } catch (error) {
+                errorCount++;
+                progressLog.append(`<div class="text-danger"><i class="fas fa-times-circle me-1"></i>Erro: ${result.field_name} (ID: ${result.record_id}) - ${error.message}</div>`);
+                progressLog.scrollTop(progressLog[0].scrollHeight);
+            }
+        }
+        
+        // Show final result
+        progressBar.removeClass('progress-bar-animated');
+        if (errorCount === 0) {
+            progressBar.addClass('bg-success');
+        } else if (successCount === 0) {
+            progressBar.addClass('bg-danger');
+        } else {
+            progressBar.addClass('bg-warning');
+        }
+        
+        progressLog.append(`<div class="mt-2 alert ${errorCount === 0 ? 'alert-success' : errorCount > 0 && successCount > 0 ? 'alert-warning' : 'alert-danger'}"><strong>Concluído:</strong> ${successCount} sucesso(s), ${errorCount} erro(s)</div>`);
+        
+        $('#bulkSendBtn').prop('disabled', false);
     }
 </script>
 {% endblock %}

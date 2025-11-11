@@ -48,6 +48,16 @@ body {
     background-color: #2563eb !important;
 }
 
+/* Navbar always on top */
+.navbar {
+    position: relative;
+    z-index: 9999 !important;
+}
+
+.navbar-nav .dropdown-menu {
+    z-index: 10000 !important;
+}
+
 .btn-primary {
     background-color: #2563eb;
     border-color: #2563eb;
@@ -1282,21 +1292,29 @@ body.dark-theme .dropdown-item:hover {
 
 /* Dropdown menu styles for navbar */
 .navbar-nav .dropdown-menu {
-    border-radius: 8px;
+    border-radius: 0;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(0, 0, 0, 0.1);
     margin-top: 0.5rem;
     padding: 0.5rem 0;
     min-width: 200px;
+    background-color: white;
+}
+
+.navbar-nav .dropdown-menu > li {
+    margin: 0;
+    padding: 0;
 }
 
 .navbar-nav .dropdown-item {
-    padding: 0.75rem 1.5rem;
-    margin: 0.125rem 0.5rem;
-    border-radius: 6px;
+    padding: 0.5rem 1.25rem;
+    margin: 0;
+    border-radius: 0;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
+    white-space: nowrap;
+    border: none;
 }
 
 .navbar-nav .dropdown-item:hover {

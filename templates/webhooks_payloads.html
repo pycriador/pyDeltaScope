@@ -1,0 +1,558 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Payloads - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="webhooksPayloadsSection">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-database me-2"></i>Gerenciar Payloads</h2>
+        <div>
+            <a href="/webhooks" class="btn btn-outline-primary me-2">
+                <i class="fas fa-paper-plane me-2"></i>Cliente HTTP
+            </a>
+            <button class="btn btn-primary" onclick="showCreateModal()">
+                <i class="fas fa-plus me-2"></i>Novo Payload
+            </button>
+        </div>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-list me-2"></i>Payloads Cadastrados</h5>
+        </div>
+        <div class="card-body">
+            <div id="payloadsListContainer">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Carregando payloads...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Examples Section -->
+    <div class="card shadow mt-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Exemplos de Payloads</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <h6>Resultado de Comparação</h6>
+                    <pre class="bg-light p-3 rounded small"><code>{
+  "comparison_id": 1,
+  "project_id": 1,
+  "total_differences": 5,
+  "executed_at": "{{timestamp}}",
+  "differences": [
+    {
+      "record_id": "{{record_id}}",
+      "field_name": "{{field_name}}",
+      "source_value": "{{source_value}}",
+      "target_value": "{{target_value}}",
+      "change_type": "{{change_type}}"
+    }
+  ]
+}</code></pre>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadExample('comparison')">Usar como Template</button>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h6>Mudanças Agregadas</h6>
+                    <pre class="bg-light p-3 rounded small"><code>{
+  "project_id": {{project_id}},
+  "date": "{{date}}",
+  "summary": {
+    "added": {{added_count}},
+    "modified": {{modified_count}},
+    "deleted": {{deleted_count}}
+  },
+  "changes": []
+}</code></pre>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadExample('aggregated')">Usar como Template</button>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h6>Notificação Simples</h6>
+                    <pre class="bg-light p-3 rounded small"><code>{
+  "message": "Nova comparação executada",
+  "project": "{{project_name}}",
+  "differences_found": {{total_differences}},
+  "timestamp": "{{timestamp}}"
+}</code></pre>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadExample('notification')">Usar como Template</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Create/Edit Payload -->
+<div class="modal fade" id="payloadModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="payloadModalTitle">Novo Payload</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="payloadForm">
+                    <input type="hidden" id="payloadId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nome *</label>
+                        <input type="text" class="form-control" id="payloadName" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Descrição</label>
+                        <textarea class="form-control" id="payloadDescription" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">Template JSON *</label>
+                            <button type="button" class="btn btn-sm btn-outline-info" onclick="formatPayloadJSON()">
+                                <i class="fas fa-indent me-1"></i>Formatar
+                            </button>
+                        </div>
+                        <textarea class="form-control font-monospace" id="payloadTemplate" rows="10" required placeholder='{"key": "{{value}}"}'></textarea>
+                        <small class="text-muted">Use {{placeholders}} para valores dinâmicos</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">Exemplo JSON (opcional)</label>
+                            <button type="button" class="btn btn-sm btn-outline-info" onclick="formatExampleJSON()">
+                                <i class="fas fa-indent me-1"></i>Formatar
+                            </button>
+                        </div>
+                        <textarea class="form-control font-monospace" id="payloadExample" rows="10" placeholder='{"key": "valor_exemplo"}'></textarea>
+                        <small class="text-muted">Exemplo preenchido com valores de demonstração</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="savePayload()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+// Use different variable name to avoid conflict with app.js
+const WEBHOOKS_API_BASE = '/api/webhooks';
+
+let currentPayloadId = null;
+
+const AUTH_TOKEN = '{{ session.token|safe }}';
+const USER_ID = parseInt('{{ current_user.id }}');
+
+function getAuthHeaders() {
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    if (AUTH_TOKEN) {
+        headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+    }
+    if (USER_ID) {
+        headers['X-User-Id'] = USER_ID;
+    }
+    return headers;
+}
+
+function showCreateModal() {
+    currentPayloadId = null;
+    $('#payloadModalTitle').text('Novo Payload');
+    $('#payloadForm')[0].reset();
+    $('#payloadId').val('');
+    const modal = new bootstrap.Modal(document.getElementById('payloadModal'));
+    modal.show();
+}
+
+$(document).ready(function() {
+    loadPayloads();
+});
+
+async function loadPayloads() {
+    const container = $('#payloadsListContainer');
+    
+    try {
+        // Add timeout to prevent hanging
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        const response = await fetch(`${WEBHOOKS_API_BASE}/payloads`, {
+            headers: getAuthHeaders(),
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        // Ensure payloads is an array
+        const payloads = Array.isArray(data.payloads) ? data.payloads : [];
+        
+        if (payloads.length > 0) {
+            let html = '<div class="row">';
+            payloads.forEach(payload => {
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">${escapeHtml(payload.name)}</h5>
+                                <p class="card-text text-muted">${escapeHtml(payload.description || 'Sem descrição')}</p>
+                                
+                                <div class="mb-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        Criado em: ${new Date(payload.created_at).toLocaleDateString('pt-BR')}
+                                    </small>
+                                </div>
+                                
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button class="btn btn-info" onclick="viewPayload(${payload.id})" title="Visualizar">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-primary" onclick="editPayload(${payload.id})" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-danger" onclick="deletePayload(${payload.id})" title="Deletar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.html(html);
+        } else {
+            container.html(`
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>Nenhum payload cadastrado. Clique em "Novo Payload" para criar um.
+                </div>
+            `);
+        }
+    } catch (error) {
+        console.error('Error loading payloads:', error);
+        
+        // If it's an abort error (timeout), show timeout message
+        if (error.name === 'AbortError') {
+            container.html(`
+                <div class="alert alert-warning">
+                    <i class="fas fa-clock me-2"></i>Timeout ao carregar payloads. Verifique sua conexão e tente novamente.
+                </div>
+            `);
+        } else {
+            container.html(`
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>Erro ao carregar payloads: ${error.message}
+                </div>
+            `);
+        }
+    }
+}
+
+function showCreateModal() {
+    currentPayloadId = null;
+    $('#payloadModalTitle').text('Novo Payload');
+    $('#payloadForm')[0].reset();
+    $('#payloadId').val('');
+    const modal = new bootstrap.Modal(document.getElementById('payloadModal'));
+    modal.show();
+}
+
+async function editPayload(payloadId) {
+    try {
+        const response = await fetch(`${WEBHOOKS_API_BASE}/payloads/${payloadId}`, {
+            headers: getAuthHeaders()
+        });
+        const payload = await response.json();
+        
+        currentPayloadId = payloadId;
+        $('#payloadModalTitle').text('Editar Payload');
+        $('#payloadId').val(payload.id);
+        $('#payloadName').val(payload.name);
+        $('#payloadDescription').val(payload.description || '');
+        $('#payloadTemplate').val(payload.payload_template);
+        $('#payloadExample').val(payload.payload_example || '');
+        
+        const modal = new bootstrap.Modal(document.getElementById('payloadModal'));
+        modal.show();
+    } catch (error) {
+        alert('Erro ao carregar payload: ' + error.message);
+    }
+}
+
+async function viewPayload(payloadId) {
+    try {
+        const response = await fetch(`${WEBHOOKS_API_BASE}/payloads/${payloadId}`, {
+            headers: getAuthHeaders()
+        });
+        const payload = await response.json();
+        
+        let html = `
+            <div class="card">
+                <div class="card-header">
+                    <h5>${escapeHtml(payload.name)}</h5>
+                </div>
+                <div class="card-body">
+                    ${payload.description ? `<p>${escapeHtml(payload.description)}</p>` : ''}
+                    <h6>Template:</h6>
+                    <pre class="bg-light p-3 rounded"><code>${escapeHtml(payload.payload_template)}</code></pre>
+                    ${payload.payload_example ? `
+                        <h6 class="mt-3">Exemplo:</h6>
+                        <pre class="bg-light p-3 rounded"><code>${escapeHtml(payload.payload_example)}</code></pre>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        
+        // Show in modal or alert
+        const modal = new bootstrap.Modal(document.createElement('div'));
+        modal._element.className = 'modal fade';
+        modal._element.innerHTML = `
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Visualizar Payload</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">${html}</div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal._element);
+        modal.show();
+        modal._element.addEventListener('hidden.bs.modal', () => {
+            document.body.removeChild(modal._element);
+        });
+    } catch (error) {
+        alert('Erro ao visualizar payload: ' + error.message);
+    }
+}
+
+async function savePayload() {
+    const name = $('#payloadName').val().trim();
+    const template = $('#payloadTemplate').val().trim();
+    
+    if (!name || !template) {
+        alert('Preencha todos os campos obrigatórios');
+        return;
+    }
+    
+    // Validate JSON
+    try {
+        JSON.parse(template);
+    } catch (e) {
+        alert('Template JSON inválido: ' + e.message);
+        return;
+    }
+    
+    const example = $('#payloadExample').val().trim();
+    if (example) {
+        try {
+            JSON.parse(example);
+        } catch (e) {
+            alert('Exemplo JSON inválido: ' + e.message);
+            return;
+        }
+    }
+    
+    const payload = {
+        name: name,
+        description: $('#payloadDescription').val().trim(),
+        payload_template: template,
+        payload_example: example || ''
+    };
+    
+    try {
+        const url = currentPayloadId 
+            ? `${WEBHOOKS_API_BASE}/payloads/${currentPayloadId}`
+            : `${WEBHOOKS_API_BASE}/payloads`;
+        const method = currentPayloadId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeaders()
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Erro ao salvar payload');
+        }
+        
+        bootstrap.Modal.getInstance(document.getElementById('payloadModal')).hide();
+        loadPayloads();
+        
+        // Show success notification
+        const alert = $('<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+            '<i class="fas fa-check-circle me-2"></i>Payload salvo com sucesso!' +
+            '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+            '</div>');
+        $('#webhooksPayloadsSection').prepend(alert);
+        setTimeout(() => alert.alert('close'), 3000);
+    } catch (error) {
+        alert('Erro ao salvar payload: ' + error.message);
+    }
+}
+
+async function deletePayload(payloadId) {
+    if (!confirm('Tem certeza que deseja deletar este payload?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${WEBHOOKS_API_BASE}/payloads/${payloadId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Erro ao deletar payload');
+        }
+        
+        loadPayloads();
+        
+        // Show success notification
+        const alert = $('<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+            '<i class="fas fa-check-circle me-2"></i>Payload deletado com sucesso!' +
+            '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+            '</div>');
+        $('#webhooksPayloadsSection').prepend(alert);
+        setTimeout(() => alert.alert('close'), 3000);
+    } catch (error) {
+        alert('Erro ao deletar payload: ' + error.message);
+    }
+}
+
+function formatPayloadJSON() {
+    const textarea = $('#payloadTemplate');
+    const text = textarea.val().trim();
+    if (!text) return;
+    
+    try {
+        const json = JSON.parse(text);
+        textarea.val(JSON.stringify(json, null, 2));
+    } catch (e) {
+        alert('JSON inválido: ' + e.message);
+    }
+}
+
+function formatExampleJSON() {
+    const textarea = $('#payloadExample');
+    const text = textarea.val().trim();
+    if (!text) return;
+    
+    try {
+        const json = JSON.parse(text);
+        textarea.val(JSON.stringify(json, null, 2));
+    } catch (e) {
+        alert('JSON inválido: ' + e.message);
+    }
+}
+
+function loadExample(type) {
+    let template = '';
+    let example = '';
+    
+    if (type === 'comparison') {
+        template = `{
+  "comparison_id": {{comparison_id}},
+  "project_id": {{project_id}},
+  "total_differences": {{total_differences}},
+  "executed_at": "{{executed_at}}",
+  "differences": [
+    {
+      "record_id": "{{record_id}}",
+      "field_name": "{{field_name}}",
+      "source_value": "{{source_value}}",
+      "target_value": "{{target_value}}",
+      "change_type": "{{change_type}}"
+    }
+  ]
+}`;
+        example = `{
+  "comparison_id": 1,
+  "project_id": 1,
+  "total_differences": 5,
+  "executed_at": "2024-01-15T10:30:00",
+  "differences": [
+    {
+      "record_id": "123",
+      "field_name": "nome",
+      "source_value": "João",
+      "target_value": "João Silva",
+      "change_type": "modified"
+    }
+  ]
+}`;
+    } else if (type === 'aggregated') {
+        template = `{
+  "project_id": {{project_id}},
+  "date": "{{date}}",
+  "summary": {
+    "added": {{added_count}},
+    "modified": {{modified_count}},
+    "deleted": {{deleted_count}}
+  },
+  "changes": []
+}`;
+        example = `{
+  "project_id": 1,
+  "date": "2024-01-15",
+  "summary": {
+    "added": 10,
+    "modified": 5,
+    "deleted": 2
+  },
+  "changes": []
+}`;
+    } else if (type === 'notification') {
+        template = `{
+  "message": "{{message}}",
+  "project": "{{project_name}}",
+  "differences_found": {{total_differences}},
+  "timestamp": "{{timestamp}}"
+}`;
+        example = `{
+  "message": "Nova comparação executada",
+  "project": "Projeto Teste",
+  "differences_found": 5,
+  "timestamp": "2024-01-15T10:30:00"
+}`;
+    }
+    
+    $('#payloadTemplate').val(template);
+    $('#payloadExample').val(example);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{% endblock scripts %}
+

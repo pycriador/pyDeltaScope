@@ -3,7 +3,7 @@ Script to initialize the database
 Run this script to create all tables in the database
 """
 from app import create_app, db
-from app.models import User, Project, Comparison, ComparisonResult, ChangeLog, DatabaseConnection, TableModelMapping, Group
+from app.models import User, Project, Comparison, ComparisonResult, ChangeLog, DatabaseConnection, TableModelMapping, Group, WebhookConfig, WebhookPayload
 import os
 
 app = create_app(os.getenv('FLASK_ENV', 'default'))
@@ -102,6 +102,17 @@ with app.app_context():
             'can_view_tables': False,
             'can_view_reports': False,
             'can_download_reports': False
+        },
+        {
+            'name': 'Gerenciadores de Webhooks',
+            'description': 'Podem gerenciar webhooks e enviar requisições HTTP para servidores externos',
+            'can_create_connections': False,
+            'can_create_projects': False,
+            'can_view_dashboards': True,
+            'can_edit_tables': False,
+            'can_view_tables': False,
+            'can_view_reports': True,
+            'can_download_reports': True
         }
     ]
     

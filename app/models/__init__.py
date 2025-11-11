@@ -6,7 +6,8 @@ from app.models.database_connection import DatabaseConnection
 from app.models.table_model_mapping import TableModelMapping
 from app.models.group import Group, user_groups
 from app.models.scheduled_task import ScheduledTask
+from app.models.webhook_config import WebhookConfig, WebhookPayload, WebhookParams
 
-__all__ = ['User', 'Project', 'Comparison', 'ComparisonResult', 'ChangeLog', 'DatabaseConnection', 'TableModelMapping', 'Group', 'user_groups', 'ScheduledTask']
+__all__ = ['User', 'Project', 'Comparison', 'ComparisonResult', 'ChangeLog', 'DatabaseConnection', 'TableModelMapping', 'Group', 'user_groups', 'ScheduledTask', 'WebhookConfig', 'WebhookPayload', 'WebhookParams']
 
 

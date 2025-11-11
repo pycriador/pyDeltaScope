@@ -14,6 +14,7 @@ Sistema completo para comparação de tabelas entre bancos de dados, com geraç�
 - [Estrutura do Banco de Dados](#estrutura-do-banco-de-dados)
 - [Páginas e Rotas](#páginas-e-rotas)
 - [API Endpoints](#api-endpoints)
+- [Webhooks e Cliente HTTP](#webhooks-e-cliente-http)
 - [Filtros por URL](#filtros-por-url)
 - [Gerenciamento de Usuários](#gerenciamento-de-usuários)
 - [Gerenciamento de Grupos](#gerenciamento-de-grupos)
@@ -1163,6 +1164,289 @@ Obter colunas das tabelas origem e destino de um projeto.
   "source_table": "usuarios",
   "target_table": "users"
 }
+```
+
+### Webhooks e Cliente HTTP
+
+O DeltaScope inclui um cliente HTTP integrado (tipo Postman) para enviar requisições HTTP para servidores externos, com suporte a templates de payload usando namespaces para substituir valores dinamicamente.
+
+#### Namespaces Disponíveis
+
+Os templates de payload suportam placeholders no formato `{{namespace.key}}` que são substituídos automaticamente pelos valores reais quando o webhook é enviado.
+
+##### Namespace: `comparison`
+Dados da comparação executada:
+- `{{comparison.id}}` - ID da comparação
+- `{{comparison.project_id}}` - ID do projeto
+- `{{comparison.executed_at}}` - Data/hora de execução (ISO format)
+- `{{comparison.status}}` - Status (pending, running, completed, failed)
+- `{{comparison.total_differences}}` - Total de diferenças encontradas
+
+##### Namespace: `difference` ou `result`
+Dados de uma diferença individual:
+- `{{difference.id}}` - ID da diferença/resultado
+- `{{difference.comparison_id}}` - ID da comparação
+- `{{difference.record_id}}` - ID do registro (chave primária)
+- `{{difference.field_name}}` - Nome do campo alterado
+- `{{difference.source_value}}` - Valor na origem
+- `{{difference.target_value}}` - Valor no destino
+- `{{difference.change_type}}` - Tipo de mudança (added, modified, deleted)
+- `{{difference.detected_at}}` - Data/hora de detecção (ISO format)
+
+##### Namespace: `project` (quando disponível)
+Dados do projeto:
+- `{{project.id}}` - ID do projeto
+- `{{project.name}}` - Nome do projeto
+- `{{project.description}}` - Descrição do projeto
+- `{{project.source_table}}` - Nome da tabela origem
+- `{{project.target_table}}` - Nome da tabela destino
+
+#### Exemplos de Templates
+
+**Exemplo Básico:**
+```json
+{
+  "comparison_id": "{{comparison.id}}",
+  "project_id": "{{comparison.project_id}}",
+  "total_differences": "{{comparison.total_differences}}",
+  "status": "{{comparison.status}}"
+}
+```
+
+**Exemplo Detalhado:**
+```json
+{
+  "comparison": {
+    "id": "{{comparison.id}}",
+    "project_id": "{{comparison.project_id}}",
+    "executed_at": "{{comparison.executed_at}}",
+    "total_differences": "{{comparison.total_differences}}"
+  },
+  "difference": {
+    "id": "{{difference.id}}",
+    "record_id": "{{difference.record_id}}",
+    "field_name": "{{difference.field_name}}",
+    "source_value": "{{difference.source_value}}",
+    "target_value": "{{difference.target_value}}",
+    "change_type": "{{difference.change_type}}",
+    "detected_at": "{{difference.detected_at}}"
+  }
+}
+```
+
+**Exemplo Notificação Webhook:**
+```json
+{
+  "event": "comparison.difference.detected",
+  "timestamp": "{{difference.detected_at}}",
+  "data": {
+    "comparison_id": "{{comparison.id}}",
+    "project_id": "{{comparison.project_id}}",
+    "record_id": "{{difference.record_id}}",
+    "field": "{{difference.field_name}}",
+    "old_value": "{{difference.source_value}}",
+    "new_value": "{{difference.target_value}}",
+    "change_type": "{{difference.change_type}}"
+  }
+}
+```
+
+#### `GET /api/webhooks/configs`
+Listar todas as configurações de webhook do usuário.
+
+**Headers:**
+```
+Authorization: Bearer {token}
+X-User-Id: {user_id}
+```
+
+**Response (200):**
+```json
+{
+  "configs": [
+    {
+      "id": 1,
+      "name": "Webhook Produção",
+      "description": "Envia notificações para API de produção",
+      "url": "https://api.exemplo.com/webhook",
+      "method": "POST",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "auth_type": "bearer",
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00"
+    }
+  ]
+}
+```
+
+#### `POST /api/webhooks/configs`
+Criar nova configuração de webhook.
+
+**Request:**
+```json
+{
+  "name": "Webhook Produção",
+  "description": "Envia notificações para API de produção",
+  "url": "https://api.exemplo.com/webhook",
+  "method": "POST",
+  "headers": {
+    "Content-Type": "application/json",
+    "X-Custom-Header": "valor"
+  },
+  "auth_type": "bearer",
+  "auth_config": {
+    "token": "seu_token_aqui"
+  },
+  "default_payload": "{\"event\": \"comparison.detected\", \"comparison_id\": \"{{comparison.id}}\"}",
+  "is_active": true
+}
+```
+
+**Tipos de Autenticação (`auth_type`):**
+- `none` - Sem autenticação
+- `bearer` - Bearer Token (requer `token` em `auth_config`)
+- `basic` - Basic Auth (requer `username` e `password` em `auth_config`)
+- `api_key` - API Key (requer `key_name` e `key_value` em `auth_config`)
+
+**Nota:** Todas as credenciais (`token`, `password`, `key_value`) são criptografadas antes de serem armazenadas no banco de dados.
+
+#### `POST /api/webhooks/send`
+Enviar requisição HTTP manualmente (cliente HTTP).
+
+**Request:**
+```json
+{
+  "url": "https://api.exemplo.com/webhook",
+  "method": "POST",
+  "headers": {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer token123"
+  },
+  "payload": {
+    "event": "test",
+    "data": "{{comparison.id}}"
+  }
+}
+```
+
+**Response (200):**
+```json
+{
+  "message": "Request sent successfully",
+  "status_code": 200,
+  "response": "{\"success\": true}",
+  "headers": {
+    "Content-Type": "application/json"
+  }
+}
+```
+
+#### `POST /api/webhooks/process-template`
+Processar um template de payload com dados fornecidos.
+
+**Request:**
+```json
+{
+  "template": "{\"comparison_id\": \"{{comparison.id}}\", \"field\": \"{{difference.field_name}}\"}",
+  "comparison": {
+    "id": 1,
+    "project_id": 1,
+    "total_differences": 5
+  },
+  "difference": {
+    "id": 10,
+    "field_name": "nome",
+    "source_value": "João",
+    "target_value": "João Silva"
+  }
+}
+```
+
+**Response (200):**
+```json
+{
+  "processed": {
+    "comparison_id": "1",
+    "field": "nome"
+  }
+}
+```
+
+#### `GET /api/webhooks/payloads`
+Listar todos os templates de payload salvos.
+
+#### `POST /api/webhooks/payloads`
+Criar novo template de payload.
+
+**Request:**
+```json
+{
+  "name": "Notificação de Diferença",
+  "description": "Template para notificar diferenças detectadas",
+  "payload_template": "{\"event\": \"difference.detected\", \"comparison_id\": \"{{comparison.id}}\", \"field\": \"{{difference.field_name}}\"}",
+  "payload_example": "{\"event\": \"difference.detected\", \"comparison_id\": \"1\", \"field\": \"nome\"}"
+}
+```
+
+#### Envio em Massa de Diferenças para Webhook
+
+Na página de resultados de comparação (`/relatorios/<comparison_id>/resultados`), você pode enviar todas as diferenças encontradas para um webhook configurado em loop.
+
+**Como Funciona:**
+
+1. **Acesse a página de resultados** de uma comparação executada
+2. **Clique no botão "Enviar Todas as Diferenças para Webhook"**
+3. **Configure o envio:**
+   - Selecione um webhook previamente configurado
+   - Escolha filtrar por campo específico (ex: "username") ou enviar todos os campos
+   - Escolha enviar no Body (Payload) ou Parâmetros (Query String)
+   - Escolha qual valor enviar: Origem ou Destino
+4. **O sistema enviará em loop:**
+   - Se você selecionar o campo "username" e houver 5 diferenças nesse campo, serão enviadas 5 requisições
+   - Cada requisição usa o mesmo payload template do webhook configurado
+   - Os namespaces `{{comparison.*}}`, `{{difference.*}}` e `{{project.*}}` são substituídos automaticamente com os dados específicos de cada diferença
+   - As requisições são enviadas sequencialmente (uma por vez) com um pequeno delay de 100ms entre elas
+
+**Exemplo de Uso:**
+
+Suponha que você tenha:
+- Uma comparação com ID 16
+- 5 diferenças no campo "username"
+- Um webhook configurado com o payload template:
+```json
+{
+  "event": "field.changed",
+  "comparison_id": "{{comparison.id}}",
+  "field_name": "{{difference.field_name}}",
+  "record_id": "{{difference.record_id}}",
+  "old_value": "{{difference.source_value}}",
+  "new_value": "{{difference.target_value}}",
+  "change_type": "{{difference.change_type}}"
+}
+```
+
+Ao clicar em "Enviar Todas as Diferenças para Webhook" e selecionar:
+- Webhook: "Meu Webhook"
+- Campo: "username"
+- Enviar em: Body (Payload)
+- Valor: Origem
+
+O sistema enviará 5 requisições HTTP, uma para cada diferença encontrada no campo "username", substituindo os placeholders com os dados específicos de cada diferença.
+
+**Recursos:**
+
+- ✅ **Barra de progresso em tempo real**: Mostra o progresso do envio (ex: "3 / 5")
+- ✅ **Log detalhado**: Exibe o resultado de cada envio (sucesso ou erro)
+- ✅ **Filtro por campo**: Permite enviar apenas diferenças de um campo específico
+- ✅ **Processamento de templates**: Suporta todos os namespaces disponíveis
+- ✅ **Envio sequencial**: Evita sobrecarregar o servidor de destino
+- ✅ **Resumo final**: Mostra total de sucessos e erros ao final
+
+**URL da Página:**
+```
+/relatorios/<comparison_id>/resultados
 ```
 
 ### Dashboard

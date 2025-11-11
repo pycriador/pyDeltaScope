@@ -1,7 +1,7 @@
 """
 Utility functions for database checks and initialization
 """
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 from app import db
 from app.models import User, Project, Comparison, ComparisonResult, ChangeLog, DatabaseConnection, TableModelMapping, Group, ScheduledTask
 from app.models.group import user_groups
@@ -23,7 +23,10 @@ def check_tables_exist():
             'table_model_mappings',
             'groups',
             'user_groups',
-            'scheduled_tasks'
+            'scheduled_tasks',
+            'webhook_configs',
+            'webhook_payloads',
+            'webhook_params'
         ]
         
         missing_tables = [table for table in required_tables if table not in existing_tables]
@@ -52,6 +55,9 @@ def ensure_tables_exist():
         try:
             db.create_all()
             db.session.commit()
+            
+            # Check and add missing columns to existing tables
+            _ensure_columns_exist()
             # Also create default groups if they don't exist
             from app.models.group import Group
             default_groups = [
@@ -142,6 +148,17 @@ def ensure_tables_exist():
                     'can_view_tables': False,
                     'can_view_reports': False,
                     'can_download_reports': False
+                },
+                {
+                    'name': 'Gerenciadores de Webhooks',
+                    'description': 'Podem gerenciar webhooks e enviar requisições HTTP para servidores externos',
+                    'can_create_connections': False,
+                    'can_create_projects': False,
+                    'can_view_dashboards': True,
+                    'can_edit_tables': False,
+                    'can_view_tables': False,
+                    'can_view_reports': True,
+                    'can_download_reports': True
                 }
             ]
             
@@ -157,8 +174,35 @@ def ensure_tables_exist():
             print(f"Error creating tables: {str(e)}")
             db.session.rollback()
             return False
+    else:
+        # Tables exist, but check for missing columns
+        _ensure_columns_exist()
     
     return False
+
+
+def _ensure_columns_exist():
+    """Ensure all required columns exist in existing tables"""
+    try:
+        inspector = inspect(db.engine)
+        
+        # Check webhook_configs table for default_payload column
+        if 'webhook_configs' in inspector.get_table_names():
+            columns = [col['name'] for col in inspector.get_columns('webhook_configs')]
+            if 'default_payload' not in columns:
+                try:
+                    print("Adding 'default_payload' column to 'webhook_configs' table...")
+                    db.session.execute(text("ALTER TABLE webhook_configs ADD COLUMN default_payload TEXT"))
+                    db.session.commit()
+                    print("✓ Successfully added 'default_payload' column.")
+                except Exception as e:
+                    db.session.rollback()
+                    # Column might already exist or table structure issue
+                    # This is not critical, continue silently
+                    pass
+    except Exception as e:
+        # Non-critical, continue silently
+        pass
 
 
 def is_first_run():
