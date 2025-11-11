@@ -478,12 +478,12 @@
                 const detectedDate = result.detected_at ? new Date(result.detected_at).toLocaleString('pt-BR') : '-';
                 
                 row.innerHTML = `
-                    <td><code>${result.record_id || '-'}</code></td>
+                    <td><code class="record-id-code">${result.record_id || '-'}</code></td>
                     <td><strong>${result.field_name || '-'}</strong></td>
                     <td><span class="badge ${badgeClass}">${changeTypeText}</span></td>
-                    <td><code class="text-primary">${formatValue(result.source_value)}</code></td>
+                    <td><code class="source-value-code">${formatValue(result.source_value)}</code></td>
                     <td><code class="target-value-code">${formatValue(result.target_value)}</code></td>
-                    <td><small class="text-muted">${detectedDate}</small></td>
+                    <td><small class="detection-date-code">${detectedDate}</small></td>
                 `;
                 
                 resultsTableBody.appendChild(row);
@@ -607,52 +607,54 @@
     
     // Load columns from tables
     async function loadColumns() {
-        const loadingDiv = $('#loadingColumns');
-        const columnsContainer = $('#columnsContainer');
-        const sourceList = $('#sourceColumnsList');
-        const targetList = $('#targetColumnsList');
-        
-        loadingDiv.show();
-        columnsContainer.hide();
-        
-        try {
-            // Load source table columns
-            const sourceResponse = await fetch(`${API_BASE}/connections/${SOURCE_CONN_ID}/tables/${SOURCE_TABLE}/info`, {
-                method: 'GET',
-                headers: getAuthHeaders()
+        return new Promise((resolve, reject) => {
+            const loadingDiv = $('#loadingColumns');
+            const columnsContainer = $('#columnsContainer');
+            const sourceList = $('#sourceColumnsList');
+            const targetList = $('#targetColumnsList');
+            
+            loadingDiv.show();
+            columnsContainer.hide();
+            
+            Promise.all([
+                fetch(`${API_BASE}/connections/${SOURCE_CONN_ID}/tables/${SOURCE_TABLE}/info`, {
+                    method: 'GET',
+                    headers: getAuthHeaders()
+                }),
+                fetch(`${API_BASE}/connections/${TARGET_CONN_ID}/tables/${TARGET_TABLE}/info`, {
+                    method: 'GET',
+                    headers: getAuthHeaders()
+                })
+            ])
+            .then(async ([sourceResponse, targetResponse]) => {
+                if (!sourceResponse.ok) {
+                    throw new Error('Erro ao carregar colunas da tabela origem');
+                }
+                if (!targetResponse.ok) {
+                    throw new Error('Erro ao carregar colunas da tabela destino');
+                }
+                
+                const sourceData = await sourceResponse.json();
+                const targetData = await targetResponse.json();
+                
+                sourceColumns = sourceData.columns || [];
+                targetColumns = targetData.columns || [];
+                
+                // Render columns
+                renderColumns();
+                
+                loadingDiv.hide();
+                columnsContainer.show();
+                
+                resolve();
+            })
+            .catch(error => {
+                console.error('Error loading columns:', error);
+                loadingDiv.hide();
+                showErrorModal(`Erro ao carregar colunas: ${error.message}`);
+                reject(error);
             });
-            
-            if (!sourceResponse.ok) {
-                throw new Error('Erro ao carregar colunas da tabela origem');
-            }
-            
-            const sourceData = await sourceResponse.json();
-            sourceColumns = sourceData.columns || [];
-            
-            // Load target table columns
-            const targetResponse = await fetch(`${API_BASE}/connections/${TARGET_CONN_ID}/tables/${TARGET_TABLE}/info`, {
-                method: 'GET',
-                headers: getAuthHeaders()
-            });
-            
-            if (!targetResponse.ok) {
-                throw new Error('Erro ao carregar colunas da tabela destino');
-            }
-            
-            const targetData = await targetResponse.json();
-            targetColumns = targetData.columns || [];
-            
-            // Render columns
-            renderColumns();
-            
-            loadingDiv.hide();
-            columnsContainer.show();
-            
-        } catch (error) {
-            console.error('Error loading columns:', error);
-            loadingDiv.hide();
-            showErrorModal(`Erro ao carregar colunas: ${error.message}`);
-        }
+        });
     }
     
     // Render columns in lists
@@ -831,8 +833,55 @@
     
     // Setup event listeners
     $(document).ready(function() {
+        {% if key_mappings_from_url %}
+        // Check if we have key mappings from URL (scheduled task)
+        const urlKeyMappings = {{ key_mappings_from_url|tojson }};
+        if (Object.keys(urlKeyMappings).length > 0) {
+            // Load columns first, then apply mappings
+            loadColumns().then(() => {
+                // Apply key mappings from URL
+                Object.entries(urlKeyMappings).forEach(([source, target]) => {
+                    // Add mapping if not exists
+                    const existingMapping = comparisonPrimaryKeyMappings.find(m => m.source === source && m.target === target);
+                    if (!existingMapping) {
+                        comparisonPrimaryKeyMappings.push({
+                            source: source,
+                            target: target
+                        });
+                    }
+                    
+                    // Find and check source column checkbox
+                    const sourceCheckbox = $(`#source_${source}`);
+                    if (sourceCheckbox.length) {
+                        sourceCheckbox.prop('checked', true);
+                    }
+                    
+                    // Find and check target column checkbox
+                    const targetCheckbox = $(`#target_${target}`);
+                    if (targetCheckbox.length) {
+                        targetCheckbox.prop('checked', true);
+                    }
+                });
+                
+                updateSelectedKeysDisplay();
+                updateExecuteButton();
+                
+                // Auto-execute if mappings are set
+                if (comparisonPrimaryKeyMappings.length > 0) {
+                    setTimeout(() => {
+                        executeComparison();
+                    }, 1000);
+                }
+            }).catch(error => {
+                console.error('Error loading columns:', error);
+            });
+        } else {
+            loadColumns();
+        }
+        {% else %}
         // Load columns on page load
         loadColumns();
+        {% endif %}
         
         // Load columns button
         $('#loadColumnsBtn').on('click', function() {

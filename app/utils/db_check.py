@@ -3,7 +3,7 @@ Utility functions for database checks and initialization
 """
 from sqlalchemy import inspect
 from app import db
-from app.models import User, Project, Comparison, ComparisonResult, ChangeLog, DatabaseConnection, TableModelMapping, Group
+from app.models import User, Project, Comparison, ComparisonResult, ChangeLog, DatabaseConnection, TableModelMapping, Group, ScheduledTask
 from app.models.group import user_groups
 
 
@@ -22,7 +22,8 @@ def check_tables_exist():
             'database_connections',
             'table_model_mappings',
             'groups',
-            'user_groups'
+            'user_groups',
+            'scheduled_tasks'
         ]
         
         missing_tables = [table for table in required_tables if table not in existing_tables]

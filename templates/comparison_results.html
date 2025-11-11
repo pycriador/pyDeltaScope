@@ -42,6 +42,20 @@
                         {% endif %}
                     </p>
                 </div>
+                <div class="col-md-6 mb-3">
+                    <h6 class="text-muted mb-2"><i class="fas fa-play-circle me-2"></i>Tipo de Execução</h6>
+                    <p class="mb-0">
+                        {% if scheduled_task %}
+                        <span class="badge bg-info">
+                            <i class="fas fa-clock me-1"></i>Agendamento: {{ scheduled_task.name }}
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-hand-pointer me-1"></i>Execução Manual
+                        </span>
+                        {% endif %}
+                    </p>
+                </div>
                 <div class="col-md-12 mb-3">
                     <h6 class="text-muted mb-2"><i class="fas fa-exclamation-triangle me-2"></i>Total de Diferenças</h6>
                     <p class="mb-0"><strong class="text-primary" style="font-size: 1.5rem;">{{ comparison.total_differences or 0 }}</strong></p>

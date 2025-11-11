@@ -1,0 +1,725 @@
+{% extends "base.html" %}
+
+{% block title %}Agendamentos - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="scheduledTasksSection">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-clock me-2"></i>Agendamentos de Comparação</h2>
+        <button class="btn btn-primary" onclick="showCreateTaskModal()">
+            <i class="fas fa-plus me-1"></i>Novo Agendamento
+        </button>
+    </div>
+
+    <div id="tasksListContainer">
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Task Modal -->
+<div class="modal fade" id="taskModal" tabindex="-1" aria-labelledby="taskModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="taskModalLabel">
+                    <i class="fas fa-clock me-2"></i>Novo Agendamento
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="taskForm">
+                    <input type="hidden" id="taskId" name="task_id">
+                    
+                    <div class="mb-3">
+                        <label for="taskName" class="form-label">Nome do Agendamento <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="taskName" name="name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="taskDescription" class="form-label">Descrição</label>
+                        <textarea class="form-control" id="taskDescription" name="description" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="taskProject" class="form-label">Projeto <span class="text-danger">*</span></label>
+                        <select class="form-select" id="taskProject" name="project_id" required onchange="loadProjectColumns(this.value)">
+                            <option value="">Selecione um projeto...</option>
+                            {% for project in projects %}
+                            <option value="{{ project.id }}">{{ project.name }} ({{ project.source_table }} → {{ project.target_table }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Columns Loading Indicator -->
+                    <div id="columnsLoading" class="alert alert-info" style="display: none;">
+                        <i class="fas fa-spinner fa-spin me-2"></i>Carregando colunas das tabelas...
+                    </div>
+                    
+                    <!-- Columns Selection -->
+                    <div id="columnsSelection" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label">Mapeamento de Chaves Primárias</label>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <small>Selecione as colunas correspondentes entre origem e destino. As colunas marcadas como chave primária são destacadas.</small>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-5">
+                                    <h6 class="mb-2"><i class="fas fa-database me-1"></i>Tabela Origem: <span id="sourceTableName" class="badge bg-primary"></span></h6>
+                                    <div id="sourceColumnsList" class="border rounded p-2" style="max-height: 300px; overflow-y: auto;">
+                                        <!-- Source columns will be loaded here -->
+                                    </div>
+                                </div>
+                                <div class="col-md-2 text-center align-self-center">
+                                    <i class="fas fa-arrow-right fa-2x text-muted"></i>
+                                </div>
+                                <div class="col-md-5">
+                                    <h6 class="mb-2"><i class="fas fa-database me-1"></i>Tabela Destino: <span id="targetTableName" class="badge bg-success"></span></h6>
+                                    <div id="targetColumnsList" class="border rounded p-2" style="max-height: 300px; overflow-y: auto;">
+                                        <!-- Target columns will be loaded here -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="selectedMappings" class="mt-3">
+                                <h6 class="mb-2">Mapeamentos Selecionados:</h6>
+                                <div id="mappingsList" class="alert alert-light">
+                                    <small class="text-muted">Nenhum mapeamento selecionado</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Frequência <span class="text-danger">*</span></label>
+                        <div class="btn-group w-100" role="group" id="scheduleTypeGroup">
+                            <input type="radio" class="btn-check" name="schedule_type" id="schedulePreset" value="preset" checked>
+                            <label class="btn btn-outline-primary" for="schedulePreset">Predefinida</label>
+                            
+                            <input type="radio" class="btn-check" name="schedule_type" id="scheduleInterval" value="interval">
+                            <label class="btn btn-outline-primary" for="scheduleInterval">Intervalo</label>
+                            
+                            <input type="radio" class="btn-check" name="schedule_type" id="scheduleCron" value="cron">
+                            <label class="btn btn-outline-primary" for="scheduleCron">CRON</label>
+                        </div>
+                    </div>
+                    
+                    <!-- Preset Schedule -->
+                    <div id="presetSchedule" class="schedule-option">
+                        <div class="mb-3">
+                            <label for="presetValue" class="form-label">Selecione a frequência</label>
+                            <select class="form-select" id="presetValue" name="preset_value">
+                                <option value="15min">A cada 15 minutos</option>
+                                <option value="1hour">A cada 1 hora</option>
+                                <option value="6hours">A cada 6 horas</option>
+                                <option value="12hours">A cada 12 horas</option>
+                                <option value="daily">Uma vez por dia (meia-noite)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Interval Schedule -->
+                    <div id="intervalSchedule" class="schedule-option" style="display: none;">
+                        <div class="mb-3">
+                            <label for="intervalMinutes" class="form-label">Intervalo em minutos</label>
+                            <input type="number" class="form-control" id="intervalMinutes" name="interval_minutes" min="1" value="60">
+                            <small class="form-text text-muted">Digite o número de minutos entre execuções</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Cron Schedule -->
+                    <div id="cronSchedule" class="schedule-option" style="display: none;">
+                        <div class="mb-3">
+                            <label for="cronExpression" class="form-label">Expressão CRON</label>
+                            <input type="text" class="form-control" id="cronExpression" name="cron_expression" placeholder="0 0 * * *">
+                            <small class="form-text text-muted">
+                                Formato: minuto hora dia mês dia-da-semana<br>
+                                Exemplos:<br>
+                                <code>0 0 * * *</code> - Diariamente à meia-noite<br>
+                                <code>0 */6 * * *</code> - A cada 6 horas<br>
+                                <code>*/15 * * * *</code> - A cada 15 minutos<br>
+                                <code>0 9 * * 1</code> - Toda segunda-feira às 9h
+                            </small>
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="taskActive" name="is_active" checked>
+                            <label class="form-check-label" for="taskActive">
+                                Agendamento ativo
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveTask()">
+                    <i class="fas fa-save me-1"></i>Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Use different variable name to avoid conflict with app.js
+    const SCHEDULED_TASKS_API_BASE = '/api/scheduled-tasks';
+    const AUTH_TOKEN = '{{ session.token|safe }}';
+    const USER_ID = parseInt('{{ current_user.id }}');
+    
+    // Store tasks list globally
+    let tasksList = [];
+    
+    function getAuthHeaders() {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        if (AUTH_TOKEN) {
+            headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+        }
+        if (USER_ID) {
+            headers['X-User-Id'] = USER_ID;
+        }
+        return headers;
+    }
+    
+    // Store columns data
+    let projectColumnsData = null;
+    let selectedMappings = {};
+    
+    // Load project columns when project is selected
+    async function loadProjectColumns(projectId) {
+        if (!projectId) {
+            $('#columnsSelection').hide();
+            $('#columnsLoading').hide();
+            selectedMappings = {};
+            updateMappingsDisplay();
+            return Promise.resolve();
+        }
+        
+        $('#columnsLoading').show();
+        $('#columnsSelection').hide();
+        
+        try {
+            const response = await fetch(`${SCHEDULED_TASKS_API_BASE}/project/${projectId}/columns`, {
+                headers: getAuthHeaders()
+            });
+            
+            if (!response.ok) {
+                throw new Error('Erro ao carregar colunas');
+            }
+            
+            const data = await response.json();
+            projectColumnsData = data;
+            
+            // Display table names
+            $('#sourceTableName').text(data.source_table);
+            $('#targetTableName').text(data.target_table);
+            
+            // Render source columns
+            const sourceList = $('#sourceColumnsList');
+            sourceList.html('');
+            data.source_columns.forEach(col => {
+                const isPK = data.source_primary_keys.includes(col);
+                const colDiv = $(`
+                    <div class="form-check mb-2">
+                        <input class="form-check-input source-column-checkbox" type="checkbox" 
+                               value="${col}" id="source_${col.replace(/[^a-zA-Z0-9_]/g, '_')}" 
+                               data-column="${col}" 
+                               onchange="handleSourceColumnChange('${col.replace(/'/g, "\\'")}', this.checked)">
+                        <label class="form-check-label ${isPK ? 'fw-bold text-primary' : ''}" for="source_${col.replace(/[^a-zA-Z0-9_]/g, '_')}">
+                            ${escapeHtml(col)} ${isPK ? '<span class="badge bg-primary ms-1">PK</span>' : ''}
+                        </label>
+                    </div>
+                `);
+                sourceList.append(colDiv);
+            });
+            
+            // Render target columns
+            const targetList = $('#targetColumnsList');
+            targetList.html('');
+            data.target_columns.forEach(col => {
+                const isPK = data.target_primary_keys.includes(col);
+                const colDiv = $(`
+                    <div class="form-check mb-2">
+                        <input class="form-check-input target-column-checkbox" type="checkbox" 
+                               value="${col}" id="target_${col.replace(/[^a-zA-Z0-9_]/g, '_')}" 
+                               data-column="${col}" 
+                               onchange="handleTargetColumnChange('${col.replace(/'/g, "\\'")}', this.checked)">
+                        <label class="form-check-label ${isPK ? 'fw-bold text-success' : ''}" for="target_${col.replace(/[^a-zA-Z0-9_]/g, '_')}">
+                            ${escapeHtml(col)} ${isPK ? '<span class="badge bg-success ms-1">PK</span>' : ''}
+                        </label>
+                    </div>
+                `);
+                targetList.append(colDiv);
+            });
+            
+            $('#columnsLoading').hide();
+            $('#columnsSelection').show();
+            
+            return Promise.resolve();
+        } catch (error) {
+            console.error('Error loading columns:', error);
+            $('#columnsLoading').hide();
+            showTaskError('Erro ao carregar colunas: ' + error.message);
+            return Promise.reject(error);
+        }
+    }
+    
+    // Handle source column checkbox change
+    function handleSourceColumnChange(column, isChecked) {
+        if (!projectColumnsData) return;
+        
+        if (isChecked) {
+            // Try to find matching target column (same name or first available)
+            let targetCol = column;
+            if (!projectColumnsData.target_columns.includes(column)) {
+                // Try to find similar column or use first available
+                targetCol = projectColumnsData.target_columns.find(c => c.toLowerCase() === column.toLowerCase()) || 
+                           projectColumnsData.target_columns[0] || '';
+            }
+            
+            if (targetCol) {
+                selectedMappings[column] = targetCol;
+                const targetId = `target_${targetCol.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+                $(`#${targetId}`).prop('checked', true);
+            }
+        } else {
+            // Remove mapping
+            if (selectedMappings[column]) {
+                const targetCol = selectedMappings[column];
+                delete selectedMappings[column];
+                const targetId = `target_${targetCol.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+                $(`#${targetId}`).prop('checked', false);
+            }
+        }
+        updateMappingsDisplay();
+    }
+    
+    // Handle target column checkbox change
+    function handleTargetColumnChange(column, isChecked) {
+        if (!projectColumnsData) return;
+        
+        if (isChecked) {
+            // Try to find matching source column
+            let sourceCol = column;
+            if (!projectColumnsData.source_columns.includes(column)) {
+                sourceCol = projectColumnsData.source_columns.find(c => c.toLowerCase() === column.toLowerCase()) || 
+                           projectColumnsData.source_columns[0] || '';
+            }
+            
+            if (sourceCol) {
+                selectedMappings[sourceCol] = column;
+                const sourceId = `source_${sourceCol.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+                $(`#${sourceId}`).prop('checked', true);
+            }
+        } else {
+            // Remove mapping
+            const sourceCol = Object.keys(selectedMappings).find(k => selectedMappings[k] === column);
+            if (sourceCol) {
+                delete selectedMappings[sourceCol];
+                const sourceId = `source_${sourceCol.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+                $(`#${sourceId}`).prop('checked', false);
+            }
+        }
+        updateMappingsDisplay();
+    }
+    
+    // Update mappings display
+    function updateMappingsDisplay() {
+        const mappingsList = $('#mappingsList');
+        if (Object.keys(selectedMappings).length === 0) {
+            mappingsList.html('<small class="text-muted">Nenhum mapeamento selecionado</small>');
+        } else {
+            let html = '';
+            Object.entries(selectedMappings).forEach(([source, target]) => {
+                html += `<span class="badge bg-info me-2 mb-2">
+                    <i class="fas fa-arrow-right me-1"></i>
+                    <code>${escapeHtml(source)}</code> → <code>${escapeHtml(target)}</code>
+                </span>`;
+            });
+            mappingsList.html(html);
+        }
+    }
+    
+    // Load tasks on page load
+    $(document).ready(function() {
+        loadTasks();
+        
+        // Handle schedule type changes
+        $('input[name="schedule_type"]').change(function() {
+            const type = $(this).val();
+            $('.schedule-option').hide();
+            if (type === 'preset') {
+                $('#presetSchedule').show();
+            } else if (type === 'interval') {
+                $('#intervalSchedule').show();
+            } else if (type === 'cron') {
+                $('#cronSchedule').show();
+            }
+        });
+    });
+    
+    function loadTasks() {
+        fetch(SCHEDULED_TASKS_API_BASE, {
+            headers: getAuthHeaders()
+        })
+        .then(response => response.json())
+        .then(data => {
+            renderTasks(data.tasks || []);
+        })
+        .catch(error => {
+            console.error('Error loading tasks:', error);
+            $('#tasksListContainer').html('<div class="alert alert-danger">Erro ao carregar agendamentos: ' + error.message + '</div>');
+        });
+    }
+    
+    function renderTasks(tasks) {
+        // Store tasks globally
+        tasksList = tasks;
+        
+        if (tasks.length === 0) {
+            $('#tasksListContainer').html('<div class="alert alert-info">Nenhum agendamento encontrado. Clique em "Novo Agendamento" para criar um.</div>');
+            return;
+        }
+        
+        let html = '<div class="row">';
+        tasks.forEach(task => {
+            const statusBadge = task.last_run_status === 'success' ? 'success' : 
+                              task.last_run_status === 'failed' ? 'danger' : 
+                              task.last_run_status === 'running' ? 'warning' : 'secondary';
+            const statusText = task.last_run_status === 'success' ? 'Sucesso' : 
+                              task.last_run_status === 'failed' ? 'Falhou' : 
+                              task.last_run_status === 'running' ? 'Executando' : 'Nunca executado';
+            
+            const scheduleText = getScheduleText(task.schedule_type, task.schedule_value);
+            const nextRun = task.next_run_at ? new Date(task.next_run_at).toLocaleString('pt-BR') : 'Não agendado';
+            const lastRun = task.last_run_at ? new Date(task.last_run_at).toLocaleString('pt-BR') : 'Nunca';
+            
+            html += `
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card shadow h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-clock me-2"></i>${escapeHtml(task.name)}
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">${escapeHtml(task.description || 'Sem descrição')}</p>
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    <strong>Projeto:</strong> ${escapeHtml(task.project_name || 'N/A')}<br>
+                                    <strong>Frequência:</strong> ${scheduleText}<br>
+                                    <strong>Status:</strong> <span class="badge bg-${statusBadge}">${statusText}</span>
+                                </small>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    <strong>Próxima execução:</strong> ${nextRun}<br>
+                                    <strong>Última execução:</strong> ${lastRun}<br>
+                                    <strong>Total:</strong> ${task.total_runs || 0} execuções
+                                    (${task.successful_runs || 0} sucesso, ${task.failed_runs || 0} falhas)
+                                </small>
+                            </div>
+                            ${task.last_run_message ? `<div class="alert alert-sm alert-${statusBadge} mb-0"><small>${escapeHtml(task.last_run_message)}</small></div>` : ''}
+                        </div>
+                        <div class="card-footer">
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-success" onclick="runTaskNow(${task.id})" title="Executar agora">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="editTask(${task.id})" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-${task.is_active ? 'warning' : 'success'}" onclick="toggleTask(${task.id})" title="${task.is_active ? 'Desativar' : 'Ativar'}">
+                                    <i class="fas fa-${task.is_active ? 'pause' : 'play'}"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteTask(${task.id})" title="Deletar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        $('#tasksListContainer').html(html);
+    }
+    
+    function getScheduleText(type, value) {
+        if (type === 'preset') {
+            const presets = {
+                '15min': 'A cada 15 minutos',
+                '1hour': 'A cada 1 hora',
+                '6hours': 'A cada 6 horas',
+                '12hours': 'A cada 12 horas',
+                'daily': 'Uma vez por dia'
+            };
+            return presets[value] || value;
+        } else if (type === 'interval') {
+            return `A cada ${value} minutos`;
+        } else if (type === 'cron') {
+            return `CRON: ${value}`;
+        }
+        return value;
+    }
+    
+    function showCreateTaskModal() {
+        $('#taskForm')[0].reset();
+        $('#taskId').val('');
+        $('#taskModalLabel').html('<i class="fas fa-clock me-2"></i>Novo Agendamento');
+        $('#presetSchedule').show();
+        $('#intervalSchedule').hide();
+        $('#cronSchedule').hide();
+        $('#schedulePreset').prop('checked', true);
+        $('#taskProject').val('');
+        $('#columnsSelection').hide();
+        $('#columnsLoading').hide();
+        selectedMappings = {};
+        projectColumnsData = null;
+        updateMappingsDisplay();
+        new bootstrap.Modal(document.getElementById('taskModal')).show();
+    }
+    
+    
+    function saveTask() {
+        const formData = {
+            name: $('#taskName').val(),
+            description: $('#taskDescription').val(),
+            project_id: parseInt($('#taskProject').val()),
+            schedule_type: $('input[name="schedule_type"]:checked').val(),
+            is_active: $('#taskActive').is(':checked')
+        };
+        
+        // Get schedule value based on type
+        if (formData.schedule_type === 'preset') {
+            formData.schedule_value = $('#presetValue').val();
+        } else if (formData.schedule_type === 'interval') {
+            formData.schedule_value = $('#intervalMinutes').val();
+        } else if (formData.schedule_type === 'cron') {
+            formData.schedule_value = $('#cronExpression').val();
+        }
+        
+        // Build key mappings from selected mappings
+        formData.key_mappings = selectedMappings || {};
+        
+        const taskId = $('#taskId').val();
+        const url = taskId ? `${SCHEDULED_TASKS_API_BASE}/${taskId}` : SCHEDULED_TASKS_API_BASE;
+        const method = taskId ? 'PUT' : 'POST';
+        
+        fetch(url, {
+            method: method,
+            headers: getAuthHeaders(),
+            body: JSON.stringify(formData)
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json().then(data => {
+                    bootstrap.Modal.getInstance(document.getElementById('taskModal')).hide();
+                    loadTasks();
+                    showTaskSuccess('Agendamento salvo com sucesso!');
+                });
+            } else {
+                return response.json().then(data => {
+                    showTaskError(data.message || 'Erro ao salvar agendamento');
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error saving task:', error);
+            showTaskError('Erro ao salvar agendamento');
+        });
+    }
+    
+    function editTask(taskId) {
+        fetch(`${SCHEDULED_TASKS_API_BASE}/${taskId}`, {
+            headers: getAuthHeaders()
+        })
+        .then(response => response.json())
+        .then(task => {
+            $('#taskId').val(task.id);
+            $('#taskName').val(task.name);
+            $('#taskDescription').val(task.description || '');
+            $('#taskProject').val(task.project_id);
+            $('#taskActive').prop('checked', task.is_active);
+            
+            // Set schedule type
+            $(`#schedule${task.schedule_type.charAt(0).toUpperCase() + task.schedule_type.slice(1)}`).prop('checked', true).trigger('change');
+            
+            // Set schedule value
+            if (task.schedule_type === 'preset') {
+                $('#presetValue').val(task.schedule_value);
+            } else if (task.schedule_type === 'interval') {
+                $('#intervalMinutes').val(task.schedule_value);
+            } else if (task.schedule_type === 'cron') {
+                $('#cronExpression').val(task.schedule_value);
+            }
+            
+            // Load columns and restore mappings
+            if (task.project_id) {
+                loadProjectColumns(task.project_id).then(() => {
+                    // Restore key mappings after columns are loaded
+                    if (task.key_mappings) {
+                        selectedMappings = task.key_mappings;
+                        // Check the checkboxes
+                        Object.entries(selectedMappings).forEach(([source, target]) => {
+                            $(`#source_${source}`).prop('checked', true);
+                            $(`#target_${target}`).prop('checked', true);
+                        });
+                        updateMappingsDisplay();
+                    }
+                });
+            }
+            
+            $('#taskModalLabel').html('<i class="fas fa-clock me-2"></i>Editar Agendamento');
+            new bootstrap.Modal(document.getElementById('taskModal')).show();
+        })
+        .catch(error => {
+            console.error('Error loading task:', error);
+            showTaskError('Erro ao carregar agendamento');
+        });
+    }
+    
+    function toggleTask(taskId) {
+        fetch(`${SCHEDULED_TASKS_API_BASE}/${taskId}/toggle`, {
+            method: 'PUT',
+            headers: getAuthHeaders()
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json().then(data => {
+                    loadTasks();
+                    showTaskSuccess('Status do agendamento atualizado!');
+                });
+            } else {
+                return response.json().then(data => {
+                    showTaskError(data.message || 'Erro ao atualizar status');
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error toggling task:', error);
+            showTaskError('Erro ao atualizar status');
+        });
+    }
+    
+    function deleteTask(taskId) {
+        if (!confirm('Tem certeza que deseja deletar este agendamento?')) {
+            return;
+        }
+        
+        fetch(`${SCHEDULED_TASKS_API_BASE}/${taskId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json().then(data => {
+                    loadTasks();
+                    showTaskSuccess('Agendamento deletado com sucesso!');
+                });
+            } else {
+                return response.json().then(data => {
+                    showTaskError(data.message || 'Erro ao deletar agendamento');
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error deleting task:', error);
+            showTaskError('Erro ao deletar agendamento');
+        });
+    }
+    
+    function runTaskNow(taskId) {
+        // Find task in the loaded tasks list
+        const task = tasksList.find(t => t.id === taskId);
+        if (!task) {
+            showTaskError('Agendamento não encontrado');
+            return;
+        }
+        
+        // Build URL with key mappings as query parameters
+        let url = `/comparacao/${task.project_id}/execution`;
+        
+        // Add key mappings as URL parameters (using getlist format)
+        if (task.key_mappings && Object.keys(task.key_mappings).length > 0) {
+            const params = [];
+            for (const [source, target] of Object.entries(task.key_mappings)) {
+                params.push(`source_key=${encodeURIComponent(source)}`);
+                params.push(`target_key=${encodeURIComponent(target)}`);
+            }
+            if (params.length > 0) {
+                url += '?' + params.join('&');
+            }
+        }
+        
+        // Redirect to execution page
+        window.location.href = url;
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Custom notification functions that work on this page
+    function showTaskSuccess(message) {
+        // Create a simple notification element with solid background
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; background-color: #198754 !important; color: white !important; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);';
+        notification.innerHTML = `
+            <i class="fas fa-check-circle me-2"></i><strong>${escapeHtml(message)}</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 150);
+            }
+        }, 5000);
+    }
+    
+    function showTaskError(message) {
+        // Create a simple notification element with solid background
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; background-color: #dc3545 !important; color: white !important; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);';
+        notification.innerHTML = `
+            <i class="fas fa-exclamation-circle me-2"></i><strong>${escapeHtml(message)}</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 7 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 150);
+            }
+        }, 7000);
+    }
+</script>
+{% endblock %}
+

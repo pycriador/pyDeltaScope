@@ -27,6 +27,16 @@ def run_comparison(user, project_id):
         source_table = data.get('source_table', project.source_table)
         target_table = data.get('target_table', project.target_table)
         
+        print(f"[MANUAL_COMPARISON] ========== MANUAL COMPARISON START ==========", flush=True)
+        print(f"[MANUAL_COMPARISON] Starting manual comparison for project {project_id}", flush=True)
+        print(f"[MANUAL_COMPARISON] Source table: {source_table}, Target table: {target_table}", flush=True)
+        print(f"[MANUAL_COMPARISON] Key mappings from request: {key_mappings}", flush=True)
+        print(f"[MANUAL_COMPARISON] Key mappings type: {type(key_mappings)}, empty: {not key_mappings}, length: {len(key_mappings) if isinstance(key_mappings, dict) else 0}", flush=True)
+        if key_mappings:
+            print(f"[MANUAL_COMPARISON] Key mappings content: {list(key_mappings.items())}", flush=True)
+        else:
+            print(f"[MANUAL_COMPARISON] WARNING: Key mappings are EMPTY!", flush=True)
+        
         # Get connection configs
         source_config = project.source_connection.get_decrypted_config()
         source_config['type'] = project.source_connection.db_type
@@ -39,6 +49,9 @@ def run_comparison(user, project_id):
             source_engine = DatabaseService.get_engine(source_config, already_decrypted=True)
             primary_keys = DatabaseService.get_primary_keys(source_engine, source_table)
         
+        print(f"[MANUAL_COMPARISON] Primary keys: {primary_keys}", flush=True)
+        print(f"[MANUAL_COMPARISON] Starting comparison with key_mappings={key_mappings}...", flush=True)
+        
         # Run comparison with key mappings
         differences_df, differences = ComparisonService.compare_tables(
             source_config,
@@ -48,6 +61,9 @@ def run_comparison(user, project_id):
             primary_keys,
             key_mappings
         )
+        
+        print(f"[MANUAL_COMPARISON] Comparison completed. Differences found: {len(differences)}", flush=True)
+        print(f"[MANUAL_COMPARISON] DataFrame shape: {differences_df.shape if not differences_df.empty else 'empty'}", flush=True)
         
         # Save results
         comparison = ComparisonService.save_comparison_results(
@@ -84,6 +100,58 @@ def get_comparisons(user, project_id):
     return jsonify({
         'comparisons': [comp.to_dict() for comp in comparisons]
     }), 200
+
+
+@comparisons_bp.route('/project/<int:project_id>', methods=['DELETE'])
+@token_required
+def delete_all_comparisons(user, project_id):
+    """Delete all comparisons for a project"""
+    project = Project.query.filter_by(id=project_id, user_id=user.id).first()
+    
+    if not project:
+        return jsonify({'message': 'Project not found'}), 404
+    
+    try:
+        # Get all comparisons ONLY for this specific project
+        comparisons = Comparison.query.filter_by(project_id=project_id).all()
+        comparison_ids = [comp.id for comp in comparisons]
+        
+        if not comparison_ids:
+            return jsonify({
+                'message': 'No comparisons found for this project',
+                'deleted_count': 0
+            }), 200
+        
+        print(f"[DELETE_ALL_COMPARISONS] Deleting {len(comparison_ids)} comparisons for project {project_id} only", flush=True)
+        
+        # Delete related change logs first (only for this project's comparisons)
+        deleted_change_logs = 0
+        for comparison_id in comparison_ids:
+            change_logs = ChangeLog.query.filter_by(comparison_id=comparison_id).all()
+            for change_log in change_logs:
+                db.session.delete(change_log)
+                deleted_change_logs += 1
+        
+        # Delete all comparisons for this project only (cascade will delete results)
+        for comparison in comparisons:
+            db.session.delete(comparison)
+        
+        db.session.commit()
+        
+        print(f"[DELETE_ALL_COMPARISONS] Successfully deleted {len(comparison_ids)} comparisons and {deleted_change_logs} change logs for project {project_id}", flush=True)
+        
+        return jsonify({
+            'message': f'All comparisons for project "{project.name}" deleted successfully',
+            'deleted_count': len(comparison_ids),
+            'project_id': project_id,
+            'project_name': project.name
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        print(f"[DELETE_ALL_COMPARISONS] Error: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'message': f'Error deleting comparisons: {str(e)}'}), 500
 
 
 @comparisons_bp.route('', methods=['GET'])
@@ -165,4 +233,39 @@ def send_changes_to_api(user, project_id):
         'message': 'Changes sent to API',
         'results': results
     }), 200
+
+
+@comparisons_bp.route('/<int:comparison_id>', methods=['DELETE'])
+@token_required
+def delete_comparison(user, comparison_id):
+    """Delete a comparison and its results"""
+    comparison = Comparison.query.get(comparison_id)
+    
+    if not comparison:
+        return jsonify({'message': 'Comparison not found'}), 404
+    
+    # Verify project ownership
+    project = Project.query.get(comparison.project_id)
+    if not project or project.user_id != user.id:
+        return jsonify({'message': 'Unauthorized'}), 403
+    
+    try:
+        # Delete related change logs first (if any)
+        change_logs = ChangeLog.query.filter_by(comparison_id=comparison_id).all()
+        for change_log in change_logs:
+            db.session.delete(change_log)
+        
+        # Delete comparison (cascade will delete results)
+        db.session.delete(comparison)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Comparison deleted successfully'
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        print(f"[DELETE_COMPARISON] Error: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'message': f'Error deleting comparison: {str(e)}'}), 500
 

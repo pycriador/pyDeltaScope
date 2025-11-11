@@ -55,6 +55,7 @@ def create_app(config_name='default'):
     from app.routes.users import users_bp
     from app.routes.groups import groups_bp
     from app.routes.setup import setup_bp
+    from app.routes.scheduled_tasks import scheduled_tasks_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(connections_bp, url_prefix='/api/connections')
@@ -65,6 +66,7 @@ def create_app(config_name='default'):
     app.register_blueprint(users_bp, url_prefix='/api/users')
     app.register_blueprint(groups_bp, url_prefix='/api/groups')
     app.register_blueprint(setup_bp, url_prefix='/api/setup')
+    app.register_blueprint(scheduled_tasks_bp, url_prefix='/api/scheduled-tasks')
     
     # Register root route - redirect to login if not authenticated, otherwise redirect to home
     @app.route('/')
@@ -93,6 +95,7 @@ def create_app(config_name='default'):
     from app.routes.reports_template import reports_template_bp
     from app.routes.users_template import users_template_bp
     from app.routes.groups_template import groups_template_bp
+    from app.routes.scheduled_tasks_template import scheduled_tasks_template_bp
     
     app.register_blueprint(connections_template_bp)
     app.register_blueprint(projects_template_bp)
@@ -102,10 +105,22 @@ def create_app(config_name='default'):
     app.register_blueprint(reports_template_bp)
     app.register_blueprint(users_template_bp)
     app.register_blueprint(groups_template_bp)
+    app.register_blueprint(scheduled_tasks_template_bp)
     
     # Register API documentation route
     from app.routes.api_docs import api_docs_bp
     app.register_blueprint(api_docs_bp)
+    
+    # Initialize scheduler
+    with app.app_context():
+        try:
+            from app.services.scheduler_service import SchedulerService
+            SchedulerService.load_all_tasks()
+            print("[SCHEDULER] Scheduler initialized and tasks loaded")
+        except Exception as e:
+            import traceback
+            print(f"[SCHEDULER] Warning: Error initializing scheduler: {str(e)}")
+            print(traceback.format_exc())
     
     return app
 

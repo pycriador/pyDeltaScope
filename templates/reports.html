@@ -13,17 +13,35 @@
         <div class="card-body">
             {% if projects %}
             <div class="mb-3">
-                <label for="projectSelect" class="form-label">Projeto</label>
-                <select class="form-select" id="projectSelect" onchange="loadReports(this.value)">
-                    <option value="">Selecione um projeto...</option>
-                    {% for project in projects %}
-                    <option value="{{ project.id }}">{{ project.name }}</option>
-                    {% endfor %}
-                </select>
+                <div class="row align-items-end">
+                    <div class="col-md-8">
+                        <label for="projectSelect" class="form-label">Projeto</label>
+                        <select class="form-select" id="projectSelect">
+                            <option value="">Selecione um projeto...</option>
+                            {% for project in projects %}
+                            <option value="{{ project.id }}" {% if project_id_from_url and project.id == project_id_from_url %}selected{% endif %}>{{ project.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-danger w-100" id="deleteAllReportsBtn" style="display: none;">
+                            <i class="fas fa-trash-alt me-2"></i>Deletar Todos os Relatórios
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div id="reportsListContainer">
+                {% if project_id_from_url %}
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Carregando relatórios...</p>
+                </div>
+                {% else %}
                 <p class="text-muted">Selecione um projeto para ver os relatórios</p>
+                {% endif %}
             </div>
             {% else %}
             <div class="alert alert-warning">
@@ -31,6 +49,61 @@
                 Nenhum projeto encontrado. <a href="/projetos/novo" class="alert-link">Crie um projeto</a> primeiro para ver relatórios.
             </div>
             {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Deleção -->
+<div class="modal fade" id="deleteComparisonModal" tabindex="-1" aria-labelledby="deleteComparisonModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteComparisonModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja deletar o relatório <strong id="deleteComparisonId"></strong>?</p>
+                <p class="text-danger mb-0"><i class="fas fa-exclamation-circle me-1"></i>Esta ação não pode ser desfeita e todos os dados relacionados serão permanentemente removidos.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="fas fa-trash me-2"></i>Deletar Relatório
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Deleção de Todos os Relatórios -->
+<div class="modal fade" id="deleteAllComparisonsModal" tabindex="-1" aria-labelledby="deleteAllComparisonsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteAllComparisonsModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão em Massa
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja deletar <strong id="deleteAllCount"></strong> relatório(s) do projeto <strong id="deleteAllProjectName"></strong>?</p>
+                <div class="alert alert-warning mb-3">
+                    <i class="fas fa-info-circle me-2"></i><strong>Importante:</strong> Apenas os relatórios deste projeto serão deletados. Relatórios de outros projetos não serão afetados.
+                </div>
+                <p class="text-danger mb-0"><i class="fas fa-exclamation-circle me-1"></i><strong>ATENÇÃO:</strong> Esta ação não pode ser desfeita e todos os dados relacionados serão permanentemente removidos.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteAllBtn">
+                    <i class="fas fa-trash-alt me-2"></i>Deletar Todos
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -59,12 +132,29 @@
         return headers;
     }
     
-    async function loadReports(projectId) {
+    async function loadReports(projectId, updateUrl = true) {
         const container = document.getElementById('reportsListContainer');
+        const projectSelect = document.getElementById('projectSelect');
         
         if (!projectId) {
             container.innerHTML = '<p class="text-muted">Selecione um projeto para ver os relatórios</p>';
+            if (updateUrl) {
+                // Update URL without reload
+                const newUrl = window.location.pathname;
+                window.history.pushState({}, '', newUrl);
+            }
             return;
+        }
+
+        // Update select value
+        if (projectSelect) {
+            projectSelect.value = projectId;
+        }
+
+        // Update URL if needed
+        if (updateUrl) {
+            const newUrl = `${window.location.pathname}?project_id=${projectId}`;
+            window.history.pushState({}, '', newUrl);
         }
 
         container.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2 text-muted">Carregando relatórios...</p></div>';
@@ -89,7 +179,7 @@
                     const statusBadge = comparison.status === 'completed' ? 'success' : (comparison.status === 'failed' ? 'danger' : 'warning');
                     const statusText = comparison.status === 'completed' ? 'Concluído' : (comparison.status === 'failed' ? 'Falhou' : 'Em Andamento');
                     
-                    html += `<tr>
+                    html += `<tr id="comparison-row-${comparison.id}">
                         <td><code>${comparison.id}</code></td>
                         <td>${executedDate}</td>
                         <td><span class="badge bg-${statusBadge}">${statusText}</span></td>
@@ -98,17 +188,257 @@
                             <a href="/relatorios/${comparison.id}/resultados" class="btn btn-sm btn-info" title="Ver Detalhes">
                                 <i class="fas fa-eye"></i> Ver Detalhes
                             </a>
+                            <button onclick="deleteComparison(${comparison.id}, ${projectId})" class="btn btn-sm btn-danger ms-2" title="Deletar Relatório">
+                                <i class="fas fa-trash"></i> Deletar
+                            </button>
                         </td>
                     </tr>`;
                 });
                 html += '</tbody></table></div>';
                 container.innerHTML = html;
+                
+                // Show delete all button
+                document.getElementById('deleteAllReportsBtn').style.display = 'block';
             } else {
                 container.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Nenhum relatório encontrado para este projeto. Execute uma comparação primeiro.</div>';
+                // Hide delete all button
+                document.getElementById('deleteAllReportsBtn').style.display = 'none';
             }
         } catch (error) {
             console.error('Error loading reports:', error);
             container.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Erro ao carregar relatórios: ${error.message}</div>`;
+        }
+    }
+    
+    let currentDeleteComparisonId = null;
+    let currentDeleteProjectId = null;
+    let currentDeleteAllProjectId = null;
+    let currentDeleteAllProjectName = null;
+    
+    function deleteComparison(comparisonId, projectId) {
+        currentDeleteComparisonId = comparisonId;
+        currentDeleteProjectId = projectId;
+        
+        // Update modal content
+        document.getElementById('deleteComparisonId').textContent = `#${comparisonId}`;
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('deleteComparisonModal'));
+        modal.show();
+    }
+    
+    function deleteAllComparisons() {
+        const projectSelect = document.getElementById('projectSelect');
+        const projectId = projectSelect ? projectSelect.value : null;
+        
+        if (!projectId) {
+            alert('Selecione um projeto primeiro');
+            return;
+        }
+        
+        // Get project name
+        const projectName = projectSelect.options[projectSelect.selectedIndex].text;
+        
+        // Get current comparisons count
+        const container = document.getElementById('reportsListContainer');
+        const table = container.querySelector('table');
+        const count = table ? table.querySelectorAll('tbody tr').length : 0;
+        
+        if (count === 0) {
+            alert('Não há relatórios para deletar');
+            return;
+        }
+        
+        currentDeleteAllProjectId = projectId;
+        currentDeleteAllProjectName = projectName;
+        
+        // Update modal content
+        document.getElementById('deleteAllCount').textContent = count;
+        document.getElementById('deleteAllProjectName').textContent = projectName;
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('deleteAllComparisonsModal'));
+        modal.show();
+    }
+    
+    async function confirmDeleteComparison() {
+        if (!currentDeleteComparisonId || !currentDeleteProjectId) {
+            return;
+        }
+        
+        const comparisonId = currentDeleteComparisonId;
+        const projectId = currentDeleteProjectId;
+        
+        // Hide modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteComparisonModal'));
+        modal.hide();
+        
+        // Disable button and show loading
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        const originalHtml = confirmBtn.innerHTML;
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deletando...';
+        
+        try {
+            const headers = getAuthHeaders();
+            const response = await fetch(`${API_BASE}/comparisons/${comparisonId}`, {
+                method: 'DELETE',
+                headers: headers
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Erro ao deletar relatório');
+            }
+            
+            // Show success message
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                <i class="fas fa-check-circle me-2"></i>Relatório deletado com sucesso!
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.getElementById('reportsSection').insertBefore(alertDiv, document.getElementById('reportsSection').firstChild);
+            
+            // Remove row from table
+            const row = document.getElementById(`comparison-row-${comparisonId}`);
+            if (row) {
+                row.style.transition = 'opacity 0.3s';
+                row.style.opacity = '0';
+                setTimeout(() => {
+                    row.remove();
+                }, 300);
+            }
+            
+            // Reload reports list after a short delay
+            setTimeout(() => {
+                loadReports(projectId, false);
+            }, 500);
+        } catch (error) {
+            console.error('Error deleting comparison:', error);
+            
+            // Show error message
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                <i class="fas fa-exclamation-circle me-2"></i>Erro ao deletar relatório: ${error.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.getElementById('reportsSection').insertBefore(alertDiv, document.getElementById('reportsSection').firstChild);
+        } finally {
+            // Restore button
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = originalHtml;
+            currentDeleteComparisonId = null;
+            currentDeleteProjectId = null;
+        }
+    }
+    
+    // Load project from URL on page load
+    $(document).ready(function() {
+        {% if project_id_from_url %}
+        // Load project from URL parameter
+        const projectId = {{ project_id_from_url }};
+        if (projectId) {
+            loadReports(projectId, false); // Don't update URL since it's already set
+        }
+        {% else %}
+        // Check URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const projectId = urlParams.get('project_id');
+        if (projectId) {
+            loadReports(parseInt(projectId), false);
+        }
+        {% endif %}
+        
+        // Update select change handler to update URL
+        $('#projectSelect').on('change', function() {
+            const projectId = $(this).val();
+            loadReports(projectId, true);
+        });
+        
+        // Attach confirm delete handler
+        document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDeleteComparison);
+        
+        // Attach delete all button handler
+        document.getElementById('deleteAllReportsBtn').addEventListener('click', deleteAllComparisons);
+        
+        // Attach confirm delete all handler
+        document.getElementById('confirmDeleteAllBtn').addEventListener('click', confirmDeleteAllComparisons);
+    });
+    
+    async function confirmDeleteAllComparisons() {
+        if (!currentDeleteAllProjectId) {
+            return;
+        }
+        
+        const projectId = currentDeleteAllProjectId;
+        const projectName = currentDeleteAllProjectName;
+        
+        // Hide modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteAllComparisonsModal'));
+        modal.hide();
+        
+        // Disable button and show loading
+        const confirmBtn = document.getElementById('confirmDeleteAllBtn');
+        const deleteAllBtn = document.getElementById('deleteAllReportsBtn');
+        const originalHtml = confirmBtn.innerHTML;
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deletando...';
+        deleteAllBtn.disabled = true;
+        
+        try {
+            const headers = getAuthHeaders();
+            const response = await fetch(`${API_BASE}/comparisons/project/${projectId}`, {
+                method: 'DELETE',
+                headers: headers
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Erro ao deletar relatórios');
+            }
+            
+            // Show success message
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                <i class="fas fa-check-circle me-2"></i>Todos os relatórios do projeto "${projectName}" foram deletados com sucesso!
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.getElementById('reportsSection').insertBefore(alertDiv, document.getElementById('reportsSection').firstChild);
+            
+            // Clear table
+            const container = document.getElementById('reportsListContainer');
+            container.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Nenhum relatório encontrado para este projeto. Execute uma comparação primeiro.</div>';
+            
+            // Hide delete all button
+            deleteAllBtn.style.display = 'none';
+            
+            // Reload reports list after a short delay
+            setTimeout(() => {
+                loadReports(projectId, false);
+            }, 500);
+        } catch (error) {
+            console.error('Error deleting all comparisons:', error);
+            
+            // Show error message
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                <i class="fas fa-exclamation-circle me-2"></i>Erro ao deletar relatórios: ${error.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.getElementById('reportsSection').insertBefore(alertDiv, document.getElementById('reportsSection').firstChild);
+        } finally {
+            // Restore button
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = originalHtml;
+            deleteAllBtn.disabled = false;
+            currentDeleteAllProjectId = null;
+            currentDeleteAllProjectName = null;
         }
     }
 </script>

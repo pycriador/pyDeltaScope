@@ -1485,15 +1485,28 @@ body.dark-theme:has(.login-container) #themeToggle:hover {
 
 /* Table and column name colors - responsive to theme */
 .table-name-code,
-.column-name-code,
-.target-value-code {
-    color: #000;
+.column-name-code {
+    color: #000 !important;
 }
 
 body.dark-theme .table-name-code,
-body.dark-theme .column-name-code,
-body.dark-theme .target-value-code {
-    color: #fff;
+body.dark-theme .column-name-code {
+    color: #fff !important;
+}
+
+/* Comparison results table codes - always black for better visibility */
+.target-value-code,
+.record-id-code,
+.source-value-code,
+.detection-date-code {
+    color: #000 !important;
+}
+
+body.dark-theme .target-value-code,
+body.dark-theme .record-id-code,
+body.dark-theme .source-value-code,
+body.dark-theme .detection-date-code {
+    color: #000 !important;
 }
 
 /* Responsive padding adjustments */

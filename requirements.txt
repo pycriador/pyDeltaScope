@@ -10,5 +10,7 @@ requests
 pandas
 plotly
 flask-cors
+APScheduler
+croniter
 
 
