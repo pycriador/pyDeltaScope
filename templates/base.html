@@ -52,58 +52,81 @@
                                </li>
                                {% endif %}
                                
+                               <!-- Menu Executar -->
                                {% if current_user.is_admin or user_groups_list|selectattr('can_create_projects')|list|length > 0 %}
-                               <li class="nav-item">
-                                   <a class="nav-link {% if request.endpoint == 'comparison_template.comparison_page' %}active{% endif %}" href="/comparacao" data-template-link="true">
-                                       <i class="fas fa-code-branch me-1"></i>Comparação
+                               <li class="nav-item dropdown">
+                                   <a class="nav-link dropdown-toggle {% if request.endpoint == 'comparison_template.comparison_page' or request.endpoint == 'scheduled_tasks_template.scheduled_tasks_page' %}active{% endif %}" href="#" id="executarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                       <i class="fas fa-play-circle me-1"></i>Executar
                                    </a>
+                                   <ul class="dropdown-menu" aria-labelledby="executarDropdown">
+                                       <li>
+                                           <a class="dropdown-item {% if request.endpoint == 'comparison_template.comparison_page' %}active{% endif %}" href="/comparacao" data-template-link="true">
+                                               <i class="fas fa-code-branch me-2"></i>Comparação
+                                           </a>
+                                       </li>
+                                       <li>
+                                           <a class="dropdown-item {% if request.endpoint == 'scheduled_tasks_template.scheduled_tasks_page' %}active{% endif %}" href="/agendamentos" data-template-link="true">
+                                               <i class="fas fa-clock me-2"></i>Agendamentos
+                                           </a>
+                                       </li>
+                                   </ul>
                                </li>
                                {% endif %}
                                
-                               {% if current_user.is_admin or user_groups_list|selectattr('can_create_projects')|list|length > 0 %}
-                               <li class="nav-item">
-                                   <a class="nav-link {% if request.endpoint == 'scheduled_tasks_template.scheduled_tasks_page' %}active{% endif %}" href="/agendamentos" data-template-link="true">
-                                       <i class="fas fa-clock me-1"></i>Agendamentos
+                               <!-- Menu Dados -->
+                               {% if current_user.is_admin or user_groups_list|selectattr('can_view_dashboards')|list|length > 0 or user_groups_list|selectattr('can_view_reports')|list|length > 0 %}
+                               <li class="nav-item dropdown">
+                                   <a class="nav-link dropdown-toggle {% if request.endpoint == 'dashboard_template.dashboard_page' or request.endpoint == 'reports_template.reports_page' %}active{% endif %}" href="#" id="dadosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                       <i class="fas fa-chart-bar me-1"></i>Dados
                                    </a>
+                                   <ul class="dropdown-menu" aria-labelledby="dadosDropdown">
+                                       {% if current_user.is_admin or user_groups_list|selectattr('can_view_reports')|list|length > 0 %}
+                                       <li>
+                                           <a class="dropdown-item {% if request.endpoint == 'reports_template.reports_page' %}active{% endif %}" href="/relatorios" data-template-link="true">
+                                               <i class="fas fa-file-alt me-2"></i>Relatórios
+                                           </a>
+                                       </li>
+                                       {% endif %}
+                                       {% if current_user.is_admin or user_groups_list|selectattr('can_view_dashboards')|list|length > 0 %}
+                                       <li>
+                                           <a class="dropdown-item {% if request.endpoint == 'dashboard_template.dashboard_page' %}active{% endif %}" href="/dashboard" data-template-link="true">
+                                               <i class="fas fa-chart-line me-2"></i>Dashboard
+                                           </a>
+                                       </li>
+                                       {% endif %}
+                                   </ul>
                                </li>
                                {% endif %}
                                
-                               {% if current_user.is_admin or user_groups_list|selectattr('can_view_dashboards')|list|length > 0 %}
-                               <li class="nav-item">
-                                   <a class="nav-link {% if request.endpoint == 'dashboard_template.dashboard_page' %}active{% endif %}" href="/dashboard" data-template-link="true">
-                                       <i class="fas fa-chart-bar me-1"></i>Dashboard
-                                   </a>
-                               </li>
-                               {% endif %}
-                               
+                               <!-- Menu Administração -->
                                {% if current_user.is_admin or user_groups_list|selectattr('can_view_tables')|list|length > 0 %}
-                               <li class="nav-item">
-                                   <a class="nav-link {% if request.endpoint == 'tables_template.tables_page' %}active{% endif %}" href="/tabelas" data-template-link="true">
-                                       <i class="fas fa-table me-1"></i>Tabelas
+                               <li class="nav-item dropdown">
+                                   <a class="nav-link dropdown-toggle {% if request.endpoint == 'users_template.users_page' or request.endpoint == 'groups_template.groups_page' or request.endpoint == 'tables_template.tables_page' %}active{% endif %}" href="#" id="administracaoDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                       <i class="fas fa-cog me-1"></i>Administração
                                    </a>
+                                   <ul class="dropdown-menu" aria-labelledby="administracaoDropdown">
+                                       {% if current_user.is_admin %}
+                                       <li>
+                                           <a class="dropdown-item {% if request.endpoint == 'users_template.users_page' %}active{% endif %}" href="/usuarios" data-template-link="true">
+                                               <i class="fas fa-users me-2"></i>Usuários
+                                           </a>
+                                       </li>
+                                       <li>
+                                           <a class="dropdown-item {% if request.endpoint == 'groups_template.groups_page' %}active{% endif %}" href="/grupos" data-template-link="true">
+                                               <i class="fas fa-user-friends me-2"></i>Grupos
+                                           </a>
+                                       </li>
+                                       {% endif %}
+                                       {% if current_user.is_admin or user_groups_list|selectattr('can_view_tables')|list|length > 0 %}
+                                       <li>
+                                           <a class="dropdown-item {% if request.endpoint == 'tables_template.tables_page' %}active{% endif %}" href="/tabelas" data-template-link="true">
+                                               <i class="fas fa-table me-2"></i>Tabelas
+                                           </a>
+                                       </li>
+                                       {% endif %}
+                                   </ul>
                                </li>
                                {% endif %}
-                               
-                               {% if current_user.is_admin or user_groups_list|selectattr('can_view_reports')|list|length > 0 %}
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'reports_template.reports_page' %}active{% endif %}" href="/relatorios" data-template-link="true">
-                                <i class="fas fa-file-alt me-1"></i>Relatórios
-                            </a>
-                        </li>
-                        {% endif %}
-                    {% endif %}
-                    
-                    {% if current_user.is_admin %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'users_template.users_page' %}active{% endif %}" href="/usuarios" data-template-link="true">
-                            <i class="fas fa-users me-1"></i>Usuários
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'groups_template.groups_page' %}active{% endif %}" href="/grupos" data-template-link="true">
-                            <i class="fas fa-user-friends me-1"></i>Grupos
-                        </a>
-                    </li>
                     {% endif %}
                 </ul>
                 <div class="navbar-nav">
