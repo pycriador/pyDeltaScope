@@ -1,6 +1,6 @@
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, session
 from app.models.database_connection import DatabaseConnection
-from app.utils.security import login_required_template
+from app.utils.security import login_required_template, generate_token
 from app.services.database import DatabaseService
 
 tables_template_bp = Blueprint('tables_template', __name__)
@@ -18,9 +18,13 @@ def tables_page(current_user):
             user_id=current_user.id,
             is_active=True
         ).all()
+    # Generate token for API calls
+    token = session.get('token') or generate_token(current_user)
+    
     return render_template('tables.html', 
                          connections=connections, 
                          current_user=current_user,
+                         auth_token=token,
                          selected_connection_id=request.args.get('connection_id', type=int))
 
 
@@ -63,9 +67,13 @@ def edit_table_page(current_user, connection_id, table_name):
         print(traceback.format_exc())
         return render_template('error.html', message=f'Erro ao carregar colunas da tabela: {str(e)}'), 500
     
+    # Generate token for API calls
+    token = session.get('token') or generate_token(current_user)
+    
     return render_template('edit_table.html', 
                          connection=connection, 
                          table_name=table_name,
                          columns=columns,
-                         current_user=current_user)
+                         current_user=current_user,
+                         auth_token=token)
 

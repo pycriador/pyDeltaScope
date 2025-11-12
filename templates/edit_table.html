@@ -129,8 +129,11 @@
 
 {% block scripts %}
 <script>
-    // API_BASE is already defined in app.js
-    const AUTH_TOKEN = '{{ session.token|safe }}';
+    // API_BASE is already defined in app.js, but check if it exists
+    if (typeof API_BASE === 'undefined') {
+        window.API_BASE = '/api';
+    }
+    const AUTH_TOKEN = '{{ auth_token|safe if auth_token else (session.token|safe if session.token else "") }}';
     const USER_ID = parseInt('{{ current_user.id }}');
     const CONNECTION_ID = parseInt('{{ connection.id }}');
     const TABLE_NAME = '{{ table_name|safe }}';

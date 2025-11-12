@@ -121,11 +121,14 @@ def update_primary_keys(user):
     table_name = data['table_name']
     primary_keys = data.get('primary_keys', [])
     
-    # Verify connection belongs to user
-    connection = DatabaseConnection.query.filter_by(
-        id=connection_id,
-        user_id=user.id
-    ).first()
+    # Verify connection - admins can access any, regular users only their own
+    if user.is_admin:
+        connection = DatabaseConnection.query.filter_by(id=connection_id).first()
+    else:
+        connection = DatabaseConnection.query.filter_by(
+            id=connection_id,
+            user_id=user.id
+        ).first()
     
     if not connection:
         return jsonify({'message': 'Connection not found'}), 404
@@ -143,11 +146,17 @@ def update_primary_keys(user):
         for col in columns:
             col['primary_key'] = col['name'] in primary_keys
         
-        # Find all projects that use this table
-        projects = Project.query.filter(
-            ((Project.source_connection_id == connection_id) & (Project.source_table == table_name)) |
-            ((Project.target_connection_id == connection_id) & (Project.target_table == table_name))
-        ).filter_by(user_id=user.id, is_active=True).all()
+        # Find all projects that use this table - admins see all, regular users only their own
+        if user.is_admin:
+            projects = Project.query.filter(
+                ((Project.source_connection_id == connection_id) & (Project.source_table == table_name)) |
+                ((Project.target_connection_id == connection_id) & (Project.target_table == table_name))
+            ).filter_by(is_active=True).all()
+        else:
+            projects = Project.query.filter(
+                ((Project.source_connection_id == connection_id) & (Project.source_table == table_name)) |
+                ((Project.target_connection_id == connection_id) & (Project.target_table == table_name))
+            ).filter_by(user_id=user.id, is_active=True).all()
         
         updated_projects = []
         base_path = Path(__file__).parent.parent.parent
@@ -203,11 +212,14 @@ def update_column_type(user):
     nullable = data.get('nullable', True)
     primary_key = data.get('primary_key', False)
     
-    # Verify connection belongs to user
-    connection = DatabaseConnection.query.filter_by(
-        id=connection_id,
-        user_id=user.id
-    ).first()
+    # Verify connection - admins can access any, regular users only their own
+    if user.is_admin:
+        connection = DatabaseConnection.query.filter_by(id=connection_id).first()
+    else:
+        connection = DatabaseConnection.query.filter_by(
+            id=connection_id,
+            user_id=user.id
+        ).first()
     
     if not connection:
         return jsonify({'message': 'Connection not found'}), 404
@@ -484,18 +496,30 @@ def update_column_type(user):
                 col['primary_key'] = col['name'] in updated_primary_keys
                 print(f"[TABLES] Final column info - Name: {col['name']}, Type: {col['type']}, Nullable: {col['nullable']}, Primary Key: {col['primary_key']}")
         
-        # Find all projects that use this table
-        projects = Project.query.filter(
-            ((Project.source_connection_id == connection_id) & (Project.source_table == table_name)) |
-            ((Project.target_connection_id == connection_id) & (Project.target_table == table_name))
-        ).filter_by(user_id=user.id, is_active=True).all()
+        # Find all projects that use this table - admins see all, regular users only their own
+        if user.is_admin:
+            projects = Project.query.filter(
+                ((Project.source_connection_id == connection_id) & (Project.source_table == table_name)) |
+                ((Project.target_connection_id == connection_id) & (Project.target_table == table_name))
+            ).filter_by(is_active=True).all()
+        else:
+            projects = Project.query.filter(
+                ((Project.source_connection_id == connection_id) & (Project.source_table == table_name)) |
+                ((Project.target_connection_id == connection_id) & (Project.target_table == table_name))
+            ).filter_by(user_id=user.id, is_active=True).all()
         
-        # Update or create table model mapping
-        mapping = TableModelMapping.query.filter_by(
-            connection_id=connection_id,
-            table_name=table_name,
-            user_id=user.id
-        ).first()
+        # Update or create table model mapping - admins can see any, regular users only their own
+        if user.is_admin:
+            mapping = TableModelMapping.query.filter_by(
+                connection_id=connection_id,
+                table_name=table_name
+            ).first()
+        else:
+            mapping = TableModelMapping.query.filter_by(
+                connection_id=connection_id,
+                table_name=table_name,
+                user_id=user.id
+            ).first()
         
         base_path = Path(__file__).parent.parent.parent
         updated_projects = []
@@ -599,21 +623,30 @@ def update_column_type(user):
 @token_required
 def get_model_code(user, connection_id, table_name):
     """Get SQLAlchemy model code for a table"""
-    # Verify connection belongs to user
-    connection = DatabaseConnection.query.filter_by(
-        id=connection_id,
-        user_id=user.id
-    ).first()
+    # Verify connection - admins can access any, regular users only their own
+    if user.is_admin:
+        connection = DatabaseConnection.query.filter_by(id=connection_id).first()
+    else:
+        connection = DatabaseConnection.query.filter_by(
+            id=connection_id,
+            user_id=user.id
+        ).first()
     
     if not connection:
         return jsonify({'message': 'Connection not found'}), 404
     
-    # Get mapping
-    mapping = TableModelMapping.query.filter_by(
-        connection_id=connection_id,
-        table_name=table_name,
-        user_id=user.id
-    ).first()
+    # Get mapping - admins can see any, regular users only their own
+    if user.is_admin:
+        mapping = TableModelMapping.query.filter_by(
+            connection_id=connection_id,
+            table_name=table_name
+        ).first()
+    else:
+        mapping = TableModelMapping.query.filter_by(
+            connection_id=connection_id,
+            table_name=table_name,
+            user_id=user.id
+        ).first()
     
     if not mapping:
         return jsonify({'message': 'Model file not found for this table'}), 404
