@@ -1,6 +1,7 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, request, redirect, session
 from app.models.group import Group
-from app.utils.security import admin_required_template
+from app.models.user import User
+from app.utils.security import admin_required_template, generate_token
 from app import db
 
 groups_template_bp = Blueprint('groups_template', __name__)
@@ -33,4 +34,65 @@ def groups_page(current_user):
         print(f"[GROUPS] Error loading groups page: {str(e)}")
         print(traceback.format_exc())
         return render_template('error.html', message=f'Erro ao carregar grupos: {str(e)}'), 500
+
+
+@groups_template_bp.route('/grupos/<int:group_id>/editar', methods=['GET', 'POST'])
+@admin_required_template
+def edit_group_page(current_user, group_id):
+    """Render edit group page and handle group update"""
+    try:
+        group = Group.query.get(group_id)
+        
+        if not group:
+            return render_template('error.html', message='Grupo não encontrado'), 404
+        
+        # Generate token for API calls
+        token = session.get('token') or generate_token(current_user)
+        
+        if request.method == 'POST':
+            # Handle form submission via API (will be handled by JavaScript)
+            return redirect('/grupos')
+        
+        # GET request - show edit form
+        return render_template('edit_group.html', 
+                             group=group, 
+                             current_user=current_user,
+                             auth_token=token)
+    except Exception as e:
+        import traceback
+        print(f"[GROUPS] Error loading edit group page: {str(e)}")
+        print(traceback.format_exc())
+        return render_template('error.html', message=f'Erro ao carregar página de edição: {str(e)}'), 500
+
+
+@groups_template_bp.route('/grupos/<int:group_id>/usuarios')
+@admin_required_template
+def group_users_page(current_user, group_id):
+    """Render group users management page"""
+    try:
+        group = Group.query.get(group_id)
+        
+        if not group:
+            return render_template('error.html', message='Grupo não encontrado'), 404
+        
+        # Get all users in the group
+        group_users = group.users.all()
+        
+        # Get all users (for adding to group)
+        all_users = User.query.filter_by(is_active=True).all()
+        
+        # Generate token for API calls
+        token = session.get('token') or generate_token(current_user)
+        
+        return render_template('group_users.html', 
+                             group=group,
+                             group_users=group_users,
+                             all_users=all_users,
+                             current_user=current_user,
+                             auth_token=token)
+    except Exception as e:
+        import traceback
+        print(f"[GROUPS] Error loading group users page: {str(e)}")
+        print(traceback.format_exc())
+        return render_template('error.html', message=f'Erro ao carregar página de usuários: {str(e)}'), 500
 

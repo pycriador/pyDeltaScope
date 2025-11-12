@@ -3,18 +3,19 @@
 {% block title %}Cliente HTTP - DeltaScope{% endblock %}
 
 {% block content %}
-<div id="webhooksClientSection">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-paper-plane me-2"></i>Cliente HTTP</h2>
-        <div>
-            <a href="/webhooks/payloads" class="btn btn-outline-primary me-2">
-                <i class="fas fa-database me-2"></i>Gerenciar Payloads
-            </a>
-            <a href="/webhooks/params" class="btn btn-outline-secondary">
-                <i class="fas fa-link me-2"></i>Gerenciar Parâmetros
-            </a>
+<div class="container-fluid py-4">
+    <div id="webhooksClientSection">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-paper-plane me-2"></i>Cliente HTTP</h2>
+            <div>
+                <a href="/webhooks/payloads" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-database me-2"></i>Gerenciar Payloads
+                </a>
+                <a href="/webhooks/params" class="btn btn-outline-secondary">
+                    <i class="fas fa-link me-2"></i>Gerenciar Parâmetros
+                </a>
+            </div>
         </div>
-    </div>
 
     <div class="row">
         <!-- Left Panel: Request Configuration -->
@@ -204,11 +205,12 @@
             </div>
         </div>
     </div>
+    </div>
 </div>
 
 <!-- Modal para salvar configuração -->
 <div class="modal fade" id="saveConfigModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Salvar Configuração</h5>
@@ -241,7 +243,7 @@
 
 <!-- Modal para carregar payload -->
 <div class="modal fade" id="loadPayloadModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Carregar Payload Salvo</h5>
@@ -263,7 +265,7 @@
 
 <!-- Modal para carregar parâmetros -->
 <div class="modal fade" id="loadParamsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Carregar Parâmetros Salvos</h5>
@@ -285,7 +287,7 @@
 
 <!-- Modal para exemplos de namespaces -->
 <div class="modal fade" id="namespaceExamplesModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="fas fa-code me-2"></i>Namespaces Disponíveis</h5>

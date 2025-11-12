@@ -13,8 +13,14 @@
         box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     }
 </style>
-<div id="comparisonSection">
-    <h2 class="mb-4"><i class="fas fa-code-branch me-2"></i>Executar Comparação</h2>
+<div class="container-fluid py-4">
+    <div id="comparisonSection">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-code-branch me-2"></i>Executar Comparação</h2>
+            <a href="/projetos?novo=true" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Novo Projeto de Comparação
+            </a>
+        </div>
 
     {% if projects %}
     <div class="card shadow mb-4">
@@ -45,8 +51,9 @@
     {% else %}
     <div class="alert alert-warning">
         <i class="fas fa-exclamation-triangle me-2"></i>
-        Nenhum projeto encontrado. <a href="/projetos" class="alert-link">Crie um projeto</a> primeiro para executar comparações.
+        Nenhum projeto encontrado. <a href="/projetos?novo=true" class="alert-link">Crie um projeto</a> primeiro para executar comparações.
     </div>
     {% endif %}
+    </div>
 </div>
 {% endblock %}

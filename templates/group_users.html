@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}Usuários do Grupo - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="groupUsersSection">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-users me-2"></i>Usuários do Grupo: {{ group.name }}</h2>
+        <a href="/grupos" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Voltar
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- Users in Group -->
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>Usuários no Grupo</h5>
+                </div>
+                <div class="card-body">
+                    {% if group_users %}
+                    <div class="list-group" id="groupUsersList">
+                        {% for user in group_users %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center" id="user-{{ user.id }}">
+                            <div>
+                                <h6 class="mb-1">{{ user.username }}</h6>
+                                <small class="text-muted">{{ user.email }}</small>
+                            </div>
+                            <button class="btn btn-sm btn-danger" 
+                                    data-group-id="{{ group.id }}" 
+                                    data-user-id="{{ user.id }}" 
+                                    data-username="{{ user.username }}"
+                                    onclick="removeUserFromGroupConfirm(this)"
+                                    title="Remover do Grupo">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">Nenhum usuário neste grupo.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Users to Group -->
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Adicionar Usuários</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="userSearch" placeholder="Buscar usuário...">
+                    </div>
+                    <div class="list-group" id="availableUsersList" style="max-height: 400px; overflow-y: auto;">
+                        {% for user in all_users %}
+                        {% if user not in group_users %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center user-item" data-username="{{ user.username|lower }}" data-email="{{ user.email|lower }}">
+                            <div>
+                                <h6 class="mb-1">{{ user.username }}</h6>
+                                <small class="text-muted">{{ user.email }}</small>
+                            </div>
+                            <button class="btn btn-sm btn-success" onclick="addUserToGroup({{ group.id }}, {{ user.id }}, '{{ user.username }}')" title="Adicionar ao Grupo">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% if group_users|length == all_users|length %}
+                    <p class="text-muted mt-3">Todos os usuários já estão neste grupo.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Remove User Confirmation Modal -->
+<div class="modal fade" id="removeUserModal" tabindex="-1" aria-labelledby="removeUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="removeUserModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Remoção
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja remover o usuário <strong id="removeUserName"></strong> deste grupo?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmRemoveUserBtn">
+                    <i class="fas fa-user-times me-2"></i>Remover do Grupo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// API_BASE is already defined in app.js
+const AUTH_TOKEN = '{{ auth_token|safe if auth_token else "" }}';
+const USER_ID = parseInt('{{ current_user.id }}');
+const CURRENT_GROUP_ID = {{ group.id }};
+
+// Variables to store removal data
+let currentRemoveGroupId = null;
+let currentRemoveUserId = null;
+let currentRemoveUsername = null;
+
+// Function to show confirmation modal for removing user from group
+window.removeUserFromGroupConfirm = function(button) {
+    // Get data attributes - use vanilla JS to avoid jQuery dependency
+    const groupId = button.getAttribute('data-group-id') || CURRENT_GROUP_ID;
+    const userId = button.getAttribute('data-user-id');
+    const username = button.getAttribute('data-username');
+    
+    if (!groupId || !userId) {
+        alert('Erro: Dados não encontrados');
+        return;
+    }
+    
+    // Store values
+    currentRemoveGroupId = parseInt(groupId);
+    currentRemoveUserId = parseInt(userId);
+    currentRemoveUsername = username || 'usuário';
+    
+    // Update modal content using vanilla JS
+    const nameEl = document.getElementById('removeUserName');
+    if (nameEl) {
+        nameEl.textContent = currentRemoveUsername;
+    }
+    
+    const modalEl = document.getElementById('removeUserModal');
+    if (modalEl) {
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    } else {
+        alert('Modal não encontrado');
+    }
+};
+
+// Function to execute removal via API using fetch (no jQuery dependency)
+function executeRemoveUser() {
+    if (!currentRemoveGroupId || !currentRemoveUserId) {
+        alert('Erro: Dados de remoção não encontrados');
+        return;
+    }
+    
+    const groupId = currentRemoveGroupId;
+    const userId = currentRemoveUserId;
+    
+    // Hide modal using vanilla JS
+    const modalEl = document.getElementById('removeUserModal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) {
+        modal.hide();
+    }
+    
+    // Show loading
+    const confirmBtn = document.getElementById('confirmRemoveUserBtn');
+    let originalHtml = null;
+    if (confirmBtn) {
+        originalHtml = confirmBtn.innerHTML;
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Removendo...';
+    }
+    
+    // Make API call using fetch
+    fetch(`${API_BASE}/groups/${groupId}/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${AUTH_TOKEN}`,
+            'X-User-Id': USER_ID,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            showToast('Usuário removido do grupo com sucesso!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            return response.json().then(data => {
+                showToast('Erro ao remover usuário: ' + (data.message || 'Erro desconhecido'), 'error');
+                if (confirmBtn && originalHtml) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = originalHtml;
+                }
+            });
+        }
+    })
+    .catch(error => {
+        showToast('Erro ao remover usuário: ' + error.message, 'error');
+        if (confirmBtn && originalHtml) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = originalHtml;
+        }
+    });
+}
+
+// Toast notification function
+function showToast(message, type = 'success') {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'info'} alert-dismissible fade show position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 400px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); animation: slideInRight 0.3s ease-out;';
+    
+    // Set background color based on type
+    if (type === 'success') {
+        toast.style.backgroundColor = '#198754';
+        toast.style.color = 'white';
+        toast.style.border = 'none';
+    } else if (type === 'error') {
+        toast.style.backgroundColor = '#dc3545';
+        toast.style.color = 'white';
+        toast.style.border = 'none';
+    } else if (type === 'warning') {
+        toast.style.backgroundColor = '#ffc107';
+        toast.style.color = '#000';
+        toast.style.border = 'none';
+    } else {
+        toast.style.backgroundColor = '#0dcaf0';
+        toast.style.color = '#000';
+        toast.style.border = 'none';
+    }
+    
+    // Icons based on type
+    const icons = {
+        'success': 'fa-check-circle',
+        'error': 'fa-exclamation-circle',
+        'warning': 'fa-exclamation-triangle',
+        'info': 'fa-info-circle'
+    };
+    
+    toast.innerHTML = `
+        <i class="fas ${icons[type] || 'fa-info-circle'} me-2"></i><strong>${escapeHtml(message)}</strong>
+        <button type="button" class="btn-close ${type === 'success' || type === 'error' ? 'btn-close-white' : ''}" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
+                }
+            }, 300);
+        }
+    }, 5000);
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // User search filter
+    const userSearchInput = document.getElementById('userSearch');
+    if (userSearchInput) {
+        userSearchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const userItems = document.querySelectorAll('.user-item');
+            
+            userItems.forEach(function(item) {
+                const username = item.getAttribute('data-username') || '';
+                const email = item.getAttribute('data-email') || '';
+                
+                if (username.includes(searchTerm) || email.includes(searchTerm)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    }
+    
+    // Bind confirm button
+    const confirmRemoveBtn = document.getElementById('confirmRemoveUserBtn');
+    if (confirmRemoveBtn) {
+        confirmRemoveBtn.addEventListener('click', executeRemoveUser);
+    }
+    
+    // Override addUserToGroup from app.js (use fetch instead of jQuery)
+    setTimeout(function() {
+        window.addUserToGroup = function(groupId, userId, username) {
+            fetch(`${API_BASE}/groups/${groupId}/users/${userId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${AUTH_TOKEN}`,
+                    'X-User-Id': USER_ID,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    showToast('Usuário adicionado ao grupo com sucesso!', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    return response.json().then(data => {
+                        let errorMessage = 'Erro ao adicionar usuário';
+                        if (data && data.message) {
+                            errorMessage = data.message;
+                        }
+                        showToast(errorMessage, 'error');
+                    });
+                }
+            })
+            .catch(error => {
+                showToast('Erro ao adicionar usuário: ' + error.message, 'error');
+            });
+        };
+    }, 100);
+});
+</script>
+{% endblock %}
+

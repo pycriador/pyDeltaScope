@@ -22,6 +22,7 @@
             }
         })();
     </script>
+    {% block head %}{% endblock %}
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -34,10 +35,10 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                        <ul class="navbar-nav me-auto">
-                           {% set user_groups_list = current_user.groups if current_user.groups else [] %}
-                           {% if current_user.is_admin or user_groups_list|selectattr('can_create_connections')|list|length > 0 or user_groups_list|selectattr('can_create_projects')|list|length > 0 or user_groups_list|selectattr('can_view_dashboards')|list|length > 0 or user_groups_list|selectattr('can_view_tables')|list|length > 0 or user_groups_list|selectattr('can_view_reports')|list|length > 0 %}
+                           {% set user_groups_list = current_user.groups if current_user and current_user.groups else [] %}
+                           {% if current_user and (current_user.is_admin or user_groups_list|selectattr('can_create_connections')|list|length > 0 or user_groups_list|selectattr('can_create_projects')|list|length > 0 or user_groups_list|selectattr('can_view_dashboards')|list|length > 0 or user_groups_list|selectattr('can_view_tables')|list|length > 0 or user_groups_list|selectattr('can_view_reports')|list|length > 0) %}
                                <!-- Menu Executar -->
-                               {% if current_user.is_admin or user_groups_list|selectattr('can_create_projects')|list|length > 0 %}
+                               {% if current_user and (current_user.is_admin or user_groups_list|selectattr('can_create_projects')|list|length > 0) %}
                                <li class="nav-item dropdown">
                                    <a class="nav-link dropdown-toggle {% if request.endpoint == 'comparison_template.comparison_page' or request.endpoint == 'scheduled_tasks_template.scheduled_tasks_page' or request.endpoint == 'webhooks_template.webhooks_client_page' %}active{% endif %}" href="#" id="executarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                        <i class="fas fa-play-circle me-1"></i>Executar
@@ -58,25 +59,35 @@
                                                <i class="fas fa-paper-plane me-2"></i>Cliente HTTP
                                            </a>
                                        </li>
+                                       <li>
+                                           <a class="dropdown-item {% if request.endpoint == 'consistency_template.consistency_page' %}active{% endif %}" href="/consistencia" data-template-link="true">
+                                               <i class="fas fa-check-circle me-2"></i>Consistência de Dados
+                                           </a>
+                                       </li>
                                    </ul>
                                </li>
                                {% endif %}
                                
                                <!-- Menu Dados -->
-                               {% if current_user.is_admin or user_groups_list|selectattr('can_view_dashboards')|list|length > 0 or user_groups_list|selectattr('can_view_reports')|list|length > 0 %}
+                               {% if current_user and (current_user.is_admin or user_groups_list|selectattr('can_view_dashboards')|list|length > 0 or user_groups_list|selectattr('can_view_reports')|list|length > 0) %}
                                <li class="nav-item dropdown">
-                                   <a class="nav-link dropdown-toggle {% if request.endpoint == 'dashboard_template.dashboard_page' or request.endpoint == 'reports_template.reports_page' %}active{% endif %}" href="#" id="dadosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                   <a class="nav-link dropdown-toggle {% if request.endpoint == 'dashboard_template.dashboard_page' or request.endpoint == 'reports_template.reports_page' or request.endpoint == 'consistency_template.consistency_reports_page' %}active{% endif %}" href="#" id="dadosDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                        <i class="fas fa-chart-bar me-1"></i>Dados
                                    </a>
                                    <ul class="dropdown-menu" aria-labelledby="dadosDropdown">
-                                       {% if current_user.is_admin or user_groups_list|selectattr('can_view_reports')|list|length > 0 %}
+                                       {% if current_user and (current_user.is_admin or user_groups_list|selectattr('can_view_reports')|list|length > 0) %}
                                        <li>
                                            <a class="dropdown-item {% if request.endpoint == 'reports_template.reports_page' %}active{% endif %}" href="/relatorios" data-template-link="true">
-                                               <i class="fas fa-file-alt me-2"></i>Relatórios
+                                               <i class="fas fa-file-alt me-2"></i>Relatórios de Comparações
+                                           </a>
+                                       </li>
+                                       <li>
+                                           <a class="dropdown-item {% if request.endpoint == 'consistency_template.consistency_reports_page' %}active{% endif %}" href="/relatorios-consistencia" data-template-link="true">
+                                               <i class="fas fa-check-circle me-2"></i>Consistência de Dados
                                            </a>
                                        </li>
                                        {% endif %}
-                                       {% if current_user.is_admin or user_groups_list|selectattr('can_view_dashboards')|list|length > 0 %}
+                                       {% if current_user and (current_user.is_admin or user_groups_list|selectattr('can_view_dashboards')|list|length > 0) %}
                                        <li>
                                            <a class="dropdown-item {% if request.endpoint == 'dashboard_template.dashboard_page' %}active{% endif %}" href="/dashboard" data-template-link="true">
                                                <i class="fas fa-chart-line me-2"></i>Dashboard
@@ -88,27 +99,27 @@
                                {% endif %}
                                
                                <!-- Menu Administração -->
-                               {% if current_user.is_admin or user_groups_list|selectattr('can_create_connections')|list|length > 0 or user_groups_list|selectattr('can_create_projects')|list|length > 0 or user_groups_list|selectattr('can_view_tables')|list|length > 0 %}
+                               {% if current_user and (current_user.is_admin or user_groups_list|selectattr('can_create_connections')|list|length > 0 or user_groups_list|selectattr('can_create_projects')|list|length > 0 or user_groups_list|selectattr('can_view_tables')|list|length > 0) %}
                                <li class="nav-item dropdown">
                                    <a class="nav-link dropdown-toggle {% if request.endpoint == 'users_template.users_page' or request.endpoint == 'groups_template.groups_page' or request.endpoint == 'tables_template.tables_page' or request.endpoint == 'connections_template.connections_page' or request.endpoint == 'projects_template.projects_page' %}active{% endif %}" href="#" id="administracaoDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                        <i class="fas fa-cog me-1"></i>Administração
                                    </a>
                                    <ul class="dropdown-menu" aria-labelledby="administracaoDropdown">
-                                       {% if current_user.is_admin or user_groups_list|selectattr('can_create_connections')|list|length > 0 %}
+                                       {% if current_user and (current_user.is_admin or user_groups_list|selectattr('can_create_connections')|list|length > 0) %}
                                        <li>
                                            <a class="dropdown-item {% if request.endpoint == 'connections_template.connections_page' %}active{% endif %}" href="/conexoes" data-template-link="true">
                                                <i class="fas fa-database me-2"></i>Conexões
                                            </a>
                                        </li>
                                        {% endif %}
-                                       {% if current_user.is_admin or user_groups_list|selectattr('can_create_projects')|list|length > 0 %}
+                                       {% if current_user and (current_user.is_admin or user_groups_list|selectattr('can_create_projects')|list|length > 0) %}
                                        <li>
                                            <a class="dropdown-item {% if request.endpoint == 'projects_template.projects_page' %}active{% endif %}" href="/projetos" data-template-link="true">
                                                <i class="fas fa-folder me-2"></i>Projetos
                                            </a>
                                        </li>
                                        {% endif %}
-                                       {% if current_user.is_admin %}
+                                       {% if current_user and current_user.is_admin %}
                                        <li>
                                            <a class="dropdown-item {% if request.endpoint == 'users_template.users_page' %}active{% endif %}" href="/usuarios" data-template-link="true">
                                                <i class="fas fa-users me-2"></i>Usuários
@@ -120,7 +131,7 @@
                                            </a>
                                        </li>
                                        {% endif %}
-                                       {% if current_user.is_admin or user_groups_list|selectattr('can_view_tables')|list|length > 0 %}
+                                       {% if current_user and (current_user.is_admin or user_groups_list|selectattr('can_view_tables')|list|length > 0) %}
                                        <li>
                                            <a class="dropdown-item {% if request.endpoint == 'tables_template.tables_page' %}active{% endif %}" href="/tabelas" data-template-link="true">
                                                <i class="fas fa-table me-2"></i>Tabelas
@@ -136,7 +147,9 @@
                     <button class="btn btn-outline-light btn-sm me-2" id="themeToggle" title="Alternar tema">
                         <i class="fas fa-moon" id="themeIcon"></i>
                     </button>
+                    {% if current_user %}
                     <span class="navbar-text me-3">Olá, {{ current_user.username }}</span>
+                    {% endif %}
                     <a href="/api-docs" class="btn btn-outline-light btn-sm me-2" target="_blank">
                         <i class="fas fa-book me-1"></i>API Docs
                     </a>

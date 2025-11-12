@@ -11,7 +11,13 @@ users_template_bp = Blueprint('users_template', __name__)
 @admin_required_template
 def users_page(current_user):
     """Render users management page"""
-    print(f"[USERS] Loading users page for user: {current_user.username}")
+    from flask import session
+    from app.utils.security import generate_token
+    
+    if not current_user:
+        return render_template('error.html', message='Usuário não autenticado'), 401
+    
+    print(f"[USERS] Loading users page for user: {current_user.username if current_user else 'None'}")
     try:
         # Load users with their groups to avoid lazy loading issues
         users = User.query.all()
@@ -20,23 +26,37 @@ def users_page(current_user):
         # Pre-load groups for each user to avoid lazy loading in template
         user_groups_dict = {}
         for user in users:
+            if not user or not hasattr(user, 'id'):
+                print(f"[USERS] Skipping invalid user object")
+                continue
+                
             try:
                 # Handle both dynamic query and list
                 if hasattr(user.groups, 'all'):
                     groups_list = user.groups.all()
                 else:
-                    groups_list = user.groups
-                user_groups_dict[user.id] = list(groups_list)
-                print(f"[USERS] User {user.username} has {len(groups_list)} groups")
+                    groups_list = user.groups if user.groups else []
+                
+                # Filter out None groups (in case of orphaned relationships)
+                valid_groups = [g for g in groups_list if g is not None and hasattr(g, 'id') and hasattr(g, 'name')]
+                user_groups_dict[user.id] = valid_groups
+                print(f"[USERS] User {user.username} has {len(valid_groups)} groups")
             except Exception as e:
-                print(f"[USERS] Error loading groups for user {user.id}: {e}")
-                user_groups_dict[user.id] = []
+                user_id = user.id if user and hasattr(user, 'id') else 'unknown'
+                print(f"[USERS] Error loading groups for user {user_id}: {e}")
+                import traceback
+                print(traceback.format_exc())
+                if user and hasattr(user, 'id'):
+                    user_groups_dict[user.id] = []
         
         groups = Group.query.all()
         print(f"[USERS] Found {len(groups)} groups")
         
+        # Generate token for API calls
+        token = session.get('token') or generate_token(current_user)
+        
         print(f"[USERS] Rendering template with {len(users)} users")
-        return render_template('users.html', users=users, groups=groups, user_groups_dict=user_groups_dict, current_user=current_user)
+        return render_template('users.html', users=users, groups=groups, user_groups_dict=user_groups_dict, current_user=current_user, auth_token=token)
     except Exception as e:
         import traceback
         print(f"[USERS] Error loading users page: {str(e)}")
@@ -48,10 +68,20 @@ def users_page(current_user):
 @admin_required_template
 def create_user_page(current_user):
     """Render create user page"""
+    from flask import session
+    from app.utils.security import generate_token
+    
     print(f"[USERS] Loading create user page for admin: {current_user.username}")
     try:
         groups = Group.query.all()
-        return render_template('create_user.html', groups=groups, current_user=current_user)
+        
+        # Generate token for API calls
+        token = session.get('token') or generate_token(current_user)
+        
+        return render_template('create_user.html', 
+                             groups=groups, 
+                             current_user=current_user,
+                             auth_token=token)
     except Exception as e:
         import traceback
         print(f"[USERS] Error loading create user page: {str(e)}")

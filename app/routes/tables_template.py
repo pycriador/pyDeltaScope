@@ -10,10 +10,14 @@ tables_template_bp = Blueprint('tables_template', __name__)
 @login_required_template
 def tables_page(current_user):
     """Render tables management page"""
-    connections = DatabaseConnection.query.filter_by(
-        user_id=current_user.id,
-        is_active=True
-    ).all()
+    # Admins see all connections, regular users see only their own
+    if current_user.is_admin:
+        connections = DatabaseConnection.query.filter_by(is_active=True).all()
+    else:
+        connections = DatabaseConnection.query.filter_by(
+            user_id=current_user.id,
+            is_active=True
+        ).all()
     return render_template('tables.html', 
                          connections=connections, 
                          current_user=current_user,
@@ -24,15 +28,21 @@ def tables_page(current_user):
 @login_required_template
 def edit_table_page(current_user, connection_id, table_name):
     """Render table columns edit page"""
-    # Verify connection belongs to user
-    connection = DatabaseConnection.query.filter_by(
-        id=connection_id,
-        user_id=current_user.id,
-        is_active=True
-    ).first()
+    # Get connection - admins can access any, regular users only their own
+    if current_user.is_admin:
+        connection = DatabaseConnection.query.filter_by(
+            id=connection_id,
+            is_active=True
+        ).first()
+    else:
+        connection = DatabaseConnection.query.filter_by(
+            id=connection_id,
+            user_id=current_user.id,
+            is_active=True
+        ).first()
     
     if not connection:
-        return render_template('error.html', message='Conexão não encontrada'), 404
+        return render_template('error.html', message='Conexão não encontrada', current_user=current_user), 404
     
     # Get table columns
     try:

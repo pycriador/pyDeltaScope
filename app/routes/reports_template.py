@@ -13,10 +13,14 @@ def reports_page(current_user):
     """Render reports page"""
     from flask import request
     
-    projects = Project.query.filter_by(
-        user_id=current_user.id,
-        is_active=True
-    ).all()
+    # Admins see all projects, regular users see only their own
+    if current_user.is_admin:
+        projects = Project.query.filter_by(is_active=True).all()
+    else:
+        projects = Project.query.filter_by(
+            user_id=current_user.id,
+            is_active=True
+        ).all()
     
     # Get project_id from URL parameter
     project_id_from_url = request.args.get('project_id', type=int)
@@ -38,10 +42,12 @@ def comparison_results_page(current_user, comparison_id):
         if not comparison:
             return render_template('error.html', message='Comparação não encontrada'), 404
         
-        # Verify project ownership
+        # Verify project ownership - admins can see any, regular users only their own
         project = Project.query.get(comparison.project_id)
-        if not project or project.user_id != current_user.id:
-            return render_template('error.html', message='Não autorizado'), 403
+        if not project:
+            return render_template('error.html', message='Projeto não encontrado', current_user=current_user), 404
+        if not current_user.is_admin and project.user_id != current_user.id:
+            return render_template('error.html', message='Não autorizado', current_user=current_user), 403
         
         # Get results
         results = ComparisonResult.query.filter_by(comparison_id=comparison_id).order_by(ComparisonResult.detected_at.desc()).all()

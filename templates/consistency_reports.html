@@ -1,0 +1,476 @@
+{% extends "base.html" %}
+
+{% block title %}Consistência de Dados - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="consistencyReportsSection">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-check-circle me-2"></i>Consistência de Dados</h2>
+        <a href="/consistencia" class="btn btn-primary">
+            <i class="fas fa-cog me-2"></i>Gerenciar Configurações
+        </a>
+    </div>
+
+    {% if configs %}
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtrar por Configuração</h5>
+        </div>
+        <div class="card-body">
+            <div class="row align-items-end">
+                <div class="col-md-8">
+                    <label for="configSelect" class="form-label">Configuração de Consistência</label>
+                    <select class="form-select" id="configSelect">
+                        <option value="">Todas as configurações...</option>
+                        {% for config in configs %}
+                        <option value="{{ config.id }}" {% if config_id_from_url and config.id == config_id_from_url %}selected{% endif %}>{{ config.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="button" class="btn btn-danger w-100" id="deleteAllChecksBtn" style="display: none;">
+                        <i class="fas fa-trash-alt me-2"></i>Deletar Todos os Relatórios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="checksListContainer">
+        {% if config_id_from_url %}
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+            <p class="mt-2 text-muted">Carregando relatórios...</p>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>Selecione uma configuração para ver os relatórios ou deixe em branco para ver todos.
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Nenhuma configuração encontrada. <a href="/consistencia" class="alert-link">Crie uma configuração</a> primeiro para ver relatórios.
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal de Confirmação de Deleção -->
+<div class="modal fade" id="deleteCheckModal" tabindex="-1" aria-labelledby="deleteCheckModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteCheckModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja deletar o relatório <strong id="deleteCheckId"></strong>?</p>
+                <p class="text-danger mb-0"><i class="fas fa-exclamation-circle me-1"></i>Esta ação não pode ser desfeita e todos os dados relacionados serão permanentemente removidos.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteCheckBtn">
+                    <i class="fas fa-trash me-2"></i>Deletar Relatório
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Deleção de Todos os Relatórios -->
+<div class="modal fade" id="deleteAllChecksModal" tabindex="-1" aria-labelledby="deleteAllChecksModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteAllChecksModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão em Massa
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja deletar <strong id="deleteAllCount"></strong> relatório(s) da configuração <strong id="deleteAllConfigName"></strong>?</p>
+                <div class="alert alert-warning mb-3">
+                    <i class="fas fa-info-circle me-2"></i><strong>Importante:</strong> Apenas os relatórios desta configuração serão deletados. Relatórios de outras configurações não serão afetados.
+                </div>
+                <p class="text-danger mb-0"><i class="fas fa-exclamation-circle me-1"></i><strong>ATENÇÃO:</strong> Esta ação não pode ser desfeita e todos os dados relacionados serão permanentemente removidos.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteAllChecksBtn">
+                    <i class="fas fa-trash me-2"></i>Deletar Todos
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success/Error Modal -->
+<div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" id="messageModalHeader">
+                <h5 class="modal-title" id="messageModalLabel">
+                    <i class="fas fa-info-circle me-2"></i>Mensagem
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="messageModalText"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                    <i class="fas fa-check me-2"></i>OK
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const CONSISTENCY_API_BASE = typeof API_BASE !== 'undefined' ? API_BASE + '/consistency' : '/api/consistency';
+    const AUTH_TOKEN = '{{ auth_token|safe if auth_token else "" }}';
+    const USER_ID = parseInt('{{ current_user.id }}');
+    
+    // Get auth headers
+    function getAuthHeaders() {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (AUTH_TOKEN) {
+            headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+        }
+        
+        if (USER_ID) {
+            headers['X-User-Id'] = USER_ID;
+        }
+        
+        return headers;
+    }
+    
+    async function loadChecks(configId, updateUrl = true) {
+        const container = document.getElementById('checksListContainer');
+        const configSelect = document.getElementById('configSelect');
+        
+        if (!configId) {
+            container.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Selecione uma configuração para ver os relatórios ou deixe em branco para ver todos.</div>';
+            document.getElementById('deleteAllChecksBtn').style.display = 'none';
+            if (updateUrl) {
+                const newUrl = window.location.pathname;
+                window.history.pushState({}, '', newUrl);
+            }
+            return;
+        }
+
+        // Update select value
+        if (configSelect) {
+            configSelect.value = configId;
+        }
+
+        // Update URL if needed
+        if (updateUrl) {
+            const newUrl = `${window.location.pathname}?config_id=${configId}`;
+            window.history.pushState({}, '', newUrl);
+        }
+
+        container.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2 text-muted">Carregando relatórios...</p></div>';
+
+        try {
+            const headers = getAuthHeaders();
+            
+            // Get config to get checks
+            const configResponse = await fetch(`${CONSISTENCY_API_BASE}/configs/${configId}`, { headers });
+            if (!configResponse.ok) {
+                throw new Error('Erro ao carregar configuração');
+            }
+            const config = await configResponse.json();
+            
+            // Get all checks for this config
+            const checksResponse = await fetch(`${CONSISTENCY_API_BASE}/configs/${configId}/checks`, { headers });
+            if (!checksResponse.ok) {
+                throw new Error('Erro ao carregar relatórios');
+            }
+            const data = await checksResponse.json();
+            const checks = data.checks || [];
+            
+            if (checks.length > 0) {
+                let html = '<div class="row">';
+                
+                checks.forEach(check => {
+                    const executedDate = check.executed_at ? new Date(check.executed_at).toLocaleString('pt-BR') : 'N/A';
+                    let statusBadge = 'secondary';
+                    let statusText = 'Pendente';
+                    let statusIcon = 'fa-clock';
+                    
+                    if (check.status === 'completed') {
+                        statusBadge = 'success';
+                        statusText = 'Concluído';
+                        statusIcon = 'fa-check-circle';
+                    } else if (check.status === 'failed') {
+                        statusBadge = 'danger';
+                        statusText = 'Falhou';
+                        statusIcon = 'fa-times-circle';
+                    } else if (check.status === 'running') {
+                        statusBadge = 'warning';
+                        statusText = 'Em Execução';
+                        statusIcon = 'fa-spinner fa-spin';
+                    }
+                    
+                    html += `
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card shadow h-100" id="check-card-${check.id}">
+                                <div class="card-header bg-${statusBadge} text-white">
+                                    <h5 class="mb-0">
+                                        <i class="fas ${statusIcon} me-2"></i>Verificação #${check.id}
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block mb-1"><i class="fas fa-calendar me-1"></i>Data de Execução</small>
+                                        <strong>${executedDate}</strong>
+                                    </div>
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block mb-1"><i class="fas fa-chart-bar me-1"></i>Status</small>
+                                        <span class="badge bg-${statusBadge}">${statusText}</span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block mb-1"><i class="fas fa-exclamation-triangle me-1"></i>Inconsistências</small>
+                                        <strong class="text-danger" style="font-size: 1.5rem;">${check.total_inconsistencies || 0}</strong>
+                                    </div>
+                                </div>
+                                <div class="card-footer">
+                                    <div class="btn-group w-100" role="group">
+                                        <a href="/consistencia/${check.id}/resultados" class="btn btn-sm btn-info" title="Ver Detalhes">
+                                            <i class="fas fa-eye"></i> Ver Detalhes
+                                        </a>
+                                        <button onclick="deleteCheck(${check.id}, ${configId})" class="btn btn-sm btn-danger" title="Deletar Relatório">
+                                            <i class="fas fa-trash"></i> Deletar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                container.innerHTML = html;
+                
+                // Show delete all button
+                document.getElementById('deleteAllChecksBtn').style.display = 'block';
+            } else {
+                container.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Nenhum relatório encontrado para esta configuração. Execute uma verificação primeiro.</div>';
+                // Hide delete all button
+                document.getElementById('deleteAllChecksBtn').style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error loading checks:', error);
+            container.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Erro ao carregar relatórios: ${error.message}</div>`;
+        }
+    }
+    
+    let currentDeleteCheckId = null;
+    let currentDeleteConfigId = null;
+    let currentDeleteAllConfigId = null;
+    let currentDeleteAllConfigName = null;
+    
+    function deleteCheck(checkId, configId) {
+        currentDeleteCheckId = checkId;
+        currentDeleteConfigId = configId;
+        document.getElementById('deleteCheckId').textContent = checkId;
+        const modal = new bootstrap.Modal(document.getElementById('deleteCheckModal'));
+        modal.show();
+    }
+    
+    async function executeDeleteCheck() {
+        if (!currentDeleteCheckId) return;
+        
+        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteCheckModal'));
+        if (modal) {
+            modal.hide();
+        }
+        
+        try {
+            const headers = getAuthHeaders();
+            const response = await fetch(`${CONSISTENCY_API_BASE}/checks/${currentDeleteCheckId}`, {
+                method: 'DELETE',
+                headers: headers
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Erro ao deletar relatório');
+            }
+            
+            // Reload checks
+            loadChecks(currentDeleteConfigId, false);
+            
+            // Show success message
+            showSuccessModal('Relatório deletado com sucesso!');
+            
+            currentDeleteCheckId = null;
+            currentDeleteConfigId = null;
+        } catch (error) {
+            console.error('Error deleting check:', error);
+            showErrorModal('Erro ao deletar relatório: ' + error.message);
+        }
+    }
+    
+    function deleteAllChecks(configId) {
+        const configSelect = document.getElementById('configSelect');
+        const configName = configSelect.options[configSelect.selectedIndex].text;
+        
+        // Get checks count
+        const rows = document.querySelectorAll('#checksListContainer tbody tr');
+        const count = rows.length;
+        
+        currentDeleteAllConfigId = configId;
+        currentDeleteAllConfigName = configName;
+        document.getElementById('deleteAllCount').textContent = count;
+        document.getElementById('deleteAllConfigName').textContent = configName;
+        
+        const modal = new bootstrap.Modal(document.getElementById('deleteAllChecksModal'));
+        modal.show();
+    }
+    
+    async function executeDeleteAllChecks() {
+        if (!currentDeleteAllConfigId) return;
+        
+        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteAllChecksModal'));
+        if (modal) {
+            modal.hide();
+        }
+        
+        try {
+            const headers = getAuthHeaders();
+            
+            // Get all checks for this config
+            const checksResponse = await fetch(`${CONSISTENCY_API_BASE}/configs/${currentDeleteAllConfigId}/checks`, { headers });
+            if (!checksResponse.ok) {
+                throw new Error('Erro ao carregar relatórios');
+            }
+            const data = await checksResponse.json();
+            const checks = data.checks || [];
+            
+            // Delete each check
+            let deletedCount = 0;
+            for (const check of checks) {
+                try {
+                    const response = await fetch(`${CONSISTENCY_API_BASE}/checks/${check.id}`, {
+                        method: 'DELETE',
+                        headers: headers
+                    });
+                    if (response.ok) {
+                        deletedCount++;
+                    }
+                } catch (error) {
+                    console.error(`Error deleting check ${check.id}:`, error);
+                }
+            }
+            
+            // Reload checks
+            loadChecks(currentDeleteAllConfigId, false);
+            
+            // Show success message
+            showSuccessModal(`${deletedCount} relatório(s) deletado(s) com sucesso!`);
+            
+            currentDeleteAllConfigId = null;
+            currentDeleteAllConfigName = null;
+        } catch (error) {
+            console.error('Error deleting all checks:', error);
+            showErrorModal('Erro ao deletar relatórios: ' + error.message);
+        }
+    }
+    
+    // Set up event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        const configSelect = document.getElementById('configSelect');
+        if (configSelect) {
+            configSelect.addEventListener('change', function() {
+                loadChecks(this.value);
+            });
+        }
+        
+        const deleteAllBtn = document.getElementById('deleteAllChecksBtn');
+        if (deleteAllBtn) {
+            deleteAllBtn.addEventListener('click', function() {
+                const configId = document.getElementById('configSelect').value;
+                if (configId) {
+                    deleteAllChecks(parseInt(configId));
+                }
+            });
+        }
+        
+        const confirmDeleteBtn = document.getElementById('confirmDeleteCheckBtn');
+        if (confirmDeleteBtn) {
+            confirmDeleteBtn.addEventListener('click', executeDeleteCheck);
+        }
+        
+        const confirmDeleteAllBtn = document.getElementById('confirmDeleteAllChecksBtn');
+        if (confirmDeleteAllBtn) {
+            confirmDeleteAllBtn.addEventListener('click', executeDeleteAllChecks);
+        }
+        
+        // Load checks if config_id is in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const configIdFromUrl = urlParams.get('config_id');
+        if (configIdFromUrl) {
+            loadChecks(parseInt(configIdFromUrl), false);
+        }
+    });
+    
+    function showSuccessModal(message, type = 'success') {
+        const modal = document.getElementById('messageModal');
+        const header = document.getElementById('messageModalHeader');
+        const title = document.getElementById('messageModalLabel');
+        const text = document.getElementById('messageModalText');
+        
+        if (!modal || !header || !title || !text) {
+            alert(message);
+            return;
+        }
+        
+        // Remove all type classes
+        header.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white', 'text-dark');
+        
+        // Set header style based on type
+        if (type === 'success') {
+            header.classList.add('bg-success', 'text-white');
+            title.innerHTML = '<i class="fas fa-check-circle me-2"></i>Sucesso';
+        } else if (type === 'error') {
+            header.classList.add('bg-danger', 'text-white');
+            title.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>Erro';
+        } else if (type === 'warning') {
+            header.classList.add('bg-warning', 'text-dark');
+            title.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Aviso';
+        } else {
+            header.classList.add('bg-info', 'text-white');
+            title.innerHTML = '<i class="fas fa-info-circle me-2"></i>Informação';
+        }
+        
+        // Set message
+        text.textContent = message;
+        
+        // Show modal
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+    }
+    
+    function showErrorModal(message) {
+        showSuccessModal(message, 'error');
+    }
+</script>
+{% endblock %}
+

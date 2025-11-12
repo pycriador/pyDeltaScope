@@ -83,7 +83,9 @@
 
 {% block scripts %}
 <script>
-    const API_BASE = '/api';
+    // API_BASE is already defined in app.js
+    const AUTH_TOKEN = '{{ auth_token|safe if auth_token else "" }}';
+    const USER_ID = parseInt('{{ current_user.id }}');
     
     // Show alert message
     function showAlert(message, type = 'danger') {
@@ -125,9 +127,10 @@
             const response = await fetch(`${API_BASE}/users/`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${AUTH_TOKEN}`,
+                    'X-User-Id': USER_ID
                 },
-                credentials: 'include', // Include cookies for session
                 body: JSON.stringify({
                     username,
                     email,
@@ -137,17 +140,27 @@
                 })
             });
             
-            const data = await response.json();
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                // If response is not JSON, use status text
+                showAlert(`Erro ao criar usuário: ${response.status} ${response.statusText}`);
+                return;
+            }
             
             if (response.ok) {
+                console.log('User created successfully:', data);
                 showAlert('Usuário criado com sucesso! Redirecionando...', 'success');
                 setTimeout(() => {
                     window.location.href = '/usuarios';
                 }, 1500);
             } else {
-                showAlert(data.message || 'Erro ao criar usuário');
+                console.error('Error creating user:', data);
+                showAlert(data.message || `Erro ao criar usuário: ${response.status} ${response.statusText}`);
             }
         } catch (error) {
+            console.error('Error creating user:', error);
             showAlert('Erro ao criar usuário: ' + error.message);
         }
     });

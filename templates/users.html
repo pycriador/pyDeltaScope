@@ -2,6 +2,7 @@
 
 {% block title %}Usuários - DeltaScope{% endblock %}
 
+
 {% block content %}
 <div id="usersSection">
     <h2 class="mb-4"><i class="fas fa-users me-2"></i>Gerenciamento de Usuários</h2>
@@ -36,6 +37,7 @@
             
             <div class="row" id="usersContainer">
                 {% for user in users %}
+                {% if user and user.id and user.username and user.email %}
                 <div class="col-md-6 mb-3 user-card" data-user-id="{{ user.id }}" data-username="{{ user.username|lower }}" data-email="{{ user.email|lower }}">
                     <div class="card h-100">
                         <div class="card-body">
@@ -81,7 +83,20 @@
                                 </small>
                                 <div class="mt-1">
                                     {% for group in user_groups %}
-                                    <span class="badge bg-secondary me-1">{{ group.name }}</span>
+                                    {% if group %}
+                                    <span class="badge bg-secondary me-1">
+                                        {{ group.name }}
+                                        {% if current_user.id != user.id %}
+                                        <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.6em; cursor: pointer;" 
+                                                data-group-id="{{ group.id }}" 
+                                                data-user-id="{{ user.id }}" 
+                                                data-username="{{ user.username }}" 
+                                                data-group-name="{{ group.name }}"
+                                                onclick="if(typeof removeUserFromGroupConfirm === 'function') { removeUserFromGroupConfirm(this); } else { alert('Função não carregada. Recarregue a página.'); }"
+                                                title="Remover do grupo {{ group.name }}"></button>
+                                        {% endif %}
+                                    </span>
+                                    {% endif %}
                                     {% endfor %}
                                 </div>
                             </div>
@@ -92,18 +107,24 @@
                                 <a href="/api/users/{{ user.id }}/toggle-active" class="btn btn-sm {{ 'btn-secondary' if user.is_active else 'btn-success' }}" title="{{ 'Desativar' if user.is_active else 'Ativar' }}">
                                     <i class="fas fa-{{ 'ban' if user.is_active else 'check' }}"></i>
                                 </a>
+                                <button onclick="toggleAdmin({{ user.id }}, '{{ user.username }}', {{ 'true' if user.is_admin else 'false' }})" class="btn btn-sm {{ 'btn-danger' if user.is_admin else 'btn-primary' }}" title="{{ 'Remover Admin' if user.is_admin else 'Tornar Admin' }}">
+                                    <i class="fas fa-{{ 'user-shield' if user.is_admin else 'user-tie' }}"></i>
+                                </button>
                                 {% else %}
                                 <button class="btn btn-sm btn-secondary" disabled title="Não é possível alterar seu próprio status">
                                     <i class="fas fa-ban"></i>
+                                </button>
+                                <button class="btn btn-sm btn-secondary" disabled title="Não é possível alterar seu próprio status de admin">
+                                    <i class="fas fa-user-shield"></i>
                                 </button>
                                 {% endif %}
                                 <a href="/usuarios/{{ user.id }}/senha" class="btn btn-sm btn-warning" title="Alterar Senha">
                                     <i class="fas fa-key"></i>
                                 </a>
                                 {% if current_user.id != user.id %}
-                                <a href="/api/users/{{ user.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Tem certeza que deseja deletar o usuário {{ user.username }}?');" title="Deletar">
+                                <button onclick="deleteUser({{ user.id }}, '{{ user.username }}')" class="btn btn-sm btn-danger" title="Deletar">
                                     <i class="fas fa-trash"></i>
-                                </a>
+                                </button>
                                 {% else %}
                                 <button class="btn btn-sm btn-secondary" disabled title="Não é possível deletar seu próprio usuário">
                                     <i class="fas fa-trash"></i>
@@ -113,6 +134,7 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
                 {% endfor %}
             </div>
             
@@ -126,12 +148,538 @@
             {% endif %}
         </div>
     </div>
+    
+    <!-- Modal de Confirmação para Deletar Usuário -->
+    <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteUserModalLabel">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Tem certeza que deseja deletar o usuário <strong id="deleteUserName"></strong>?</p>
+                    <div class="alert alert-warning mb-3">
+                        <i class="fas fa-info-circle me-2"></i><strong>Atenção:</strong> O usuário será removido de todos os grupos e esta ação não pode ser desfeita.
+                    </div>
+                    <p class="text-danger mb-0"><i class="fas fa-exclamation-circle me-1"></i><strong>ATENÇÃO:</strong> Todos os dados relacionados serão permanentemente removidos.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteUserBtn">
+                        <i class="fas fa-trash me-2"></i>Deletar Usuário
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação para Toggle Admin -->
+    <div class="modal fade" id="toggleAdminModal" tabindex="-1" aria-labelledby="toggleAdminModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="toggleAdminModalLabel">
+                        <i class="fas fa-user-shield me-2"></i>Alterar Status de Admin
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="toggleAdminModalBody">
+                    <!-- Content will be set dynamically -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" id="confirmToggleAdminBtn">
+                        <i class="fas fa-check me-2"></i>Confirmar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Mensagem (Success/Error) -->
+    <div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" id="messageModalHeader">
+                    <h5 class="modal-title" id="messageModalLabel">
+                        <i class="fas fa-info-circle me-2"></i>Mensagem
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="messageModalText"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                        <i class="fas fa-check me-2"></i>OK
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Confirmação para Remover Usuário de Grupo -->
+    <div class="modal fade" id="removeUserFromGroupModal" tabindex="-1" aria-labelledby="removeUserFromGroupModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="removeUserFromGroupModalLabel">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Remoção
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="removeUserFromGroupMessage"></p>
+                    <p class="text-muted mb-0"><small>Esta ação não pode ser desfeita.</small></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-danger" id="removeUserFromGroupConfirmBtn">
+                        <i class="fas fa-trash me-2"></i>Remover do Grupo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+    // Toast notification function
+    function showToast(message, type = 'success') {
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'info'} alert-dismissible fade show position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 400px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); animation: slideInRight 0.3s ease-out;';
+        
+        // Set background color based on type
+        if (type === 'success') {
+            toast.style.backgroundColor = '#198754';
+            toast.style.color = 'white';
+            toast.style.border = 'none';
+        } else if (type === 'error') {
+            toast.style.backgroundColor = '#dc3545';
+            toast.style.color = 'white';
+            toast.style.border = 'none';
+        } else if (type === 'warning') {
+            toast.style.backgroundColor = '#ffc107';
+            toast.style.color = '#000';
+            toast.style.border = 'none';
+        } else {
+            toast.style.backgroundColor = '#0dcaf0';
+            toast.style.color = '#000';
+            toast.style.border = 'none';
+        }
+        
+        // Icons based on type
+        const icons = {
+            'success': 'fa-check-circle',
+            'error': 'fa-exclamation-circle',
+            'warning': 'fa-exclamation-triangle',
+            'info': 'fa-info-circle'
+        };
+        
+        toast.innerHTML = `
+            <i class="fas ${icons[type] || 'fa-info-circle'} me-2"></i><strong>${escapeHtml(message)}</strong>
+            <button type="button" class="btn-close ${type === 'success' || type === 'error' ? 'btn-close-white' : ''}" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.remove();
+                    }
+                }, 300);
+            }
+        }, 5000);
+    }
+    
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Define function IMMEDIATELY at the top so it's available when onclick is called
+    // Variables to store removal data
+    let currentRemoveGroupId = null;
+    let currentRemoveUserId = null;
+    let currentRemoveUsername = null;
+    let currentRemoveGroupName = null;
+    
+    // Function to show confirmation modal for removing user from group
+    // Define globally so it can be called from onclick
+    window.removeUserFromGroupConfirm = function(button) {
+        console.log('removeUserFromGroupConfirm called', button);
+        
+        // Get data attributes - handle both jQuery and vanilla JS
+        let groupId, userId, username, groupName;
+        
+        if (typeof $ !== 'undefined' && typeof jQuery !== 'undefined') {
+            const $btn = $(button);
+            groupId = $btn.data('group-id');
+            userId = $btn.data('user-id');
+            username = $btn.data('username');
+            groupName = $btn.data('group-name');
+        } else {
+            // Fallback to vanilla JS
+            groupId = button.getAttribute('data-group-id');
+            userId = button.getAttribute('data-user-id');
+            username = button.getAttribute('data-username');
+            groupName = button.getAttribute('data-group-name');
+        }
+        
+        console.log('Data:', { groupId, userId, username, groupName });
+        
+        if (!groupId || !userId) {
+            alert('Erro: Dados não encontrados. GroupId: ' + groupId + ', UserId: ' + userId);
+            return;
+        }
+        
+        // Store values (convert to numbers for IDs)
+        currentRemoveGroupId = parseInt(groupId);
+        currentRemoveUserId = parseInt(userId);
+        currentRemoveUsername = username || 'usuário';
+        currentRemoveGroupName = groupName || 'grupo';
+        
+        console.log('Stored values:', {
+            currentRemoveGroupId,
+            currentRemoveUserId,
+            currentRemoveUsername,
+            currentRemoveGroupName
+        });
+        
+        // Update modal content - use jQuery if available, otherwise vanilla JS
+        if (typeof $ !== 'undefined' && typeof jQuery !== 'undefined') {
+            $('#removeUserFromGroupMessage').text(
+                `Tem certeza que deseja remover o usuário "${currentRemoveUsername}" do grupo "${currentRemoveGroupName}"?`
+            );
+            // Show modal using jQuery
+            $('#removeUserFromGroupModal').modal('show');
+        } else {
+            // Fallback to vanilla JS
+            const messageEl = document.getElementById('removeUserFromGroupMessage');
+            if (messageEl) {
+                messageEl.textContent = `Tem certeza que deseja remover o usuário "${currentRemoveUsername}" do grupo "${currentRemoveGroupName}"?`;
+            } else {
+                console.error('Message element not found');
+            }
+            const modalEl = document.getElementById('removeUserFromGroupModal');
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            } else {
+                console.error('Modal element not found');
+                alert('Modal não encontrado');
+            }
+        }
+    };
+    
+    // API_BASE is already defined in app.js, so we check if it exists before using it
+    if (typeof API_BASE === 'undefined') {
+        window.API_BASE = '/api';
+    }
+    const AUTH_TOKEN = '{{ auth_token|safe if auth_token else (session.token|safe if session.token else "") }}';
+    const USER_ID = parseInt('{{ current_user.id }}');
+    
+    // Function to execute removal via API using jQuery
+    function executeRemoveUserFromGroup() {
+        if (!currentRemoveGroupId || !currentRemoveUserId) {
+            alert('Erro: Dados de remoção não encontrados');
+            return;
+        }
+        
+        // Hide modal
+        $('#removeUserFromGroupModal').modal('hide');
+        
+        // Show loading
+        const $confirmBtn = $('#removeUserFromGroupConfirmBtn');
+        const originalHtml = $confirmBtn.html();
+        $confirmBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Removendo...');
+        
+        // Make API call using jQuery
+        $.ajax({
+            url: `${API_BASE}/groups/${currentRemoveGroupId}/users/${currentRemoveUserId}`,
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${AUTH_TOKEN}`,
+                'X-User-Id': USER_ID,
+                'Content-Type': 'application/json'
+            },
+            success: function(data) {
+                showToast('Usuário removido do grupo com sucesso!', 'success');
+                // Reload page after short delay
+                setTimeout(function() {
+                    window.location.reload();
+                }, 1500);
+            },
+            error: function(xhr) {
+                let errorMessage = 'Erro ao remover usuário do grupo';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.statusText) {
+                    errorMessage += ': ' + xhr.statusText;
+                }
+                showToast(errorMessage, 'error');
+                // Re-enable button
+                $confirmBtn.prop('disabled', false).html(originalHtml);
+            }
+        });
+    }
+    
+    // Get auth headers
+    function getAuthHeaders() {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (AUTH_TOKEN) {
+            headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+        }
+        
+        if (USER_ID) {
+            headers['X-User-Id'] = USER_ID;
+        }
+        
+        return headers;
+    }
+    
+    // Show message modal (local implementation to avoid dependency on app.js modal)
+    function showMessageModal(message, type = 'success') {
+        const modal = document.getElementById('messageModal');
+        const header = document.getElementById('messageModalHeader');
+        const title = document.getElementById('messageModalLabel');
+        const text = document.getElementById('messageModalText');
+        
+        if (!modal || !header || !title || !text) {
+            // Fallback to alert if modal doesn't exist
+            alert(message);
+            return;
+        }
+        
+        // Remove all type classes
+        header.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white', 'text-dark');
+        
+        // Set header style based on type
+        if (type === 'success') {
+            header.classList.add('bg-success', 'text-white');
+            title.innerHTML = '<i class="fas fa-check-circle me-2"></i>Sucesso';
+        } else if (type === 'error') {
+            header.classList.add('bg-danger', 'text-white');
+            title.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>Erro';
+        } else if (type === 'warning') {
+            header.classList.add('bg-warning', 'text-dark');
+            title.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Aviso';
+        } else {
+            header.classList.add('bg-info', 'text-white');
+            title.innerHTML = '<i class="fas fa-info-circle me-2"></i>Informação';
+        }
+        
+        // Set message
+        text.textContent = message;
+        
+        // Show modal
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+    }
+    
+    // Variables for delete user
+    let currentDeleteUserId = null;
+    let currentDeleteUsername = null;
+    
+    // Delete user function - Define globally
+    window.deleteUser = function(userId, username) {
+        currentDeleteUserId = userId;
+        currentDeleteUsername = username;
+        
+        // Update modal content
+        const modalLabel = document.getElementById('deleteUserModalLabel');
+        const modalBody = document.getElementById('deleteUserName');
+        const confirmBtn = document.getElementById('confirmDeleteUserBtn');
+        
+        if (!modalLabel || !modalBody || !confirmBtn) {
+            console.error('Modal elements not found');
+            showToast('Erro: Elementos do modal não encontrados', 'error');
+            return;
+        }
+        
+        // Set username in modal
+        modalBody.textContent = username;
+        confirmBtn.setAttribute('data-user-id', userId);
+        
+        // Show modal using Bootstrap
+        const modalElement = document.getElementById('deleteUserModal');
+        if (modalElement) {
+            // Use jQuery if available, otherwise Bootstrap vanilla JS
+            if (typeof $ !== 'undefined') {
+                $('#deleteUserModal').modal('show');
+            } else {
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            }
+        } else {
+            console.error('Modal element not found');
+            showToast('Erro: Modal não encontrado', 'error');
+        }
+    };
+    
+    // Execute delete user
+    async function executeDeleteUser() {
+        const btn = document.getElementById('confirmDeleteUserBtn');
+        const userId = btn.getAttribute('data-user-id');
+        
+        if (!userId) return;
+        
+        // Hide modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteUserModal'));
+        if (modal) {
+            modal.hide();
+        }
+        
+        // Show loading
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deletando...';
+        
+        try {
+            const apiBase = typeof API_BASE !== 'undefined' ? API_BASE : '/api';
+            const response = await fetch(`${apiBase}/users/${userId}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                // Show success message using toast
+                showToast(data.message || 'Usuário deletado com sucesso!', 'success');
+                
+                // Reload page after short delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                // Show error message using toast
+                showToast(data.message || 'Erro ao deletar usuário', 'error');
+                // Re-enable button
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            showToast('Erro ao deletar usuário: ' + error.message, 'error');
+            // Re-enable button
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    }
+    
+    // Toggle admin status - Define globally
+    window.toggleAdmin = function(userId, username, isCurrentlyAdmin) {
+        const action = isCurrentlyAdmin === 'true' || isCurrentlyAdmin === true ? 'remover' : 'tornar';
+        const actionText = isCurrentlyAdmin === 'true' || isCurrentlyAdmin === true ? 'Remover Admin' : 'Tornar Admin';
+        
+        // Set modal content
+        const modalLabel = document.getElementById('toggleAdminModalLabel');
+        const modalBody = document.getElementById('toggleAdminModalBody');
+        const confirmBtn = document.getElementById('confirmToggleAdminBtn');
+        
+        if (!modalLabel || !modalBody || !confirmBtn) {
+            console.error('Modal elements not found');
+            alert('Erro: Elementos do modal não encontrados');
+            return;
+        }
+        
+        modalLabel.textContent = actionText;
+        modalBody.innerHTML = `
+            <p>Tem certeza que deseja ${action} o usuário <strong>${username}</strong> como administrador?</p>
+            ${isCurrentlyAdmin === 'true' || isCurrentlyAdmin === true 
+                ? '<p class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>O usuário perderá todos os privilégios de administrador.</p>'
+                : '<p class="text-info"><i class="fas fa-info-circle me-1"></i>O usuário terá acesso total ao sistema.</p>'}
+        `;
+        confirmBtn.setAttribute('data-user-id', userId);
+        confirmBtn.setAttribute('data-is-admin', isCurrentlyAdmin);
+        
+        // Show modal
+        const modalElement = document.getElementById('toggleAdminModal');
+        if (modalElement) {
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        } else {
+            console.error('Modal element not found');
+            alert('Erro: Modal não encontrado');
+        }
+    };
+    
+    // Execute toggle admin
+    async function executeToggleAdmin() {
+        const btn = document.getElementById('confirmToggleAdminBtn');
+        const userId = btn.getAttribute('data-user-id');
+        const isCurrentlyAdmin = btn.getAttribute('data-is-admin') === 'true';
+        
+        if (!userId) return;
+        
+        // Hide modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('toggleAdminModal'));
+        if (modal) {
+            modal.hide();
+        }
+        
+        try {
+            const apiBase = typeof API_BASE !== 'undefined' ? API_BASE : '/api';
+            const response = await fetch(`${apiBase}/users/${userId}/toggle-admin`, {
+                method: 'PUT',
+                headers: getAuthHeaders()
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                // Show success message using toast
+                showToast(data.message || 'Status de admin alterado com sucesso', 'success');
+                
+                // Reload page after short delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                // Show error message using modal
+                showToast(data.message || 'Erro ao alterar status de admin', 'error');
+            }
+        } catch (error) {
+            console.error('Error toggling admin:', error);
+            showToast('Erro ao alterar status de admin: ' + error.message, 'error');
+        }
+    }
+    
+    // Initialize on document ready
     $(document).ready(function() {
+        // Bind confirm button for remove user from group
+        $('#removeUserFromGroupConfirmBtn').on('click', executeRemoveUserFromGroup);
+        
+        // Bind confirm button for toggle admin
+        $('#confirmToggleAdminBtn').on('click', executeToggleAdmin);
+        
+        // Bind confirm button for delete user
+        $('#confirmDeleteUserBtn').on('click', executeDeleteUser);
+        
+        // User filter functionality
         const $filterInput = $('#userFilter');
         const $userCards = $('.user-card');
         const $usersCountText = $('#usersCountText');

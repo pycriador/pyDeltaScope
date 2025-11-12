@@ -9,19 +9,26 @@ dashboard_template_bp = Blueprint('dashboard_template', __name__)
 @login_required_template
 def dashboard_page(current_user):
     """Render dashboard page"""
-    projects = Project.query.filter_by(
-        user_id=current_user.id,
-        is_active=True
-    ).all()
+    # Admins see all projects, regular users see only their own
+    if current_user.is_admin:
+        projects = Project.query.filter_by(is_active=True).all()
+    else:
+        projects = Project.query.filter_by(
+            user_id=current_user.id,
+            is_active=True
+        ).all()
     
     # Get selected project from query parameter
     selected_project_id = request.args.get('project_id', type=int)
     selected_project = None
     if selected_project_id:
-        selected_project = Project.query.filter_by(
-            id=selected_project_id,
-            user_id=current_user.id
-        ).first()
+        if current_user.is_admin:
+            selected_project = Project.query.filter_by(id=selected_project_id).first()
+        else:
+            selected_project = Project.query.filter_by(
+                id=selected_project_id,
+                user_id=current_user.id
+            ).first()
     
     # Get date filters from query parameters
     start_date = request.args.get('start_date', '')

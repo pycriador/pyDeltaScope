@@ -215,7 +215,12 @@ async function checkAuth() {
     
     try {
         token = localStorage.getItem('authToken');
-        userStr = localStorage.getItem('currentUser');
+        try {
+            userStr = localStorage.getItem('currentUser');
+        } catch (e) {
+            console.warn('Could not access localStorage:', e);
+            userStr = null;
+        }
     } catch (error) {
         // Ignore localStorage errors (may be from browser extensions)
         console.warn('Could not access localStorage:', error);
@@ -246,7 +251,11 @@ async function checkAuth() {
             console.error('Error parsing user data:', error);
             try {
                 localStorage.removeItem('authToken');
-                localStorage.removeItem('currentUser');
+                try {
+                    localStorage.removeItem('currentUser');
+                } catch (e) {
+                    console.warn('Could not remove currentUser from localStorage:', e);
+                }
             } catch (e) {
                 // Ignore errors clearing localStorage
             }
@@ -665,7 +674,11 @@ async function handleLogin(e) {
             currentUser = data.user;
             try {
                 localStorage.setItem('authToken', authToken);
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                try {
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                } catch (e) {
+                    console.warn('Could not save currentUser to localStorage:', e);
+                }
             } catch (storageError) {
                 console.error('Error saving to localStorage:', storageError);
                 // Continue anyway - session-based auth will handle it

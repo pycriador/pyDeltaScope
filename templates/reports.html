@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Relatórios - DeltaScope{% endblock %}
+{% block title %}Relatórios de Comparações - DeltaScope{% endblock %}
 
 {% block content %}
 <div id="reportsSection">
-    <h2 class="mb-4"><i class="fas fa-file-alt me-2"></i>Relatórios</h2>
+    <h2 class="mb-4"><i class="fas fa-file-alt me-2"></i>Relatórios de Comparações</h2>
 
     <div class="card shadow mb-4">
         <div class="card-header bg-primary text-white">
@@ -46,7 +46,7 @@
             {% else %}
             <div class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle me-2"></i>
-                Nenhum projeto encontrado. <a href="/projetos/novo" class="alert-link">Crie um projeto</a> primeiro para ver relatórios.
+                Nenhum projeto encontrado. <a href="/projetos?novo=true" class="alert-link">Crie um projeto</a> primeiro para ver relatórios.
             </div>
             {% endif %}
         </div>
@@ -358,14 +358,23 @@
             loadReports(projectId, true);
         });
         
-        // Attach confirm delete handler
-        document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDeleteComparison);
+        // Attach confirm delete handler (check if element exists)
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+        if (confirmDeleteBtn) {
+            confirmDeleteBtn.addEventListener('click', confirmDeleteComparison);
+        }
         
-        // Attach delete all button handler
-        document.getElementById('deleteAllReportsBtn').addEventListener('click', deleteAllComparisons);
+        // Attach delete all button handler (check if element exists)
+        const deleteAllReportsBtn = document.getElementById('deleteAllReportsBtn');
+        if (deleteAllReportsBtn) {
+            deleteAllReportsBtn.addEventListener('click', deleteAllComparisons);
+        }
         
-        // Attach confirm delete all handler
-        document.getElementById('confirmDeleteAllBtn').addEventListener('click', confirmDeleteAllComparisons);
+        // Attach confirm delete all handler (check if element exists)
+        const confirmDeleteAllBtn = document.getElementById('confirmDeleteAllBtn');
+        if (confirmDeleteAllBtn) {
+            confirmDeleteAllBtn.addEventListener('click', confirmDeleteAllComparisons);
+        }
     });
     
     async function confirmDeleteAllComparisons() {

@@ -1170,7 +1170,17 @@ echo $response;</code></pre>
                             <span class="method-badge method-get">GET</span>
                             <span class="endpoint-url">/api/groups/</span>
                         </h4>
-                        <p><strong>Descrição:</strong> Lista todos os grupos de permissões cadastrados no sistema.</p>
+                        <p><strong>Descrição:</strong> Lista todos os grupos de permissões cadastrados no sistema. O sistema utiliza permissões granulares separadas em <strong>Criar</strong> e <strong>Executar</strong> para cada funcionalidade.</p>
+                        
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Sistema de Permissões Granulares:</strong> Cada funcionalidade possui duas permissões:
+                            <ul class="mb-0 mt-2">
+                                <li><strong>Criar</strong>: Permite criar novos recursos (projetos, conexões, etc.)</li>
+                                <li><strong>Executar</strong>: Permite visualizar e usar recursos criados por outros usuários</li>
+                            </ul>
+                            <p class="mb-0 mt-2">Recursos criados por usuários com permissão de criar são automaticamente visíveis para todos os usuários com permissão de executar.</p>
+                        </div>
                         
                         <h5 class="mt-3">Response (200 OK):</h5>
                         <pre><code>{
@@ -1180,7 +1190,9 @@ echo $response;</code></pre>
       "name": "Administradores",
       "description": "Acesso total ao sistema",
       "can_create_connections": true,
+      "can_execute_connections": true,
       "can_create_projects": true,
+      "can_execute_projects": true,
       "can_view_dashboards": true,
       "can_edit_tables": true,
       "can_view_tables": true,
@@ -1241,14 +1253,36 @@ foreach ($groups as $group) {
                             <span class="method-badge method-post">POST</span>
                             <span class="endpoint-url">/api/groups/</span>
                         </h4>
-                        <p><strong>Descrição:</strong> Cria um novo grupo de permissões com as configurações especificadas.</p>
+                        <p><strong>Descrição:</strong> Cria um novo grupo de permissões com as configurações especificadas. Todas as permissões granulares (criar/executar) devem ser especificadas.</p>
                         
                         <h5 class="mt-3">Request Body:</h5>
                         <pre><code>{
-  "name": "Editores",
-  "description": "Podem editar tabelas",
+  "name": "Executores de Projetos",
+  "description": "Podem visualizar e executar projetos criados por outros",
   "can_create_connections": false,
+  "can_execute_connections": true,
   "can_create_projects": false,
+  "can_execute_projects": true,
+  "can_create_tables": false,
+  "can_execute_tables": true,
+  "can_create_users": false,
+  "can_execute_users": false,
+  "can_create_groups": false,
+  "can_execute_groups": false,
+  "can_create_comparison_reports": false,
+  "can_execute_comparison_reports": true,
+  "can_create_consistency_reports": false,
+  "can_execute_consistency_reports": true,
+  "can_create_dashboard": false,
+  "can_execute_dashboard": true,
+  "can_create_comparison": false,
+  "can_execute_comparison": true,
+  "can_create_scheduled_tasks": false,
+  "can_execute_scheduled_tasks": true,
+  "can_create_webhooks": false,
+  "can_execute_webhooks": true,
+  "can_create_data_consistency": false,
+  "can_execute_data_consistency": true,
   "can_view_dashboards": true,
   "can_edit_tables": true,
   "can_view_tables": true,
@@ -1757,7 +1791,17 @@ foreach ($tables as $table) {
                             <span class="method-badge method-get">GET</span>
                             <span class="endpoint-url">/api/projects</span>
                         </h4>
-                        <p><strong>Descrição:</strong> Lista todos os projetos do usuário autenticado.</p>
+                        <p><strong>Descrição:</strong> Lista projetos disponíveis para o usuário autenticado. O sistema utiliza compartilhamento inteligente baseado em permissões.</p>
+                        
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Compartilhamento Automático:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li><strong>Administradores:</strong> Veem todos os projetos ativos</li>
+                                <li><strong>Usuários regulares:</strong> Veem projetos criados por qualquer usuário que tenha <code>can_execute_projects=True</code> em seus grupos</li>
+                                <li>Isso permite que equipes compartilhem projetos automaticamente sem necessidade de configuração manual</li>
+                            </ul>
+                        </div>
                         
                         <h5 class="mt-3">Response (200 OK):</h5>
                         <pre><code>{
@@ -3549,6 +3593,28 @@ echo $response;</code></pre>
                     <li><strong>Resultados de Comparação:</strong> CSV, JSON, Excel/TXT</li>
                     <li><strong>Relatórios:</strong> Exportação completa de resultados</li>
                     <li>Botões de exportação aparecem após carregar dados</li>
+                </ul>
+            </div>
+            
+            <div class="mb-4">
+                <h4><i class="fas fa-users-cog me-2"></i>Sistema de Permissões Granulares</h4>
+                <p>O sistema utiliza permissões granulares separadas em <strong>Criar</strong> e <strong>Executar</strong>:</p>
+                <ul>
+                    <li><strong>Criar:</strong> Permite criar novos recursos (projetos, conexões, etc.)</li>
+                    <li><strong>Executar:</strong> Permite visualizar e usar recursos criados por outros usuários</li>
+                    <li><strong>Compartilhamento Automático:</strong> Recursos criados por usuários com permissão de criar são automaticamente visíveis para todos os usuários com permissão de executar</li>
+                    <li><strong>Administradores:</strong> Têm todas as permissões e podem ver todos os recursos, independente de quem os criou</li>
+                </ul>
+            </div>
+            
+            <div class="mb-4">
+                <h4><i class="fas fa-share-alt me-2"></i>Compartilhamento de Recursos</h4>
+                <p>O sistema compartilha automaticamente recursos entre equipes:</p>
+                <ul>
+                    <li>Projetos criados por usuários com <code>can_create_projects</code> são visíveis para usuários com <code>can_execute_projects</code></li>
+                    <li>Conexões criadas por usuários com <code>can_create_connections</code> são visíveis para usuários com <code>can_execute_connections</code></li>
+                    <li>O mesmo padrão se aplica a todas as funcionalidades do sistema</li>
+                    <li>Não é necessário configurar compartilhamento manualmente - tudo é automático baseado em permissões</li>
                 </ul>
             </div>
             

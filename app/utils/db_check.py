@@ -26,7 +26,10 @@ def check_tables_exist():
             'scheduled_tasks',
             'webhook_configs',
             'webhook_payloads',
-            'webhook_params'
+            'webhook_params',
+            'data_consistency_configs',
+            'data_consistency_checks',
+            'data_consistency_results'
         ]
         
         missing_tables = [table for table in required_tables if table not in existing_tables]

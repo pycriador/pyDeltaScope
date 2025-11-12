@@ -53,16 +53,26 @@ O **DeltaScope** é uma aplicação web desenvolvida em Flask que permite compar
 
 ### Grupos e Permissões
 - ✅ Criação e gerenciamento de grupos
-- ✅ Permissões granulares:
-  - Criar conexões de banco
-  - Criar projetos
-  - Visualizar dashboards
-  - Editar tabelas
-  - Visualizar tabelas
-  - Visualizar relatórios
-  - Baixar relatórios
+- ✅ **Sistema de Permissões Granulares (Criar/Executar)**:
+  - Cada funcionalidade possui duas permissões distintas:
+    - **Criar**: Permite criar novos recursos (conexões, projetos, etc.)
+    - **Executar**: Permite visualizar e usar recursos criados por outros usuários
+  - Funcionalidades com permissões granulares:
+    - Conexões (`can_create_connections`, `can_execute_connections`)
+    - Projetos (`can_create_projects`, `can_execute_projects`)
+    - Tabelas (`can_create_tables`, `can_execute_tables`)
+    - Usuários (`can_create_users`, `can_execute_users`)
+    - Grupos (`can_create_groups`, `can_execute_groups`)
+    - Relatórios de Comparação (`can_create_comparison_reports`, `can_execute_comparison_reports`)
+    - Relatórios de Consistência (`can_create_consistency_reports`, `can_execute_consistency_reports`)
+    - Dashboard (`can_create_dashboard`, `can_execute_dashboard`)
+    - Comparação (`can_create_comparison`, `can_execute_comparison`)
+    - Agendamentos (`can_create_scheduled_tasks`, `can_execute_scheduled_tasks`)
+    - Webhooks (`can_create_webhooks`, `can_execute_webhooks`)
+    - Consistência de Dados (`can_create_data_consistency`, `can_execute_data_consistency`)
+- ✅ **Compartilhamento Inteligente**: Projetos, conexões e outros recursos criados por usuários com permissão de criar são automaticamente visíveis para todos os usuários com permissão de executar
 - ✅ Associação de usuários a grupos
-- ✅ Usuários admin têm todas as permissões automaticamente
+- ✅ Usuários admin têm todas as permissões automaticamente e podem ver todos os recursos
 
 ### Conexões de Banco de Dados
 - ✅ CRUD completo de conexões
@@ -326,14 +336,13 @@ python init_db.py
 
 Este script irá:
 - Criar todas as tabelas necessárias
-- Criar grupos de permissões padrão:
-  - Administradores
-  - Criadores de Conexões
-  - Criadores de Projetos
-  - Visualizadores de Dashboard
-  - Editores de Tabelas
-  - Visualizadores de Tabelas
-  - Visualizadores de Relatórios
+- Criar grupos de permissões padrão com sistema granular (criar/executar):
+  - **Administradores**: Todas as permissões de criar e executar
+  - **Criadores de Conexões**: `can_create_connections=True`
+  - **Executores de Conexões**: `can_execute_connections=True`
+  - **Criadores de Projetos**: `can_create_projects=True`
+  - **Executores de Projetos**: `can_execute_projects=True`
+  - E assim por diante para todas as funcionalidades...
 
 ### 2. Criar o Primeiro Usuário Administrador
 
@@ -441,20 +450,55 @@ Armazena informações dos usuários do sistema.
 | updated_at | DateTime | Data de atualização |
 
 #### `groups`
-Armazena grupos de permissões.
+Armazena grupos de permissões com sistema granular de criar/executar.
 
 | Campo | Tipo | Descrição |
 |-------|------|-----------|
 | id | Integer | Chave primária |
 | name | String(100) | Nome do grupo (único) |
 | description | String(500) | Descrição do grupo |
+| **Conexões** | | |
 | can_create_connections | Boolean | Pode criar conexões |
+| can_execute_connections | Boolean | Pode visualizar/usar conexões criadas por outros |
+| **Projetos** | | |
 | can_create_projects | Boolean | Pode criar projetos |
-| can_view_dashboards | Boolean | Pode ver dashboards |
-| can_edit_tables | Boolean | Pode editar tabelas |
-| can_view_tables | Boolean | Pode ver tabelas |
-| can_view_reports | Boolean | Pode ver relatórios |
-| can_download_reports | Boolean | Pode baixar relatórios |
+| can_execute_projects | Boolean | Pode visualizar/usar projetos criados por outros |
+| **Tabelas** | | |
+| can_create_tables | Boolean | Pode criar tabelas |
+| can_execute_tables | Boolean | Pode visualizar/editar tabelas |
+| **Usuários** | | |
+| can_create_users | Boolean | Pode criar usuários |
+| can_execute_users | Boolean | Pode gerenciar usuários |
+| **Grupos** | | |
+| can_create_groups | Boolean | Pode criar grupos |
+| can_execute_groups | Boolean | Pode gerenciar grupos |
+| **Relatórios de Comparação** | | |
+| can_create_comparison_reports | Boolean | Pode criar relatórios de comparação |
+| can_execute_comparison_reports | Boolean | Pode visualizar relatórios de comparação |
+| **Relatórios de Consistência** | | |
+| can_create_consistency_reports | Boolean | Pode criar relatórios de consistência |
+| can_execute_consistency_reports | Boolean | Pode visualizar relatórios de consistência |
+| **Dashboard** | | |
+| can_create_dashboard | Boolean | Pode criar dashboards |
+| can_execute_dashboard | Boolean | Pode visualizar dashboards |
+| **Comparação** | | |
+| can_create_comparison | Boolean | Pode criar comparações |
+| can_execute_comparison | Boolean | Pode executar comparações |
+| **Agendamentos** | | |
+| can_create_scheduled_tasks | Boolean | Pode criar tarefas agendadas |
+| can_execute_scheduled_tasks | Boolean | Pode executar tarefas agendadas |
+| **Webhooks** | | |
+| can_create_webhooks | Boolean | Pode criar configurações de webhook |
+| can_execute_webhooks | Boolean | Pode usar webhooks |
+| **Consistência de Dados** | | |
+| can_create_data_consistency | Boolean | Pode criar configurações de consistência |
+| can_execute_data_consistency | Boolean | Pode executar verificações de consistência |
+| **Permissões Legadas** (deprecated) | | |
+| can_view_dashboards | Boolean | Pode ver dashboards (legado) |
+| can_edit_tables | Boolean | Pode editar tabelas (legado) |
+| can_view_tables | Boolean | Pode ver tabelas (legado) |
+| can_view_reports | Boolean | Pode ver relatórios (legado) |
+| can_download_reports | Boolean | Pode baixar relatórios (legado) |
 | created_at | DateTime | Data de criação |
 | updated_at | DateTime | Data de atualização |
 
@@ -931,10 +975,15 @@ Obter informações de uma tabela (colunas, chaves primárias, etc).
 ### Projetos
 
 #### `GET /api/projects`
-Listar projetos do usuário.
+Listar projetos. Usuários veem projetos criados por qualquer usuário com permissão de executar projetos. Administradores veem todos os projetos.
+
+**Comportamento:**
+- Administradores: Veem todos os projetos ativos
+- Usuários regulares: Veem projetos criados por usuários que têm `can_execute_projects=True` em seus grupos
+- Isso permite compartilhamento automático de projetos entre equipes
 
 #### `POST /api/projects`
-Criar novo projeto.
+Criar novo projeto. Requer permissão `can_create_projects`.
 
 **Request:**
 ```json
@@ -2477,7 +2526,12 @@ if ($loginResult) {
 
 3. **Primeira Execução:** O sistema verifica automaticamente se é a primeira execução e solicita criação do primeiro admin.
 
-4. **Permissões:** Usuários admin têm todas as permissões automaticamente. Outros usuários precisam estar em grupos com as permissões apropriadas.
+4. **Sistema de Permissões Granulares:**
+   - Cada funcionalidade possui duas permissões: **Criar** e **Executar**
+   - **Criar**: Permite criar novos recursos (projetos, conexões, etc.)
+   - **Executar**: Permite visualizar e usar recursos criados por outros usuários
+   - **Compartilhamento Automático**: Recursos criados por usuários com permissão de criar são automaticamente visíveis para todos os usuários com permissão de executar
+   - **Administradores**: Têm todas as permissões automaticamente e podem ver todos os recursos, independente de quem os criou
 
 5. **Sessões:** O sistema usa sessões Flask para autenticação em páginas HTML. APIs usam tokens Bearer.
 
@@ -2489,7 +2543,24 @@ if ($loginResult) {
 7. **Filtros por URL:** 
    - Dashboard suporta `project_id`, `start_date` e `end_date`
    - Tabelas suporta `connection_id`
+   - Relatórios suporta `project_id`
    - URLs podem ser compartilhadas e bookmarkadas
+
+8. **Passos para Iniciar um Projeto Novo:**
+   - **Passo 1**: Criar conexões de banco de dados (origem e destino)
+   - **Passo 2**: Criar um projeto de comparação selecionando as tabelas origem e destino
+   - **Passo 3**: Executar comparação mapeando as chaves primárias
+   - **Passo 4**: Visualizar resultados e exportar se necessário
+   - **Passo 5** (Opcional): Configurar agendamento automático para comparações periódicas
+   - **Passo 6** (Opcional): Configurar webhooks para notificações automáticas
+
+9. **Dicas da Interface Web:**
+   - Use o botão de tema claro/escuro no canto superior direito para alternar entre temas
+   - Modais são centralizados automaticamente - não é necessário ajustar manualmente
+   - Notificações aparecem no canto da tela como toasts não bloqueantes
+   - Use filtros por URL para compartilhar visualizações específicas (dashboard, relatórios, etc.)
+   - Administradores veem todos os recursos criados por qualquer usuário
+   - Usuários regulares veem apenas recursos criados por usuários com permissão de executar
 
 ## 📄 Licença
 

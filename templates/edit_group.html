@@ -1,0 +1,473 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Grupo - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="editGroupSection">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-user-friends me-2"></i>Editar Grupo</h2>
+        <a href="/grupos" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Voltar
+        </a>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Informações do Grupo</h5>
+        </div>
+        <div class="card-body">
+            <form id="editGroupForm">
+                <input type="hidden" id="groupId" value="{{ group.id }}">
+                
+                <div class="mb-3">
+                    <label for="groupName" class="form-label">Nome do Grupo <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="groupName" value="{{ group.name }}" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="groupDescription" class="form-label">Descrição</label>
+                    <textarea class="form-control" id="groupDescription" rows="3">{{ group.description or '' }}</textarea>
+                </div>
+                
+                <hr>
+                
+                <h5 class="mb-4"><i class="fas fa-key me-2"></i>Permissões</h5>
+                
+                <div class="row">
+                    <!-- Conexões -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0"><i class="fas fa-database me-2"></i>Conexões</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permCreateConnections" {% if group.can_create_connections %}checked{% endif %}>
+                                    <label class="form-check-label" for="permCreateConnections">
+                                        Criar Conexões
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="permExecuteConnections" {% if group.can_execute_connections %}checked{% endif %}>
+                                    <label class="form-check-label" for="permExecuteConnections">
+                                        Executar Conexões
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Projetos -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-success">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0"><i class="fas fa-project-diagram me-2"></i>Projetos</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permCreateProjects" {% if group.can_create_projects %}checked{% endif %}>
+                                    <label class="form-check-label" for="permCreateProjects">
+                                        Criar Projetos
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="permExecuteProjects" {% if group.can_execute_projects %}checked{% endif %}>
+                                    <label class="form-check-label" for="permExecuteProjects">
+                                        Executar Projetos
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tabelas -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-info">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-table me-2"></i>Tabelas</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permCreateTables" {% if group.can_create_tables %}checked{% endif %}>
+                                    <label class="form-check-label" for="permCreateTables">
+                                        Criar Tabelas
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="permExecuteTables" {% if group.can_execute_tables %}checked{% endif %}>
+                                    <label class="form-check-label" for="permExecuteTables">
+                                        Executar Tabelas
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Usuários -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0"><i class="fas fa-users me-2"></i>Usuários</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permCreateUsers" {% if group.can_create_users %}checked{% endif %}>
+                                    <label class="form-check-label" for="permCreateUsers">
+                                        Criar Usuários
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="permExecuteUsers" {% if group.can_execute_users %}checked{% endif %}>
+                                    <label class="form-check-label" for="permExecuteUsers">
+                                        Executar Usuários
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Grupos -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-secondary">
+                            <div class="card-header bg-secondary text-white">
+                                <h6 class="mb-0"><i class="fas fa-user-friends me-2"></i>Grupos</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permCreateGroups" {% if group.can_create_groups %}checked{% endif %}>
+                                    <label class="form-check-label" for="permCreateGroups">
+                                        Criar Grupos
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="permExecuteGroups" {% if group.can_execute_groups %}checked{% endif %}>
+                                    <label class="form-check-label" for="permExecuteGroups">
+                                        Executar Grupos
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Relatórios de Comparação -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-danger">
+                            <div class="card-header bg-danger text-white">
+                                <h6 class="mb-0"><i class="fas fa-file-alt me-2"></i>Relatórios de Comparação</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permCreateComparisonReports" {% if group.can_create_comparison_reports %}checked{% endif %}>
+                                    <label class="form-check-label" for="permCreateComparisonReports">
+                                        Criar Relatórios
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="permExecuteComparisonReports" {% if group.can_execute_comparison_reports %}checked{% endif %}>
+                                    <label class="form-check-label" for="permExecuteComparisonReports">
+                                        Executar Relatórios
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Relatórios de Consistência -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-dark">
+                            <div class="card-header bg-dark text-white">
+                                <h6 class="mb-0"><i class="fas fa-check-circle me-2"></i>Relatórios de Consistência</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permCreateConsistencyReports" {% if group.can_create_consistency_reports %}checked{% endif %}>
+                                    <label class="form-check-label" for="permCreateConsistencyReports">
+                                        Criar Relatórios
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="permExecuteConsistencyReports" {% if group.can_execute_consistency_reports %}checked{% endif %}>
+                                    <label class="form-check-label" for="permExecuteConsistencyReports">
+                                        Executar Relatórios
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Dashboard -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Dashboard</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permCreateDashboard" {% if group.can_create_dashboard %}checked{% endif %}>
+                                    <label class="form-check-label" for="permCreateDashboard">
+                                        Criar Dashboard
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="permExecuteDashboard" {% if group.can_execute_dashboard %}checked{% endif %}>
+                                    <label class="form-check-label" for="permExecuteDashboard">
+                                        Executar Dashboard
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Comparação -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-success">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0"><i class="fas fa-code-branch me-2"></i>Comparação</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permCreateComparison" {% if group.can_create_comparison %}checked{% endif %}>
+                                    <label class="form-check-label" for="permCreateComparison">
+                                        Criar Comparação
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="permExecuteComparison" {% if group.can_execute_comparison %}checked{% endif %}>
+                                    <label class="form-check-label" for="permExecuteComparison">
+                                        Executar Comparação
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Agendamentos -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-info">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-clock me-2"></i>Agendamentos</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permCreateScheduledTasks" {% if group.can_create_scheduled_tasks %}checked{% endif %}>
+                                    <label class="form-check-label" for="permCreateScheduledTasks">
+                                        Criar Agendamentos
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="permExecuteScheduledTasks" {% if group.can_execute_scheduled_tasks %}checked{% endif %}>
+                                    <label class="form-check-label" for="permExecuteScheduledTasks">
+                                        Executar Agendamentos
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Webhooks/Cliente HTTP -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0"><i class="fas fa-paper-plane me-2"></i>Webhooks/Cliente HTTP</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permCreateWebhooks" {% if group.can_create_webhooks %}checked{% endif %}>
+                                    <label class="form-check-label" for="permCreateWebhooks">
+                                        Criar Webhooks
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="permExecuteWebhooks" {% if group.can_execute_webhooks %}checked{% endif %}>
+                                    <label class="form-check-label" for="permExecuteWebhooks">
+                                        Executar Webhooks
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Consistência de Dados -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-dark">
+                            <div class="card-header bg-dark text-white">
+                                <h6 class="mb-0"><i class="fas fa-sync-alt me-2"></i>Consistência de Dados</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="permCreateDataConsistency" {% if group.can_create_data_consistency %}checked{% endif %}>
+                                    <label class="form-check-label" for="permCreateDataConsistency">
+                                        Criar Consistência
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="permExecuteDataConsistency" {% if group.can_execute_data_consistency %}checked{% endif %}>
+                                    <label class="form-check-label" for="permExecuteDataConsistency">
+                                        Executar Consistência
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <button type="button" class="btn btn-primary" onclick="saveGroupLocal()">
+                        <i class="fas fa-save me-2"></i>Salvar Alterações
+                    </button>
+                    <a href="/grupos" class="btn btn-secondary">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Mensagem (Sucesso/Erro) -->
+<div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" id="messageModalHeader">
+                <h5 class="modal-title" id="messageModalTitle">
+                    <i class="fas fa-info-circle me-2"></i>Mensagem
+                </h5>
+                <button type="button" class="btn-close" id="messageModalCloseBtn" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="messageModalBody">
+                <!-- Mensagem será inserida aqui -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// API_BASE is already defined in app.js
+const AUTH_TOKEN = '{{ auth_token|safe if auth_token else "" }}';
+const USER_ID = parseInt('{{ current_user.id }}');
+
+async function saveGroupLocal() {
+    const groupId = document.getElementById('groupId').value;
+    const name = document.getElementById('groupName').value.trim();
+    const description = document.getElementById('groupDescription').value.trim();
+    
+    if (!name) {
+        showMessageModal('Erro', 'O nome do grupo é obrigatório.', 'error');
+        return;
+    }
+    
+    // Helper function to safely get checkbox value
+    function getCheckboxValue(id) {
+        const element = document.getElementById(id);
+        return element ? element.checked : false;
+    }
+    
+    const groupData = {
+        name,
+        description,
+        // Connections
+        can_create_connections: getCheckboxValue('permCreateConnections'),
+        can_execute_connections: getCheckboxValue('permExecuteConnections'),
+        // Projects
+        can_create_projects: getCheckboxValue('permCreateProjects'),
+        can_execute_projects: getCheckboxValue('permExecuteProjects'),
+        // Tables
+        can_create_tables: getCheckboxValue('permCreateTables'),
+        can_execute_tables: getCheckboxValue('permExecuteTables'),
+        // Users
+        can_create_users: getCheckboxValue('permCreateUsers'),
+        can_execute_users: getCheckboxValue('permExecuteUsers'),
+        // Groups
+        can_create_groups: getCheckboxValue('permCreateGroups'),
+        can_execute_groups: getCheckboxValue('permExecuteGroups'),
+        // Comparison Reports
+        can_create_comparison_reports: getCheckboxValue('permCreateComparisonReports'),
+        can_execute_comparison_reports: getCheckboxValue('permExecuteComparisonReports'),
+        // Consistency Reports
+        can_create_consistency_reports: getCheckboxValue('permCreateConsistencyReports'),
+        can_execute_consistency_reports: getCheckboxValue('permExecuteConsistencyReports'),
+        // Dashboard
+        can_create_dashboard: getCheckboxValue('permCreateDashboard'),
+        can_execute_dashboard: getCheckboxValue('permExecuteDashboard'),
+        // Comparison
+        can_create_comparison: getCheckboxValue('permCreateComparison'),
+        can_execute_comparison: getCheckboxValue('permExecuteComparison'),
+        // Scheduled Tasks
+        can_create_scheduled_tasks: getCheckboxValue('permCreateScheduledTasks'),
+        can_execute_scheduled_tasks: getCheckboxValue('permExecuteScheduledTasks'),
+        // Webhooks
+        can_create_webhooks: getCheckboxValue('permCreateWebhooks'),
+        can_execute_webhooks: getCheckboxValue('permExecuteWebhooks'),
+        // Data Consistency
+        can_create_data_consistency: getCheckboxValue('permCreateDataConsistency'),
+        can_execute_data_consistency: getCheckboxValue('permExecuteDataConsistency')
+    };
+    
+    try {
+        const response = await fetch(`${API_BASE}/groups/${groupId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${AUTH_TOKEN}`,
+                'X-User-Id': USER_ID
+            },
+            body: JSON.stringify(groupData)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showMessageModal('Sucesso', 'Grupo atualizado com sucesso!', 'success');
+            // Redirect after 1.5 seconds
+            setTimeout(() => {
+                window.location.href = '/grupos';
+            }, 1500);
+        } else {
+            showMessageModal('Erro', 'Erro ao atualizar grupo: ' + (data.message || 'Erro desconhecido'), 'error');
+        }
+    } catch (error) {
+        showMessageModal('Erro', 'Erro ao atualizar grupo: ' + error.message, 'error');
+    }
+}
+
+// Function to show message modal
+function showMessageModal(title, message, type) {
+    const modal = document.getElementById('messageModal');
+    const modalTitle = document.getElementById('messageModalTitle');
+    const modalBody = document.getElementById('messageModalBody');
+    const modalHeader = document.getElementById('messageModalHeader');
+    
+    // Set title
+    modalTitle.textContent = title;
+    
+    // Set message
+    modalBody.textContent = message;
+    
+    // Set header color based on type
+    const closeBtn = document.getElementById('messageModalCloseBtn');
+    modalHeader.className = 'modal-header';
+    closeBtn.className = 'btn-close';
+    
+    if (type === 'success') {
+        modalHeader.classList.add('bg-success', 'text-white');
+        closeBtn.classList.add('btn-close-white');
+        modalTitle.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + title;
+    } else if (type === 'error') {
+        modalHeader.classList.add('bg-danger', 'text-white');
+        closeBtn.classList.add('btn-close-white');
+        modalTitle.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>' + title;
+    } else {
+        modalHeader.classList.add('bg-info', 'text-white');
+        closeBtn.classList.add('btn-close-white');
+        modalTitle.innerHTML = '<i class="fas fa-info-circle me-2"></i>' + title;
+    }
+    
+    // Show modal
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+}
+</script>
+{% endblock %}

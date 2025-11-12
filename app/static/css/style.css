@@ -289,6 +289,22 @@ body.dark-theme .card:hover {
     border: none;
 }
 
+/* Ensure modals are properly centered vertically with space from navbar */
+.modal-dialog-centered {
+    display: flex !important;
+    align-items: center !important;
+    min-height: calc(100% - 3.5rem) !important;
+    margin-top: 4rem !important; /* Add space from navbar */
+    margin-bottom: 2rem !important;
+}
+
+.modal-dialog-centered::before {
+    content: "";
+    display: block;
+    height: calc(100vh - 7rem); /* Account for navbar and margins */
+    min-height: inherit;
+}
+
 .modal-content {
     border-radius: 10px;
 }
@@ -402,6 +418,18 @@ body.dark-theme .card:hover {
 
 #notificationModal .modal-footer {
     border-top: 1px solid #dee2e6;
+}
+
+/* Toast Notification Animation */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 /* Confirmation Modal Styles */

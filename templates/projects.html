@@ -6,64 +6,563 @@
 <div id="projectsSection">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="fas fa-folder me-2"></i>Projetos</h2>
-        <button class="btn btn-primary" onclick="window.location.href='/projetos/novo'">
-            <i class="fas fa-plus me-1"></i>Novo Projeto
-        </button>
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-primary" onclick="showCreateComparisonProjectModal()">
+                <i class="fas fa-code-branch me-1"></i>Novo Projeto de Comparação
+            </button>
+            <a href="/consistencia" class="btn btn-success">
+                <i class="fas fa-check-circle me-1"></i>Novo Projeto de Consistência
+            </a>
+        </div>
     </div>
 
-    {% if projects %}
-    <div class="row">
-        {% for project in projects %}
-        <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card shadow h-100">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-folder me-2"></i>{{ project.name }}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <p class="card-text">{{ project.description or 'Sem descrição' }}</p>
-                    <div class="mb-2">
-                        <small class="text-muted">
-                            <strong>Origem:</strong> {{ project.source_table }}<br>
-                            <strong>Destino:</strong> {{ project.target_table }}
-                        </small>
+    <!-- Comparison Projects Section -->
+    <div class="mb-5">
+        <h4 class="mb-3"><i class="fas fa-code-branch me-2"></i>Projetos de Comparação</h4>
+        {% if comparison_projects %}
+        <div class="row">
+            {% for project in comparison_projects %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-folder me-2"></i>{{ project.name }}
+                        </h5>
                     </div>
-                    <div class="mb-2">
-                        <small class="text-muted">
-                            <i class="fas fa-calendar me-1"></i>
-                            Criado em: {{ project.created_at.strftime('%d/%m/%Y') if project.created_at else '-' }}
-                        </small>
+                    <div class="card-body">
+                        <p class="card-text">{{ project.description or 'Sem descrição' }}</p>
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <strong>Origem:</strong> {{ project.source_table }}<br>
+                                <strong>Destino:</strong> {{ project.target_table }}
+                            </small>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>
+                                Criado em: {{ project.created_at.strftime('%d/%m/%Y') if project.created_at else '-' }}
+                            </small>
+                        </div>
                     </div>
-                </div>
-                <div class="card-footer">
-                    <div class="btn-group w-100" role="group">
-                        <a href="/comparacao?project_id={{ project.id }}" class="btn btn-sm btn-success" title="Comparar">
-                            <i class="fas fa-code-branch"></i>
-                        </a>
-                        <a href="/dashboard?project_id={{ project.id }}" class="btn btn-sm btn-info" title="Dashboard">
-                            <i class="fas fa-chart-bar"></i>
-                        </a>
-                        <a href="/projetos/{{ project.id }}/editar" class="btn btn-sm btn-primary" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                        <a href="/api/projects/{{ project.id }}" class="btn btn-sm btn-danger" 
-                           onclick="return confirm('Tem certeza que deseja deletar o projeto {{ project.name }}?');" 
-                           title="Deletar">
-                            <i class="fas fa-trash"></i>
-                        </a>
+                    <div class="card-footer">
+                        <div class="btn-group w-100" role="group">
+                            <a href="/comparacao?project_id={{ project.id }}" class="btn btn-sm btn-success" title="Comparar">
+                                <i class="fas fa-code-branch"></i>
+                            </a>
+                            <a href="/dashboard?project_id={{ project.id }}" class="btn btn-sm btn-info" title="Dashboard">
+                                <i class="fas fa-chart-bar"></i>
+                            </a>
+                            <a href="/projetos/{{ project.id }}/editar" class="btn btn-sm btn-primary" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn btn-sm btn-danger" 
+                               onclick="deleteComparisonProject({{ project.id }}, '{{ project.name }}')" 
+                               title="Deletar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Nenhum projeto de comparação encontrado. Clique em "Novo Projeto de Comparação" para criar um.
+        </div>
+        {% endif %}
     </div>
-    {% else %}
-    <div class="alert alert-info">
-        <i class="fas fa-info-circle me-2"></i>
-        Nenhum projeto encontrado. <a href="/projetos/novo" class="alert-link">Crie um novo projeto</a> para começar.
+
+    <!-- Consistency Projects Section -->
+    <div class="mb-5">
+        <h4 class="mb-3"><i class="fas fa-check-circle me-2"></i>Projetos de Consistência de Dados</h4>
+        {% if consistency_projects %}
+        <div class="row">
+            {% for config in consistency_projects %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-check-circle me-2"></i>{{ config.name }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">{{ config.description or 'Sem descrição' }}</p>
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <strong>Origem:</strong> {{ config.source_table }}<br>
+                                <strong>Destino:</strong> {{ config.target_table }}
+                            </small>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <strong>Mapeamentos Join:</strong> <span class="badge bg-warning">{{ (config.join_mappings or {})|length }}</span><br>
+                                <strong>Campos Comparação:</strong> <span class="badge bg-danger">{{ (config.comparison_fields or [])|length }}</span>
+                            </small>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>
+                                Criado em: {{ config.created_at.strftime('%d/%m/%Y') if config.created_at else '-' }}
+                            </small>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="btn-group w-100" role="group">
+                            <a href="/consistencia" onclick="editConsistencyConfig({{ config.id }}); return false;" class="btn btn-sm btn-success" title="Executar Verificação">
+                                <i class="fas fa-play"></i>
+                            </a>
+                            <a href="/relatorios-consistencia?config_id={{ config.id }}" class="btn btn-sm btn-info" title="Ver Relatórios">
+                                <i class="fas fa-file-alt"></i>
+                            </a>
+                            <a href="/consistencia" onclick="editConsistencyConfig({{ config.id }}); return false;" class="btn btn-sm btn-primary" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button onclick="deleteConsistencyConfig({{ config.id }}, '{{ config.name }}')" class="btn btn-sm btn-danger" title="Deletar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Nenhum projeto de consistência encontrado. Clique em "Novo Projeto de Consistência" para criar um.
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
+
+<!-- Create Comparison Project Modal -->
+<div class="modal fade" id="createComparisonProjectModal" tabindex="-1" aria-labelledby="createComparisonProjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="createComparisonProjectModalLabel">
+                    <i class="fas fa-code-branch me-2"></i>Novo Projeto de Comparação
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Step 1: Project Info and Connection Selection -->
+                <div id="comparisonProjectConfigStep">
+                    <form id="createComparisonProjectForm">
+                        <div class="mb-3">
+                            <label for="comparisonProjectName" class="form-label">Nome do Projeto</label>
+                            <input type="text" class="form-control" id="comparisonProjectName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="comparisonProjectDescription" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="comparisonProjectDescription" rows="2"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Conexão Origem</h6>
+                                <select class="form-select mb-3" id="comparisonSourceConnectionSelect" onchange="loadComparisonConnectionTables('source')">
+                                    <option value="">Selecione uma conexão...</option>
+                                    {% for connection in connections %}
+                                    <option value="{{ connection.id }}">{{ connection.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <a href="/conexoes/novo" class="btn btn-sm btn-outline-primary" target="_blank">
+                                    <i class="fas fa-plus me-1"></i>Nova Conexão
+                                </a>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Conexão Destino</h6>
+                                <select class="form-select mb-3" id="comparisonTargetConnectionSelect" onchange="loadComparisonConnectionTables('target')">
+                                    <option value="">Selecione uma conexão...</option>
+                                    {% for connection in connections %}
+                                    <option value="{{ connection.id }}">{{ connection.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <a href="/conexoes/novo" class="btn btn-sm btn-outline-primary" target="_blank">
+                                    <i class="fas fa-plus me-1"></i>Nova Conexão
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Step 2: Table Selection -->
+                <div id="comparisonTableSelectionStep" style="display: none;">
+                    <h6 class="mb-3">Selecione as Tabelas</h6>
+                    <div class="row">
+                        <div class="col-md-5">
+                            <h6>Tabela Origem</h6>
+                            <select class="form-select mb-3" id="comparisonModalSourceTableSelect" size="10">
+                                <option value="">Selecione uma conexão primeiro...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 text-center align-self-center">
+                            <i class="fas fa-exchange-alt fa-2x text-primary"></i>
+                        </div>
+                        <div class="col-md-5">
+                            <h6>Tabela Destino</h6>
+                            <select class="form-select mb-3" id="comparisonModalTargetTableSelect" size="10">
+                                <option value="">Selecione uma conexão primeiro...</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-outline-primary" id="comparisonBackToConfigBtn" style="display: none;" onclick="backToComparisonConfig()">Voltar</button>
+                <button type="button" class="btn btn-primary" id="comparisonNextToTablesBtn" onclick="loadComparisonTablesForProject()" disabled>Próximo: Selecionar Tabelas</button>
+                <button type="button" class="btn btn-success" id="comparisonCreateProjectBtn" style="display: none;" onclick="createComparisonProject()">Criar Projeto</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Comparison Project Confirmation Modal -->
+<div class="modal fade" id="deleteComparisonProjectModal" tabindex="-1" aria-labelledby="deleteComparisonProjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteComparisonProjectModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja deletar o projeto <strong id="deleteProjectName"></strong>?</p>
+                <p class="text-danger mb-0"><i class="fas fa-exclamation-circle me-1"></i><strong>ATENÇÃO:</strong> Esta ação não pode ser desfeita e todos os dados relacionados serão permanentemente removidos.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteComparisonProjectBtn">
+                    <i class="fas fa-trash me-2"></i>Deletar Projeto
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Consistency Config Confirmation Modal -->
+<div class="modal fade" id="deleteConsistencyConfigModal" tabindex="-1" aria-labelledby="deleteConsistencyConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteConsistencyConfigModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja deletar a configuração de consistência <strong id="deleteConsistencyConfigName"></strong>?</p>
+                <p class="text-danger mb-0"><i class="fas fa-exclamation-circle me-1"></i><strong>ATENÇÃO:</strong> Esta ação não pode ser desfeita e todos os dados relacionados serão permanentemente removidos.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteConsistencyConfigBtn">
+                    <i class="fas fa-trash me-2"></i>Deletar Configuração
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// API_BASE is already defined in app.js, but ensure it's available
+if (typeof API_BASE === 'undefined') {
+    window.API_BASE = '/api';
+}
+const AUTH_TOKEN = '{{ auth_token|safe if auth_token else "" }}';
+const USER_ID = parseInt('{{ current_user.id }}');
+
+let currentDeleteProjectId = null;
+let currentDeleteConsistencyConfigId = null;
+
+let comparisonSourceConnectionId = null;
+let comparisonTargetConnectionId = null;
+
+function showCreateComparisonProjectModal() {
+    const modal = new bootstrap.Modal(document.getElementById('createComparisonProjectModal'));
+    modal.show();
+    
+    // Reset form
+    document.getElementById('createComparisonProjectForm').reset();
+    document.getElementById('comparisonProjectConfigStep').style.display = 'block';
+    document.getElementById('comparisonTableSelectionStep').style.display = 'none';
+    document.getElementById('comparisonBackToConfigBtn').style.display = 'none';
+    document.getElementById('comparisonNextToTablesBtn').style.display = 'inline-block';
+    document.getElementById('comparisonCreateProjectBtn').style.display = 'none';
+    document.getElementById('comparisonNextToTablesBtn').disabled = true;
+    
+    comparisonSourceConnectionId = null;
+    comparisonTargetConnectionId = null;
+}
+
+function loadComparisonConnectionTables(type) {
+    const selectId = type === 'source' ? 'comparisonSourceConnectionSelect' : 'comparisonTargetConnectionSelect';
+    const connectionId = document.getElementById(selectId).value;
+    
+    if (type === 'source') {
+        comparisonSourceConnectionId = connectionId ? parseInt(connectionId) : null;
+    } else {
+        comparisonTargetConnectionId = connectionId ? parseInt(connectionId) : null;
+    }
+    
+    if (!connectionId) {
+        const tableSelectId = type === 'source' ? 'comparisonModalSourceTableSelect' : 'comparisonModalTargetTableSelect';
+        document.getElementById(tableSelectId).innerHTML = '<option value="">Selecione uma conexão primeiro...</option>';
+        updateComparisonNextButton();
+        return;
+    }
+    
+    // Load tables
+    fetch(`${API_BASE}/connections/${connectionId}/tables`, {
+        headers: {
+            'Authorization': `Bearer ${AUTH_TOKEN}`,
+            'X-User-Id': USER_ID
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const tableSelectId = type === 'source' ? 'comparisonModalSourceTableSelect' : 'comparisonModalTargetTableSelect';
+        const select = document.getElementById(tableSelectId);
+        select.innerHTML = '<option value="">Selecione uma tabela...</option>';
+        
+        if (data.tables && data.tables.length > 0) {
+            data.tables.forEach(table => {
+                const option = document.createElement('option');
+                option.value = table;
+                option.textContent = table;
+                select.appendChild(option);
+            });
+        }
+        
+        updateComparisonNextButton();
+    })
+    .catch(error => {
+        console.error('Error loading tables:', error);
+        alert('Erro ao carregar tabelas: ' + error.message);
+    });
+}
+
+function updateComparisonNextButton() {
+    const sourceTable = document.getElementById('comparisonModalSourceTableSelect').value;
+    const targetTable = document.getElementById('comparisonModalTargetTableSelect').value;
+    const sourceConn = comparisonSourceConnectionId;
+    const targetConn = comparisonTargetConnectionId;
+    
+    document.getElementById('comparisonNextToTablesBtn').disabled = !(sourceConn && targetConn);
+}
+
+function loadComparisonTablesForProject() {
+    if (!comparisonSourceConnectionId || !comparisonTargetConnectionId) {
+        alert('Selecione ambas as conexões primeiro.');
+        return;
+    }
+    
+    // Load tables for both connections
+    loadComparisonConnectionTables('source');
+    loadComparisonConnectionTables('target');
+    
+    // Show table selection step
+    document.getElementById('comparisonProjectConfigStep').style.display = 'none';
+    document.getElementById('comparisonTableSelectionStep').style.display = 'block';
+    document.getElementById('comparisonBackToConfigBtn').style.display = 'inline-block';
+    document.getElementById('comparisonNextToTablesBtn').style.display = 'none';
+    document.getElementById('comparisonCreateProjectBtn').style.display = 'inline-block';
+}
+
+function backToComparisonConfig() {
+    document.getElementById('comparisonProjectConfigStep').style.display = 'block';
+    document.getElementById('comparisonTableSelectionStep').style.display = 'none';
+    document.getElementById('comparisonBackToConfigBtn').style.display = 'none';
+    document.getElementById('comparisonNextToTablesBtn').style.display = 'inline-block';
+    document.getElementById('comparisonCreateProjectBtn').style.display = 'none';
+}
+
+async function createComparisonProject() {
+    const name = document.getElementById('comparisonProjectName').value.trim();
+    const description = document.getElementById('comparisonProjectDescription').value.trim();
+    const sourceTable = document.getElementById('comparisonModalSourceTableSelect').value;
+    const targetTable = document.getElementById('comparisonModalTargetTableSelect').value;
+    
+    if (!name) {
+        alert('Nome do projeto é obrigatório.');
+        return;
+    }
+    
+    if (!sourceTable || !targetTable) {
+        alert('Selecione ambas as tabelas antes de criar o projeto.');
+        return;
+    }
+    
+    if (!comparisonSourceConnectionId || !comparisonTargetConnectionId) {
+        alert('Conexões não encontradas.');
+        return;
+    }
+    
+    const projectData = {
+        name,
+        description,
+        source_table: sourceTable,
+        target_table: targetTable,
+        source_connection_id: comparisonSourceConnectionId,
+        target_connection_id: comparisonTargetConnectionId
+    };
+    
+    try {
+        const response = await fetch(`${API_BASE}/projects`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${AUTH_TOKEN}`,
+                'X-User-Id': USER_ID
+            },
+            body: JSON.stringify(projectData)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('createComparisonProjectModal')).hide();
+            window.location.reload();
+        } else {
+            alert('Erro ao criar projeto: ' + (data.message || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        alert('Erro ao criar projeto: ' + error.message);
+    }
+}
+
+// Add event listeners for table selection
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if we should open the create modal automatically
+    {% if open_create_modal %}
+    // Open modal after a short delay to ensure DOM is ready
+    setTimeout(function() {
+        if (typeof showCreateComparisonProjectModal === 'function') {
+            showCreateComparisonProjectModal();
+        } else {
+            // Fallback: try to show modal directly
+            const modalElement = document.getElementById('createComparisonProjectModal');
+            if (modalElement) {
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            }
+        }
+        // Remove the parameter from URL without reloading
+        if (window.history && window.history.replaceState) {
+            window.history.replaceState({}, '', '/projetos');
+        }
+    }, 300);
+    {% endif %}
+    
+    const sourceTableSelect = document.getElementById('comparisonModalSourceTableSelect');
+    const targetTableSelect = document.getElementById('comparisonModalTargetTableSelect');
+    
+    if (sourceTableSelect) {
+        sourceTableSelect.addEventListener('change', updateComparisonNextButton);
+    }
+    if (targetTableSelect) {
+        targetTableSelect.addEventListener('change', updateComparisonNextButton);
+    }
+});
+
+function deleteComparisonProject(projectId, projectName) {
+    currentDeleteProjectId = projectId;
+    document.getElementById('deleteProjectName').textContent = projectName;
+    const modal = new bootstrap.Modal(document.getElementById('deleteComparisonProjectModal'));
+    modal.show();
+}
+
+async function executeDeleteComparisonProject() {
+    const projectId = currentDeleteProjectId;
+    if (!projectId) return;
+    
+    // Hide modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('deleteComparisonProjectModal'));
+    if (modal) {
+        modal.hide();
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/projects/${projectId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${AUTH_TOKEN}`,
+                'X-User-Id': USER_ID
+            }
+        });
+        
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            const data = await response.json();
+            alert('Erro ao deletar projeto: ' + (data.message || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        alert('Erro ao deletar projeto: ' + error.message);
+    }
+}
+
+function editConsistencyConfig(configId) {
+    window.location.href = `/consistencia?edit=${configId}`;
+}
+
+function deleteConsistencyConfig(configId, configName) {
+    currentDeleteConsistencyConfigId = configId;
+    document.getElementById('deleteConsistencyConfigName').textContent = configName;
+    const modal = new bootstrap.Modal(document.getElementById('deleteConsistencyConfigModal'));
+    modal.show();
+}
+
+async function executeDeleteConsistencyConfig() {
+    const configId = currentDeleteConsistencyConfigId;
+    if (!configId) return;
+    
+    // Hide modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('deleteConsistencyConfigModal'));
+    if (modal) {
+        modal.hide();
+    }
+    
+    try {
+        const response = await fetch(`/api/consistency/configs/${configId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${AUTH_TOKEN}`,
+                'X-User-Id': USER_ID
+            }
+        });
+        
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            const data = await response.json();
+            alert('Erro ao deletar configuração: ' + (data.message || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        alert('Erro ao deletar configuração: ' + error.message);
+    }
+}
+
+// Set up event listeners for confirm delete buttons
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmDeleteComparisonBtn = document.getElementById('confirmDeleteComparisonProjectBtn');
+    if (confirmDeleteComparisonBtn) {
+        confirmDeleteComparisonBtn.addEventListener('click', executeDeleteComparisonProject);
+    }
+    
+    const confirmDeleteConsistencyBtn = document.getElementById('confirmDeleteConsistencyConfigBtn');
+    if (confirmDeleteConsistencyBtn) {
+        confirmDeleteConsistencyBtn.addEventListener('click', executeDeleteConsistencyConfig);
+    }
+});
+</script>
 {% endblock %}
 

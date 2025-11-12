@@ -3,18 +3,19 @@
 {% block title %}Gerenciar Payloads - DeltaScope{% endblock %}
 
 {% block content %}
-<div id="webhooksPayloadsSection">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-database me-2"></i>Gerenciar Payloads</h2>
-        <div>
-            <a href="/webhooks" class="btn btn-outline-primary me-2">
-                <i class="fas fa-paper-plane me-2"></i>Cliente HTTP
-            </a>
-            <button class="btn btn-primary" onclick="showCreateModal()">
-                <i class="fas fa-plus me-2"></i>Novo Payload
-            </button>
+<div class="container-fluid py-4">
+    <div id="webhooksPayloadsSection">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-database me-2"></i>Gerenciar Payloads</h2>
+            <div>
+                <a href="/webhooks" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-paper-plane me-2"></i>Cliente HTTP
+                </a>
+                <button class="btn btn-primary" onclick="showCreateModal()">
+                    <i class="fas fa-plus me-2"></i>Novo Payload
+                </button>
+            </div>
         </div>
-    </div>
 
     <div class="card shadow">
         <div class="card-header bg-primary text-white">
@@ -85,11 +86,12 @@
             </div>
         </div>
     </div>
+    </div>
 </div>
 
 <!-- Modal Create/Edit Payload -->
 <div class="modal fade" id="payloadModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="payloadModalTitle">Novo Payload</h5>

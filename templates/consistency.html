@@ -1,0 +1,989 @@
+{% extends "base.html" %}
+
+{% block title %}Consistência de Dados - DeltaScope{% endblock %}
+
+{% block content %}
+<div id="consistencySection">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-check-circle me-2"></i>Consistência de Dados</h2>
+        <button type="button" class="btn btn-primary" onclick="showCreateConfigModal()">
+            <i class="fas fa-plus me-2"></i>Nova Configuração
+        </button>
+    </div>
+    
+    <!-- Configurations List -->
+    <div id="configsListContainer">
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+            <p class="mt-2 text-muted">Carregando configurações...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Config Modal -->
+<div class="modal fade" id="configModal" tabindex="-1" aria-labelledby="configModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="configModalLabel">
+                    <i class="fas fa-cog me-2"></i>Nova Configuração de Consistência
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="configForm">
+                    <input type="hidden" id="configId">
+                    
+                    <!-- Basic Info -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações Básicas</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="configName" class="form-label">Nome da Configuração *</label>
+                                <input type="text" class="form-control" id="configName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="configDescription" class="form-label">Descrição</label>
+                                <textarea class="form-control" id="configDescription" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Source Table -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="fas fa-database me-2"></i>Tabela Origem</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="sourceConnection" class="form-label">Conexão *</label>
+                                    <select class="form-select" id="sourceConnection" required onchange="loadSourceTables()">
+                                        <option value="">Selecione uma conexão...</option>
+                                        {% for connection in connections %}
+                                        <option value="{{ connection.id }}">{{ connection.name }} ({{ connection.db_type.upper() }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="sourceTable" class="form-label">Tabela *</label>
+                                    <select class="form-select" id="sourceTable" required onchange="loadSourceColumns()">
+                                        <option value="">Selecione uma tabela...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="sourceColumnsContainer" style="display: none;">
+                                <label class="form-label">Colunas Disponíveis:</label>
+                                <div id="sourceColumnsList" class="border p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+                                    <p class="text-muted text-center">Carregando colunas...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Target Table -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="fas fa-database me-2"></i>Tabela Destino</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="targetConnection" class="form-label">Conexão *</label>
+                                    <select class="form-select" id="targetConnection" required onchange="loadTargetTables()">
+                                        <option value="">Selecione uma conexão...</option>
+                                        {% for connection in connections %}
+                                        <option value="{{ connection.id }}">{{ connection.name }} ({{ connection.db_type.upper() }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="targetTable" class="form-label">Tabela *</label>
+                                    <select class="form-select" id="targetTable" required onchange="loadTargetColumns()">
+                                        <option value="">Selecione uma tabela...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="targetColumnsContainer" style="display: none;">
+                                <label class="form-label">Colunas Disponíveis:</label>
+                                <div id="targetColumnsList" class="border p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+                                    <p class="text-muted text-center">Carregando colunas...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Join Mappings -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0"><i class="fas fa-link me-2"></i>Mapeamento de Chaves de Busca (Join)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Instruções:</strong> Defina quais campos serão usados para relacionar os registros entre as duas tabelas.
+                                Exemplo: campo "id" da tabela origem com campo "user_id" da tabela destino.
+                            </div>
+                            <div id="joinMappingsContainer">
+                                <div class="row mb-2">
+                                    <div class="col-md-5">
+                                        <label class="form-label">Campo Origem</label>
+                                        <select class="form-select join-source-field" required>
+                                            <option value="">Selecione...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label">Campo Destino</label>
+                                        <select class="form-select join-target-field" required>
+                                            <option value="">Selecione...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        <button type="button" class="btn btn-danger w-100" onclick="removeJoinMapping(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addJoinMapping()">
+                                <i class="fas fa-plus me-2"></i>Adicionar Mapeamento
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Comparison Fields -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-danger text-white">
+                            <h6 class="mb-0"><i class="fas fa-balance-scale me-2"></i>Campos para Comparação</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Instruções:</strong> Defina quais campos serão comparados para verificar inconsistências.
+                                O sistema verificará se os valores desses campos são iguais entre as tabelas.
+                            </div>
+                            <div id="comparisonFieldsContainer">
+                                <div class="row mb-2">
+                                    <div class="col-md-5">
+                                        <label class="form-label">Campo Origem</label>
+                                        <select class="form-select comparison-source-field" required>
+                                            <option value="">Selecione...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label">Campo Destino</label>
+                                        <select class="form-select comparison-target-field" required>
+                                            <option value="">Selecione...</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end">
+                                        <button type="button" class="btn btn-danger w-100" onclick="removeComparisonField(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addComparisonField()">
+                                <i class="fas fa-plus me-2"></i>Adicionar Campo
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="saveConfig()">
+                    <i class="fas fa-save me-2"></i>Salvar Configuração
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal for Running Check -->
+<div class="modal fade" id="runCheckModal" tabindex="-1" aria-labelledby="runCheckModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="runCheckModalLabel">
+                    <i class="fas fa-play-circle me-2"></i>Executar Verificação de Consistência
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Deseja executar a verificação de consistência agora?</p>
+                <p class="text-muted mb-0"><small>Esta operação pode levar alguns minutos dependendo do tamanho das tabelas.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" id="confirmRunCheckBtn">
+                    <i class="fas fa-play me-2"></i>Executar Verificação
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success/Error Modal -->
+<div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" id="messageModalHeader">
+                <h5 class="modal-title" id="messageModalLabel">
+                    <i class="fas fa-info-circle me-2"></i>Mensagem
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="messageModalText"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                    <i class="fas fa-check me-2"></i>OK
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfigModal" tabindex="-1" aria-labelledby="deleteConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteConfigModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja deletar esta configuração de consistência?</p>
+                <p class="text-danger mb-0"><small><i class="fas fa-exclamation-circle me-1"></i>Esta ação não pode ser desfeita e todos os dados relacionados serão permanentemente removidos.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteConfigBtn">
+                    <i class="fas fa-trash me-2"></i>Deletar Configuração
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Use existing API_BASE if available, otherwise create consistency-specific one
+const CONSISTENCY_API_BASE = typeof API_BASE !== 'undefined' ? API_BASE + '/consistency' : '/api/consistency';
+const AUTH_TOKEN = '{{ auth_token|safe if auth_token else "" }}';
+const USER_ID = parseInt('{{ current_user.id }}');
+let sourceColumns = [];
+let targetColumns = [];
+let currentConfigId = null;
+
+// Override global showSuccess and showError functions from app.js to use our modal
+// This must be done after app.js is loaded, so we use a small delay
+setTimeout(function() {
+    if (typeof showSuccessModal === 'function') {
+        window.showSuccess = function(message, title = null) {
+            showSuccessModal(message, 'success');
+        };
+        
+        window.showError = function(message, title = null) {
+            showSuccessModal(message, 'error');
+        };
+    }
+}, 100);
+
+// Load configurations on page load and set up event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    loadConfigs();
+    
+    // Check if there's an edit parameter in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const editId = urlParams.get('edit');
+    if (editId) {
+        setTimeout(() => {
+            editConfig(parseInt(editId));
+        }, 500);
+    }
+    
+    // Set up event listener for confirm run check button
+    const confirmBtn = document.getElementById('confirmRunCheckBtn');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', executeRunCheck);
+    }
+    
+    // Set up event listener for confirm delete config button
+    const confirmDeleteBtn = document.getElementById('confirmDeleteConfigBtn');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', executeDeleteConfig);
+    }
+});
+
+async function loadConfigs() {
+    try {
+        const response = await fetch(`${CONSISTENCY_API_BASE}/configs`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) {
+            throw new Error('Erro ao carregar configurações');
+        }
+        
+        const data = await response.json();
+        displayConfigs(data.configs || []);
+    } catch (error) {
+        console.error('Error loading configs:', error);
+        document.getElementById('configsListContainer').innerHTML = 
+            `<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Erro ao carregar configurações: ${error.message}</div>`;
+    }
+}
+
+function displayConfigs(configs) {
+    const container = document.getElementById('configsListContainer');
+    
+    if (configs.length === 0) {
+        container.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle me-2"></i>Nenhuma configuração encontrada. Clique em "Nova Configuração" para criar uma.</div>';
+        return;
+    }
+    
+    let html = '<div class="row">';
+    
+    configs.forEach(config => {
+        const joinCount = Object.keys(config.join_mappings || {}).length;
+        const comparisonCount = (config.comparison_fields || []).length;
+        
+        html += `
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cog me-2"></i>${config.name}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        ${config.description ? `<p class="card-text">${config.description}</p>` : '<p class="card-text text-muted"><em>Sem descrição</em></p>'}
+                        <div class="mb-2">
+                            <small class="text-muted d-block mb-1"><i class="fas fa-database me-1"></i><strong>Origem:</strong></small>
+                            <code>${config.source_table}</code>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted d-block mb-1"><i class="fas fa-database me-1"></i><strong>Destino:</strong></small>
+                            <code>${config.target_table}</code>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted d-block mb-1"><i class="fas fa-link me-1"></i><strong>Mapeamentos Join:</strong></small>
+                            <span class="badge bg-warning">${joinCount}</span>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted d-block mb-1"><i class="fas fa-balance-scale me-1"></i><strong>Campos Comparação:</strong></small>
+                            <span class="badge bg-danger">${comparisonCount}</span>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="btn-group w-100" role="group">
+                            <button class="btn btn-sm btn-success" onclick="runCheck(${config.id})" title="Executar Verificação">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <a href="/relatorios-consistencia?config_id=${config.id}" class="btn btn-sm btn-info" title="Ver Relatórios">
+                                <i class="fas fa-file-alt"></i>
+                            </a>
+                            <button class="btn btn-sm btn-primary" onclick="editConfig(${config.id})" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteConfig(${config.id})" title="Deletar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function showCreateConfigModal() {
+    currentConfigId = null;
+    document.getElementById('configModalLabel').innerHTML = '<i class="fas fa-cog me-2"></i>Nova Configuração de Consistência';
+    document.getElementById('configForm').reset();
+    document.getElementById('configId').value = '';
+    document.getElementById('sourceTable').innerHTML = '<option value="">Selecione uma tabela...</option>';
+    document.getElementById('targetTable').innerHTML = '<option value="">Selecione uma tabela...</option>';
+    document.getElementById('sourceColumnsContainer').style.display = 'none';
+    document.getElementById('targetColumnsContainer').style.display = 'none';
+    document.getElementById('joinMappingsContainer').innerHTML = '';
+    document.getElementById('comparisonFieldsContainer').innerHTML = '';
+    addJoinMapping();
+    addComparisonField();
+    new bootstrap.Modal(document.getElementById('configModal')).show();
+}
+
+async function loadSourceTables() {
+    const connectionId = document.getElementById('sourceConnection').value;
+    if (!connectionId) return;
+    
+    try {
+        const apiBase = typeof API_BASE !== 'undefined' ? API_BASE : '/api';
+        const response = await fetch(`${apiBase}/connections/${connectionId}/tables`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) throw new Error('Erro ao carregar tabelas');
+        
+        const data = await response.json();
+        const select = document.getElementById('sourceTable');
+        select.innerHTML = '<option value="">Selecione uma tabela...</option>';
+        data.tables.forEach(table => {
+            select.innerHTML += `<option value="${table}">${table}</option>`;
+        });
+    } catch (error) {
+        console.error('Error loading source tables:', error);
+        alert('Erro ao carregar tabelas: ' + error.message);
+    }
+}
+
+async function loadTargetTables() {
+    const connectionId = document.getElementById('targetConnection').value;
+    if (!connectionId) return;
+    
+    try {
+        const apiBase = typeof API_BASE !== 'undefined' ? API_BASE : '/api';
+        const response = await fetch(`${apiBase}/connections/${connectionId}/tables`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) throw new Error('Erro ao carregar tabelas');
+        
+        const data = await response.json();
+        const select = document.getElementById('targetTable');
+        select.innerHTML = '<option value="">Selecione uma tabela...</option>';
+        data.tables.forEach(table => {
+            select.innerHTML += `<option value="${table}">${table}</option>`;
+        });
+    } catch (error) {
+        console.error('Error loading target tables:', error);
+        alert('Erro ao carregar tabelas: ' + error.message);
+    }
+}
+
+async function loadSourceColumns() {
+    const connectionId = document.getElementById('sourceConnection').value;
+    const tableName = document.getElementById('sourceTable').value;
+    
+    if (!connectionId || !tableName) {
+        document.getElementById('sourceColumnsContainer').style.display = 'none';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${CONSISTENCY_API_BASE}/connections/${connectionId}/tables/${tableName}/columns`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) throw new Error('Erro ao carregar colunas');
+        
+        const data = await response.json();
+        sourceColumns = data.columns || [];
+        
+        displayColumns('sourceColumnsList', sourceColumns);
+        document.getElementById('sourceColumnsContainer').style.display = 'block';
+        updateFieldSelects();
+    } catch (error) {
+        console.error('Error loading source columns:', error);
+        alert('Erro ao carregar colunas: ' + error.message);
+    }
+}
+
+async function loadTargetColumns() {
+    const connectionId = document.getElementById('targetConnection').value;
+    const tableName = document.getElementById('targetTable').value;
+    
+    if (!connectionId || !tableName) {
+        document.getElementById('targetColumnsContainer').style.display = 'none';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${CONSISTENCY_API_BASE}/connections/${connectionId}/tables/${tableName}/columns`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) throw new Error('Erro ao carregar colunas');
+        
+        const data = await response.json();
+        targetColumns = data.columns || [];
+        
+        displayColumns('targetColumnsList', targetColumns);
+        document.getElementById('targetColumnsContainer').style.display = 'block';
+        updateFieldSelects();
+    } catch (error) {
+        console.error('Error loading target columns:', error);
+        alert('Erro ao carregar colunas: ' + error.message);
+    }
+}
+
+function displayColumns(containerId, columns) {
+    const container = document.getElementById(containerId);
+    if (columns.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center">Nenhuma coluna encontrada</p>';
+        return;
+    }
+    
+    let html = '<div class="d-flex flex-wrap gap-2">';
+    columns.forEach(col => {
+        html += `<span class="badge bg-secondary">${col}</span>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function updateFieldSelects() {
+    // Update join mapping selects
+    document.querySelectorAll('.join-source-field').forEach(select => {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Selecione...</option>';
+        sourceColumns.forEach(col => {
+            select.innerHTML += `<option value="${col}" ${col === currentValue ? 'selected' : ''}>${col}</option>`;
+        });
+    });
+    
+    document.querySelectorAll('.join-target-field').forEach(select => {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Selecione...</option>';
+        targetColumns.forEach(col => {
+            select.innerHTML += `<option value="${col}" ${col === currentValue ? 'selected' : ''}>${col}</option>`;
+        });
+    });
+    
+    // Update comparison field selects
+    document.querySelectorAll('.comparison-source-field').forEach(select => {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Selecione...</option>';
+        sourceColumns.forEach(col => {
+            select.innerHTML += `<option value="${col}" ${col === currentValue ? 'selected' : ''}>${col}</option>`;
+        });
+    });
+    
+    document.querySelectorAll('.comparison-target-field').forEach(select => {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Selecione...</option>';
+        targetColumns.forEach(col => {
+            select.innerHTML += `<option value="${col}" ${col === currentValue ? 'selected' : ''}>${col}</option>`;
+        });
+    });
+}
+
+function addJoinMapping() {
+    const container = document.getElementById('joinMappingsContainer');
+    const div = document.createElement('div');
+    div.className = 'row mb-2';
+    div.innerHTML = `
+        <div class="col-md-5">
+            <label class="form-label">Campo Origem</label>
+            <select class="form-select join-source-field" required>
+                <option value="">Selecione...</option>
+            </select>
+        </div>
+        <div class="col-md-5">
+            <label class="form-label">Campo Destino</label>
+            <select class="form-select join-target-field" required>
+                <option value="">Selecione...</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="button" class="btn btn-danger w-100" onclick="removeJoinMapping(this)">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(div);
+    updateFieldSelects();
+}
+
+function removeJoinMapping(btn) {
+    btn.closest('.row').remove();
+}
+
+function addComparisonField() {
+    const container = document.getElementById('comparisonFieldsContainer');
+    const div = document.createElement('div');
+    div.className = 'row mb-2';
+    div.innerHTML = `
+        <div class="col-md-5">
+            <label class="form-label">Campo Origem</label>
+            <select class="form-select comparison-source-field" required>
+                <option value="">Selecione...</option>
+            </select>
+        </div>
+        <div class="col-md-5">
+            <label class="form-label">Campo Destino</label>
+            <select class="form-select comparison-target-field" required>
+                <option value="">Selecione...</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="button" class="btn btn-danger w-100" onclick="removeComparisonField(this)">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(div);
+    updateFieldSelects();
+}
+
+function removeComparisonField(btn) {
+    btn.closest('.row').remove();
+}
+
+async function saveConfig() {
+    const form = document.getElementById('configForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    // Collect join mappings
+    const joinMappings = {};
+    document.querySelectorAll('#joinMappingsContainer .row').forEach(row => {
+        const sourceField = row.querySelector('.join-source-field').value;
+        const targetField = row.querySelector('.join-target-field').value;
+        if (sourceField && targetField) {
+            joinMappings[sourceField] = targetField;
+        }
+    });
+    
+    if (Object.keys(joinMappings).length === 0) {
+        alert('Adicione pelo menos um mapeamento de join');
+        return;
+    }
+    
+    // Collect comparison fields
+    const comparisonFields = [];
+    document.querySelectorAll('#comparisonFieldsContainer .row').forEach(row => {
+        const sourceField = row.querySelector('.comparison-source-field').value;
+        const targetField = row.querySelector('.comparison-target-field').value;
+        if (sourceField && targetField) {
+            comparisonFields.push({
+                source_field: sourceField,
+                target_field: targetField
+            });
+        }
+    });
+    
+    if (comparisonFields.length === 0) {
+        alert('Adicione pelo menos um campo para comparação');
+        return;
+    }
+    
+    const configData = {
+        name: document.getElementById('configName').value,
+        description: document.getElementById('configDescription').value,
+        source_connection_id: parseInt(document.getElementById('sourceConnection').value),
+        source_table: document.getElementById('sourceTable').value,
+        target_connection_id: parseInt(document.getElementById('targetConnection').value),
+        target_table: document.getElementById('targetTable').value,
+        join_mappings: joinMappings,
+        comparison_fields: comparisonFields
+    };
+    
+    const configId = document.getElementById('configId').value;
+    const url = configId ? `${CONSISTENCY_API_BASE}/configs/${configId}` : `${CONSISTENCY_API_BASE}/configs`;
+    const method = configId ? 'PUT' : 'POST';
+    
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(configData)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Erro ao salvar configuração');
+        }
+        
+        const data = await response.json();
+        // Close config modal
+        const configModal = bootstrap.Modal.getInstance(document.getElementById('configModal'));
+        if (configModal) {
+            configModal.hide();
+        }
+        // Show success message
+        showSuccessModal('Configuração salva com sucesso!');
+        loadConfigs();
+    } catch (error) {
+        console.error('Error saving config:', error);
+        showErrorModal('Erro ao salvar configuração: ' + error.message);
+    }
+}
+
+async function editConfig(configId) {
+    try {
+        const response = await fetch(`${CONSISTENCY_API_BASE}/configs/${configId}`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) throw new Error('Erro ao carregar configuração');
+        
+        const config = await response.json();
+        currentConfigId = configId;
+        
+        document.getElementById('configModalLabel').innerHTML = '<i class="fas fa-edit me-2"></i>Editar Configuração';
+        document.getElementById('configId').value = configId;
+        document.getElementById('configName').value = config.name;
+        document.getElementById('configDescription').value = config.description || '';
+        document.getElementById('sourceConnection').value = config.source_connection_id;
+        document.getElementById('targetConnection').value = config.target_connection_id;
+        
+        await loadSourceTables();
+        await loadTargetTables();
+        
+        setTimeout(() => {
+            document.getElementById('sourceTable').value = config.source_table;
+            document.getElementById('targetTable').value = config.target_table;
+            loadSourceColumns();
+            loadTargetColumns();
+            
+            setTimeout(() => {
+                // Load join mappings
+                document.getElementById('joinMappingsContainer').innerHTML = '';
+                Object.entries(config.join_mappings || {}).forEach(([source, target]) => {
+                    addJoinMapping();
+                    const lastRow = document.querySelector('#joinMappingsContainer .row:last-child');
+                    lastRow.querySelector('.join-source-field').value = source;
+                    lastRow.querySelector('.join-target-field').value = target;
+                });
+                
+                // Load comparison fields
+                document.getElementById('comparisonFieldsContainer').innerHTML = '';
+                (config.comparison_fields || []).forEach(field => {
+                    addComparisonField();
+                    const lastRow = document.querySelector('#comparisonFieldsContainer .row:last-child');
+                    lastRow.querySelector('.comparison-source-field').value = field.source_field;
+                    lastRow.querySelector('.comparison-target-field').value = field.target_field;
+                });
+                
+                new bootstrap.Modal(document.getElementById('configModal')).show();
+            }, 500);
+        }, 500);
+    } catch (error) {
+        console.error('Error loading config:', error);
+        alert('Erro ao carregar configuração: ' + error.message);
+    }
+}
+
+let currentDeleteConfigId = null;
+
+function deleteConfig(configId) {
+    currentDeleteConfigId = configId;
+    const modal = new bootstrap.Modal(document.getElementById('deleteConfigModal'));
+    modal.show();
+}
+
+async function executeDeleteConfig() {
+    const configId = currentDeleteConfigId;
+    if (!configId) return;
+    
+    // Hide modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('deleteConfigModal'));
+    if (modal) {
+        modal.hide();
+    }
+    
+    try {
+        const response = await fetch(`${CONSISTENCY_API_BASE}/configs/${configId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) throw new Error('Erro ao deletar configuração');
+        
+        showSuccessModal('Configuração deletada com sucesso!');
+        loadConfigs();
+    } catch (error) {
+        console.error('Error deleting config:', error);
+        showErrorModal('Erro ao deletar configuração: ' + error.message);
+    }
+}
+
+let currentRunCheckConfigId = null;
+
+function runCheck(configId) {
+    currentRunCheckConfigId = configId;
+    const modal = new bootstrap.Modal(document.getElementById('runCheckModal'));
+    modal.show();
+}
+
+async function executeRunCheck() {
+    const configId = currentRunCheckConfigId;
+    if (!configId) return;
+    
+    // Hide modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('runCheckModal'));
+    if (modal) {
+        modal.hide();
+    }
+    
+    try {
+        showLoading('Executando verificação de consistência...');
+        
+        const response = await fetch(`${CONSISTENCY_API_BASE}/configs/${configId}/run`, {
+            method: 'POST',
+            headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Erro ao executar verificação');
+        }
+        
+        const data = await response.json();
+        hideLoading();
+        
+        if (data.check && data.check.id) {
+            showSuccessModal(`Verificação concluída! Encontradas ${data.total_inconsistencies || 0} inconsistências.`);
+            // Redirect to results page after modal is closed
+            setTimeout(() => {
+                window.location.href = `/consistencia/${data.check.id}/resultados`;
+            }, 2000);
+        } else {
+            showSuccessModal('Verificação concluída!');
+            loadConfigs();
+        }
+    } catch (error) {
+        hideLoading();
+        console.error('Error running check:', error);
+        showErrorModal('Erro ao executar verificação: ' + error.message);
+    }
+}
+
+function getAuthHeaders() {
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+    
+    // Use token from template if available, otherwise try localStorage
+    let token = AUTH_TOKEN || '';
+    let userId = USER_ID || '';
+    
+    try {
+        if (!token) {
+            token = localStorage.getItem('authToken') || localStorage.getItem('token') || '';
+        }
+        if (!userId) {
+            const storedUserId = localStorage.getItem('userId');
+            if (storedUserId) {
+                userId = storedUserId;
+            } else {
+                const currentUserStr = localStorage.getItem('currentUser');
+                if (currentUserStr) {
+                    try {
+                        const currentUserObj = JSON.parse(currentUserStr);
+                        userId = currentUserObj.id || '';
+                    } catch (e) {
+                        console.warn('Could not parse currentUser from localStorage:', e);
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Could not access localStorage:', e);
+    }
+    
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    if (userId) {
+        headers['X-User-Id'] = userId;
+    }
+    
+    return headers;
+}
+
+function showSuccessModal(message, type = 'success') {
+    const modal = document.getElementById('messageModal');
+    const header = document.getElementById('messageModalHeader');
+    const title = document.getElementById('messageModalLabel');
+    const text = document.getElementById('messageModalText');
+    
+    if (!modal || !header || !title || !text) {
+        // Fallback to alert if modal doesn't exist
+        alert(message);
+        return;
+    }
+    
+    // Remove all type classes
+    header.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-white', 'text-dark');
+    
+    // Set header style based on type
+    if (type === 'success') {
+        header.classList.add('bg-success', 'text-white');
+        title.innerHTML = '<i class="fas fa-check-circle me-2"></i>Sucesso';
+    } else if (type === 'error') {
+        header.classList.add('bg-danger', 'text-white');
+        title.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>Erro';
+    } else if (type === 'warning') {
+        header.classList.add('bg-warning', 'text-dark');
+        title.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Aviso';
+    } else {
+        header.classList.add('bg-info', 'text-white');
+        title.innerHTML = '<i class="fas fa-info-circle me-2"></i>Informação';
+    }
+    
+    // Set message
+    text.textContent = message;
+    
+    // Show modal
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+}
+
+function showErrorModal(message) {
+    showSuccessModal(message, 'error');
+}
+
+function showLoading(message) {
+    // Check if loading modal exists
+    const loadingModal = document.getElementById('loadingModal');
+    if (loadingModal && typeof showLoadingModal === 'function') {
+        try {
+            showLoadingModal(message);
+            return;
+        } catch (e) {
+            console.warn('Error showing loading:', e);
+        }
+    }
+    // Fallback: show message in console
+    console.log('Loading:', message);
+}
+
+function hideLoading() {
+    // Check if loading modal exists
+    const loadingModal = document.getElementById('loadingModal');
+    if (loadingModal && typeof hideLoadingModal === 'function') {
+        try {
+            hideLoadingModal();
+            return;
+        } catch (e) {
+            console.warn('Error hiding loading:', e);
+        }
+    }
+    // No fallback needed
+}
+</script>
+{% endblock %}
+

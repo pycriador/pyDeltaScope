@@ -12,11 +12,14 @@ connections_bp = Blueprint('connections', __name__)
 @connections_bp.route('', methods=['GET'])
 @token_required
 def get_connections(user):
-    """Get all database connections for the current user"""
-    connections = DatabaseConnection.query.filter_by(
-        user_id=user.id, 
-        is_active=True
-    ).all()
+    """Get all database connections - admins see all, regular users see only their own"""
+    if user.is_admin:
+        connections = DatabaseConnection.query.filter_by(is_active=True).all()
+    else:
+        connections = DatabaseConnection.query.filter_by(
+            user_id=user.id, 
+            is_active=True
+        ).all()
     return jsonify({
         'connections': [conn.to_dict() for conn in connections]
     }), 200
@@ -25,11 +28,14 @@ def get_connections(user):
 @connections_bp.route('/<int:connection_id>', methods=['GET'])
 @token_required
 def get_connection(user, connection_id):
-    """Get a specific database connection"""
-    connection = DatabaseConnection.query.filter_by(
-        id=connection_id, 
-        user_id=user.id
-    ).first()
+    """Get a specific database connection - admins can see any, regular users only their own"""
+    if user.is_admin:
+        connection = DatabaseConnection.query.filter_by(id=connection_id).first()
+    else:
+        connection = DatabaseConnection.query.filter_by(
+            id=connection_id, 
+            user_id=user.id
+        ).first()
     
     if not connection:
         return jsonify({'message': 'Connection not found'}), 404
@@ -74,11 +80,14 @@ def create_connection(user):
 @connections_bp.route('/<int:connection_id>', methods=['PUT'])
 @token_required
 def update_connection(user, connection_id):
-    """Update a database connection"""
-    connection = DatabaseConnection.query.filter_by(
-        id=connection_id, 
-        user_id=user.id
-    ).first()
+    """Update a database connection - admins can update any, regular users only their own"""
+    if user.is_admin:
+        connection = DatabaseConnection.query.filter_by(id=connection_id).first()
+    else:
+        connection = DatabaseConnection.query.filter_by(
+            id=connection_id, 
+            user_id=user.id
+        ).first()
     
     if not connection:
         return jsonify({'message': 'Connection not found'}), 404
@@ -123,11 +132,14 @@ def update_connection(user, connection_id):
 @connections_bp.route('/<int:connection_id>', methods=['DELETE'])
 @token_required
 def delete_connection(user, connection_id):
-    """Delete a database connection (soft delete)"""
-    connection = DatabaseConnection.query.filter_by(
-        id=connection_id, 
-        user_id=user.id
-    ).first()
+    """Delete a database connection (soft delete) - admins can delete any, regular users only their own"""
+    if user.is_admin:
+        connection = DatabaseConnection.query.filter_by(id=connection_id).first()
+    else:
+        connection = DatabaseConnection.query.filter_by(
+            id=connection_id, 
+            user_id=user.id
+        ).first()
     
     if not connection:
         return jsonify({'message': 'Connection not found'}), 404
@@ -145,11 +157,14 @@ def delete_connection(user, connection_id):
 @connections_bp.route('/<int:connection_id>/test', methods=['POST'])
 @token_required
 def test_connection(user, connection_id):
-    """Test a database connection"""
-    connection = DatabaseConnection.query.filter_by(
-        id=connection_id, 
-        user_id=user.id
-    ).first()
+    """Test a database connection - admins can test any, regular users only their own"""
+    if user.is_admin:
+        connection = DatabaseConnection.query.filter_by(id=connection_id).first()
+    else:
+        connection = DatabaseConnection.query.filter_by(
+            id=connection_id, 
+            user_id=user.id
+        ).first()
     
     if not connection:
         return jsonify({'message': 'Connection not found'}), 404
@@ -195,11 +210,14 @@ def test_connection(user, connection_id):
 @connections_bp.route('/<int:connection_id>/tables', methods=['GET'])
 @token_required
 def get_connection_tables(user, connection_id):
-    """Get tables from a database connection"""
-    connection = DatabaseConnection.query.filter_by(
-        id=connection_id, 
-        user_id=user.id
-    ).first()
+    """Get tables from a database connection - admins can access any, regular users only their own"""
+    if user.is_admin:
+        connection = DatabaseConnection.query.filter_by(id=connection_id).first()
+    else:
+        connection = DatabaseConnection.query.filter_by(
+            id=connection_id, 
+            user_id=user.id
+        ).first()
     
     if not connection:
         return jsonify({'message': 'Connection not found'}), 404
@@ -261,11 +279,14 @@ def get_connection_tables(user, connection_id):
 @connections_bp.route('/<int:connection_id>/tables/<table_name>/info', methods=['GET'])
 @token_required
 def get_table_info(user, connection_id, table_name):
-    """Get table information"""
-    connection = DatabaseConnection.query.filter_by(
-        id=connection_id, 
-        user_id=user.id
-    ).first()
+    """Get table information - admins can access any, regular users only their own"""
+    if user.is_admin:
+        connection = DatabaseConnection.query.filter_by(id=connection_id).first()
+    else:
+        connection = DatabaseConnection.query.filter_by(
+            id=connection_id, 
+            user_id=user.id
+        ).first()
     
     if not connection:
         return jsonify({'message': 'Connection not found'}), 404

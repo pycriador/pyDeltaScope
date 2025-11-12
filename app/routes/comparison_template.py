@@ -9,10 +9,14 @@ comparison_template_bp = Blueprint('comparison_template', __name__)
 @login_required_template
 def comparison_page(current_user):
     """Render comparison page"""
-    projects = Project.query.filter_by(
-        user_id=current_user.id,
-        is_active=True
-    ).all()
+    # Admins see all projects, regular users see only their own
+    if current_user.is_admin:
+        projects = Project.query.filter_by(is_active=True).all()
+    else:
+        projects = Project.query.filter_by(
+            user_id=current_user.id,
+            is_active=True
+        ).all()
     
     return render_template('comparison.html', 
                          projects=projects, 

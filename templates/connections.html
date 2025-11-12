@@ -6,7 +6,7 @@
 <div id="connectionsSection">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="fas fa-database me-2"></i>Conexões de Banco de Dados</h2>
-        <button class="btn btn-primary" onclick="window.location.href='/conexoes/novo'">
+        <button class="btn btn-primary" onclick="showCreateConnectionModal()">
             <i class="fas fa-plus me-1"></i>Nova Conexão
         </button>
     </div>
@@ -42,11 +42,9 @@
                         <a href="/conexoes/{{ conn.id }}/editar" class="btn btn-sm btn-primary" title="Editar">
                             <i class="fas fa-edit"></i>
                         </a>
-                        <a href="/api/connections/{{ conn.id }}" class="btn btn-sm btn-danger" 
-                           onclick="return confirm('Tem certeza que deseja deletar a conexão {{ conn.name }}?');" 
-                           title="Deletar">
+                        <button onclick="deleteConnection({{ conn.id }}, '{{ conn.name }}')" class="btn btn-sm btn-danger" title="Deletar">
                             <i class="fas fa-trash"></i>
-                        </a>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -56,9 +54,483 @@
     {% else %}
     <div class="alert alert-info">
         <i class="fas fa-info-circle me-2"></i>
-        Nenhuma conexão encontrada. <a href="/conexoes/novo" class="alert-link">Crie uma nova conexão</a> para começar.
+        Nenhuma conexão encontrada. <a href="#" class="alert-link" onclick="showCreateConnectionModal(); return false;">Crie uma nova conexão</a> para começar.
     </div>
     {% endif %}
 </div>
+
+<!-- Modal de Criação de Conexão -->
+<div class="modal fade" id="createConnectionModal" tabindex="-1" aria-labelledby="createConnectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="createConnectionModalLabel">
+                    <i class="fas fa-database me-2"></i>Nova Conexão de Banco de Dados
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createConnectionForm">
+                    <div class="mb-3">
+                        <label for="connectionName" class="form-label">
+                            <i class="fas fa-tag me-2"></i>Nome da Conexão <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="connectionName" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="connectionDescription" class="form-label">
+                            <i class="fas fa-align-left me-2"></i>Descrição
+                        </label>
+                        <textarea class="form-control" id="connectionDescription" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="connectionDbType" class="form-label">
+                            <i class="fas fa-database me-2"></i>Tipo de Banco <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="connectionDbType" required>
+                            <option value="sqlite">SQLite</option>
+                            <option value="mariadb">MariaDB</option>
+                            <option value="mysql">MySQL</option>
+                        </select>
+                    </div>
+                    
+                    <div id="connectionDbConfig">
+                        <!-- Config fields will be dynamically inserted here -->
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-outline-primary" onclick="testConnectionForNew()">
+                    <i class="fas fa-vial me-2"></i>Testar Conexão
+                </button>
+                <button type="button" class="btn btn-primary" onclick="createConnection()">
+                    <i class="fas fa-save me-2"></i>Criar Conexão
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação para Deletar Conexão -->
+<div class="modal fade" id="deleteConnectionModal" tabindex="-1" aria-labelledby="deleteConnectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteConnectionModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja deletar a conexão <strong id="deleteConnectionName"></strong>?</p>
+                <div class="alert alert-warning mb-3">
+                    <i class="fas fa-info-circle me-2"></i><strong>Atenção:</strong> Esta ação não pode ser desfeita e todos os projetos que usam esta conexão serão afetados.
+                </div>
+                <p class="text-danger mb-0"><i class="fas fa-exclamation-circle me-1"></i><strong>ATENÇÃO:</strong> Todos os dados relacionados serão permanentemente removidos.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteConnectionBtn">
+                    <i class="fas fa-trash me-2"></i>Deletar Conexão
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // API_BASE is already defined in app.js, but check if it exists
+    if (typeof API_BASE === 'undefined') {
+        window.API_BASE = '/api';
+    }
+    const AUTH_TOKEN = '{{ auth_token|safe if auth_token else "" }}';
+    const USER_ID = parseInt('{{ current_user.id }}');
+    
+    // Toast notification function
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'info'} alert-dismissible fade show position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 400px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); animation: slideInRight 0.3s ease-out;';
+        
+        if (type === 'success') {
+            toast.style.backgroundColor = '#198754';
+            toast.style.color = 'white';
+            toast.style.border = 'none';
+        } else if (type === 'error') {
+            toast.style.backgroundColor = '#dc3545';
+            toast.style.color = 'white';
+            toast.style.border = 'none';
+        } else if (type === 'warning') {
+            toast.style.backgroundColor = '#ffc107';
+            toast.style.color = '#000';
+            toast.style.border = 'none';
+        } else {
+            toast.style.backgroundColor = '#0dcaf0';
+            toast.style.color = '#000';
+            toast.style.border = 'none';
+        }
+        
+        const icons = {
+            'success': 'fa-check-circle',
+            'error': 'fa-exclamation-circle',
+            'warning': 'fa-exclamation-triangle',
+            'info': 'fa-info-circle'
+        };
+        
+        toast.innerHTML = `
+            <i class="fas ${icons[type] || 'fa-info-circle'} me-2"></i><strong>${escapeHtml(message)}</strong>
+            <button type="button" class="btn-close ${type === 'success' || type === 'error' ? 'btn-close-white' : ''}" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.remove();
+                    }
+                }, 300);
+            }
+        }, 5000);
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Variables for delete connection
+    let currentDeleteConnectionId = null;
+    let currentDeleteConnectionName = null;
+    
+    // Show create connection modal
+    function showCreateConnectionModal() {
+        updateConnectionDbConfig();
+        const modalElement = document.getElementById('createConnectionModal');
+        if (modalElement) {
+            if (typeof $ !== 'undefined') {
+                $('#createConnectionModal').modal('show');
+            } else {
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            }
+        }
+    }
+    
+    // Update connection DB config fields
+    function updateConnectionDbConfig() {
+        const typeSelect = document.getElementById('connectionDbType');
+        if (!typeSelect) return;
+        
+        const type = typeSelect.value;
+        const container = document.getElementById('connectionDbConfig');
+        if (!container) return;
+        
+        if (type === 'sqlite') {
+            container.innerHTML = `
+                <div class="mb-3">
+                    <label for="connectionDbPath" class="form-label">
+                        <i class="fas fa-folder me-2"></i>Caminho do Arquivo <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" class="form-control" id="connectionDbPath" placeholder="instance/deltascope.db" required>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="connectionDbHost" class="form-label">
+                            <i class="fas fa-server me-2"></i>Host <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="connectionDbHost" value="localhost" placeholder="localhost" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="connectionDbPort" class="form-label">
+                            <i class="fas fa-network-wired me-2"></i>Porta <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" class="form-control" id="connectionDbPort" value="3306" placeholder="3306" required>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="connectionDbUser" class="form-label">
+                            <i class="fas fa-user me-2"></i>Usuário <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="connectionDbUser" value="root" placeholder="root" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="connectionDbPassword" class="form-label">
+                            <i class="fas fa-lock me-2"></i>Senha <span class="text-danger">*</span>
+                        </label>
+                        <input type="password" class="form-control" id="connectionDbPassword" placeholder="Senha do banco" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="connectionDbName" class="form-label">
+                        <i class="fas fa-database me-2"></i>Database <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" class="form-control" id="connectionDbName" placeholder="Nome do banco" required>
+                </div>
+            `;
+        }
+    }
+    
+    // Test connection for new connection
+    async function testConnectionForNew() {
+        const dbType = document.getElementById('connectionDbType').value;
+        let dbConfig = {};
+        
+        if (dbType === 'sqlite') {
+            const path = document.getElementById('connectionDbPath').value.trim();
+            if (!path) {
+                showToast('Preencha o caminho do arquivo', 'error');
+                return;
+            }
+            dbConfig = { path: path };
+        } else {
+            const host = document.getElementById('connectionDbHost').value.trim();
+            const port = document.getElementById('connectionDbPort').value.trim();
+            const user = document.getElementById('connectionDbUser').value.trim();
+            const password = document.getElementById('connectionDbPassword').value;
+            const database = document.getElementById('connectionDbName').value.trim();
+            
+            if (!host || !port || !user || !database) {
+                showToast('Preencha todos os campos obrigatórios', 'error');
+                return;
+            }
+            
+            dbConfig = {
+                host: host,
+                port: parseInt(port),
+                user: user,
+                password: password,
+                database: database
+            };
+        }
+        
+        try {
+            const response = await fetch(`${API_BASE}/tables/test-connection`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${AUTH_TOKEN}`,
+                    'X-User-Id': USER_ID
+                },
+                body: JSON.stringify({
+                    db_config: dbConfig,
+                    type: dbType
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast('Conexão testada com sucesso!', 'success');
+            } else {
+                showToast('Erro ao testar conexão: ' + (data.message || 'Erro desconhecido'), 'error');
+            }
+        } catch (error) {
+            showToast('Erro ao testar conexão: ' + error.message, 'error');
+        }
+    }
+    
+    // Create connection
+    async function createConnection() {
+        const name = document.getElementById('connectionName').value.trim();
+        const description = document.getElementById('connectionDescription').value.trim();
+        const dbType = document.getElementById('connectionDbType').value;
+        
+        if (!name) {
+            showToast('Preencha o nome da conexão', 'error');
+            return;
+        }
+        
+        let dbConfig = {};
+        
+        if (dbType === 'sqlite') {
+            const path = document.getElementById('connectionDbPath').value.trim();
+            if (!path) {
+                showToast('Preencha o caminho do arquivo', 'error');
+                return;
+            }
+            dbConfig = { path: path };
+        } else {
+            const host = document.getElementById('connectionDbHost').value.trim();
+            const port = document.getElementById('connectionDbPort').value.trim();
+            const user = document.getElementById('connectionDbUser').value.trim();
+            const password = document.getElementById('connectionDbPassword').value;
+            const database = document.getElementById('connectionDbName').value.trim();
+            
+            if (!host || !port || !user || !database) {
+                showToast('Preencha todos os campos obrigatórios', 'error');
+                return;
+            }
+            
+            dbConfig = {
+                host: host,
+                port: parseInt(port),
+                user: user,
+                password: password,
+                database: database
+            };
+        }
+        
+        try {
+            const response = await fetch(`${API_BASE}/connections`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${AUTH_TOKEN}`,
+                    'X-User-Id': USER_ID
+                },
+                body: JSON.stringify({
+                    name: name,
+                    description: description,
+                    db_type: dbType,
+                    db_config: dbConfig
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                showToast('Conexão criada com sucesso!', 'success');
+                
+                // Hide modal
+                const modalElement = document.getElementById('createConnectionModal');
+                if (modalElement) {
+                    if (typeof $ !== 'undefined') {
+                        $('#createConnectionModal').modal('hide');
+                    } else {
+                        const modal = bootstrap.Modal.getInstance(modalElement);
+                        if (modal) modal.hide();
+                    }
+                }
+                
+                // Clear form
+                document.getElementById('createConnectionForm').reset();
+                updateConnectionDbConfig();
+                
+                // Reload page after short delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showToast(data.message || 'Erro ao criar conexão', 'error');
+            }
+        } catch (error) {
+            showToast('Erro ao criar conexão: ' + error.message, 'error');
+        }
+    }
+    
+    // Delete connection function
+    window.deleteConnection = function(connectionId, connectionName) {
+        currentDeleteConnectionId = connectionId;
+        currentDeleteConnectionName = connectionName;
+        
+        const modalBody = document.getElementById('deleteConnectionName');
+        if (modalBody) {
+            modalBody.textContent = connectionName;
+        }
+        
+        const modalElement = document.getElementById('deleteConnectionModal');
+        if (modalElement) {
+            if (typeof $ !== 'undefined') {
+                $('#deleteConnectionModal').modal('show');
+            } else {
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            }
+        }
+    };
+    
+    // Execute delete connection
+    async function executeDeleteConnection() {
+        if (!currentDeleteConnectionId) return;
+        
+        const connectionId = currentDeleteConnectionId;
+        
+        // Hide modal
+        const modalElement = document.getElementById('deleteConnectionModal');
+        if (modalElement) {
+            if (typeof $ !== 'undefined') {
+                $('#deleteConnectionModal').modal('hide');
+            } else {
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) modal.hide();
+            }
+        }
+        
+        // Show loading
+        const confirmBtn = document.getElementById('confirmDeleteConnectionBtn');
+        const originalHtml = confirmBtn ? confirmBtn.innerHTML : '';
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deletando...';
+        }
+        
+        try {
+            const response = await fetch(`${API_BASE}/connections/${connectionId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${AUTH_TOKEN}`,
+                    'X-User-Id': USER_ID,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                showToast(data.message || 'Conexão deletada com sucesso!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showToast(data.message || 'Erro ao deletar conexão', 'error');
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = originalHtml;
+                }
+            }
+        } catch (error) {
+            showToast('Erro ao deletar conexão: ' + error.message, 'error');
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = originalHtml;
+            }
+        }
+    }
+    
+    // Initialize on document ready
+    document.addEventListener('DOMContentLoaded', function() {
+        // Update DB config when type changes
+        const dbTypeSelect = document.getElementById('connectionDbType');
+        if (dbTypeSelect) {
+            dbTypeSelect.addEventListener('change', updateConnectionDbConfig);
+        }
+        
+        // Initialize config on load
+        updateConnectionDbConfig();
+        
+        // Bind delete confirmation button
+        const confirmDeleteBtn = document.getElementById('confirmDeleteConnectionBtn');
+        if (confirmDeleteBtn) {
+            confirmDeleteBtn.addEventListener('click', executeDeleteConnection);
+        }
+    });
+</script>
 {% endblock %}
 

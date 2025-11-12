@@ -4,19 +4,36 @@ from app.models.project import Project
 from app.models.database_connection import DatabaseConnection
 from app.models.user import User
 from app import db
-from app.utils.security import token_required
+from app.utils.security import token_required, get_users_with_execute_permission
 from app.services.table_mapper import TableMapper
 from app.services.database import DatabaseService
 from pathlib import Path
+from sqlalchemy import or_
 
 projects_bp = Blueprint('projects', __name__)
 
 
 @projects_bp.route('', methods=['GET'])
+@projects_bp.route('/', methods=['GET'])
 @token_required
 def get_projects(user):
-    """Get all projects for the current user"""
-    projects = Project.query.filter_by(user_id=user.id, is_active=True).all()
+    """Get all projects - users see projects created by users with execute permission"""
+    if user.is_admin:
+        # Admins see all projects
+        projects = Project.query.filter_by(is_active=True).all()
+    else:
+        # Get user IDs that have execute permission for projects
+        authorized_user_ids = get_users_with_execute_permission('projects')
+        if not authorized_user_ids:
+            # No users have permission (shouldn't happen if user got here)
+            projects = []
+        else:
+            # Show projects created by any user with execute permission
+            projects = Project.query.filter(
+                Project.user_id.in_(authorized_user_ids),
+                Project.is_active == True
+            ).all()
+    
     return jsonify({
         'projects': [project.to_dict() for project in projects]
     }), 200
@@ -25,8 +42,19 @@ def get_projects(user):
 @projects_bp.route('/<int:project_id>', methods=['GET'])
 @token_required
 def get_project(user, project_id):
-    """Get a specific project"""
-    project = Project.query.filter_by(id=project_id, user_id=user.id).first()
+    """Get a specific project - users can see projects created by users with execute permission"""
+    if user.is_admin:
+        project = Project.query.filter_by(id=project_id).first()
+    else:
+        # Get user IDs that have execute permission for projects
+        authorized_user_ids = get_users_with_execute_permission('projects')
+        if not authorized_user_ids:
+            project = None
+        else:
+            project = Project.query.filter(
+                Project.id == project_id,
+                Project.user_id.in_(authorized_user_ids)
+            ).first()
     
     if not project:
         return jsonify({'message': 'Project not found'}), 404
@@ -35,6 +63,7 @@ def get_project(user, project_id):
 
 
 @projects_bp.route('', methods=['POST'])
+@projects_bp.route('/', methods=['POST'])
 @token_required
 def create_project(user):
     """Create a new project"""
@@ -50,16 +79,19 @@ def create_project(user):
     if not source_connection_id or not target_connection_id:
         return jsonify({'message': 'Source and target connection IDs required'}), 400
     
-    # Get connections
-    source_connection = DatabaseConnection.query.filter_by(
-        id=source_connection_id, 
-        user_id=user.id
-    ).first()
-    
-    target_connection = DatabaseConnection.query.filter_by(
-        id=target_connection_id, 
-        user_id=user.id
-    ).first()
+    # Get connections - admins can use any, regular users only their own
+    if user.is_admin:
+        source_connection = DatabaseConnection.query.filter_by(id=source_connection_id).first()
+        target_connection = DatabaseConnection.query.filter_by(id=target_connection_id).first()
+    else:
+        source_connection = DatabaseConnection.query.filter_by(
+            id=source_connection_id, 
+            user_id=user.id
+        ).first()
+        target_connection = DatabaseConnection.query.filter_by(
+            id=target_connection_id, 
+            user_id=user.id
+        ).first()
     
     if not source_connection or not target_connection:
         return jsonify({'message': 'Connection not found'}), 404
@@ -171,8 +203,19 @@ def create_project(user):
 @projects_bp.route('/<int:project_id>', methods=['PUT'])
 @token_required
 def update_project(user, project_id):
-    """Update a project"""
-    project = Project.query.filter_by(id=project_id, user_id=user.id).first()
+    """Update a project - users can update projects created by users with execute permission"""
+    if user.is_admin:
+        project = Project.query.filter_by(id=project_id).first()
+    else:
+        # Get user IDs that have execute permission for projects
+        authorized_user_ids = get_users_with_execute_permission('projects')
+        if not authorized_user_ids:
+            project = None
+        else:
+            project = Project.query.filter(
+                Project.id == project_id,
+                Project.user_id.in_(authorized_user_ids)
+            ).first()
     
     if not project:
         return jsonify({'message': 'Project not found'}), 404
@@ -331,8 +374,19 @@ def update_project(user, project_id):
 @projects_bp.route('/<int:project_id>', methods=['DELETE'])
 @token_required
 def delete_project(user, project_id):
-    """Delete a project (soft delete)"""
-    project = Project.query.filter_by(id=project_id, user_id=user.id).first()
+    """Delete a project (soft delete) - users can delete projects created by users with execute permission"""
+    if user.is_admin:
+        project = Project.query.filter_by(id=project_id).first()
+    else:
+        # Get user IDs that have execute permission for projects
+        authorized_user_ids = get_users_with_execute_permission('projects')
+        if not authorized_user_ids:
+            project = None
+        else:
+            project = Project.query.filter(
+                Project.id == project_id,
+                Project.user_id.in_(authorized_user_ids)
+            ).first()
     
     if not project:
         return jsonify({'message': 'Project not found'}), 404
