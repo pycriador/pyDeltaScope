@@ -36,9 +36,9 @@
                 </div>
                 <div class="card-footer">
                     <div class="btn-group w-100" role="group">
-                        <a href="/api/connections/{{ conn.id }}/test" class="btn btn-sm btn-info" title="Testar Conexão">
+                        <button onclick="testConnectionById({{ conn.id }})" class="btn btn-sm btn-info" title="Testar Conexão">
                             <i class="fas fa-vial"></i>
-                        </a>
+                        </button>
                         <a href="/conexoes/{{ conn.id }}/editar" class="btn btn-sm btn-primary" title="Editar">
                             <i class="fas fa-edit"></i>
                         </a>
@@ -332,6 +332,29 @@
                     db_config: dbConfig,
                     type: dbType
                 })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showToast('Conexão testada com sucesso!', 'success');
+            } else {
+                showToast('Erro ao testar conexão: ' + (data.message || 'Erro desconhecido'), 'error');
+            }
+        } catch (error) {
+            showToast('Erro ao testar conexão: ' + error.message, 'error');
+        }
+    }
+    
+    // Test connection by ID
+    async function testConnectionById(connectionId) {
+        try {
+            const response = await fetch(`${API_BASE}/connections/${connectionId}/test`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${AUTH_TOKEN}`,
+                    'X-User-Id': USER_ID
+                }
             });
             
             const data = await response.json();

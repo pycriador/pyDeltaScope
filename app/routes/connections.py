@@ -154,7 +154,7 @@ def delete_connection(user, connection_id):
         return jsonify({'message': f'Error deleting connection: {str(e)}'}), 500
 
 
-@connections_bp.route('/<int:connection_id>/test', methods=['POST'])
+@connections_bp.route('/<int:connection_id>/test', methods=['GET', 'POST'])
 @token_required
 def test_connection(user, connection_id):
     """Test a database connection - admins can test any, regular users only their own"""
