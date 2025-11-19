@@ -47,6 +47,41 @@
         </div>
     </div>
     
+    <!-- Profile Management Section -->
+    <div id="profileSection" class="card shadow mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0"><i class="fas fa-save me-2"></i>Perfis de Execução</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <label for="profileSelect" class="form-label">Carregar Perfil:</label>
+                    <div class="input-group mb-2">
+                        <select id="profileSelect" class="form-select">
+                            <option value="">-- Selecione um perfil --</option>
+                        </select>
+                        <button class="btn btn-outline-primary" onclick="loadProfile()">
+                            <i class="fas fa-download me-1"></i>Carregar
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="deleteProfile()">
+                            <i class="fas fa-trash me-1"></i>Excluir
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label for="profileName" class="form-label">Salvar Perfil:</label>
+                    <div class="input-group mb-2">
+                        <input type="text" id="profileName" class="form-control" placeholder="Nome do perfil">
+                        <input type="text" id="profileDescription" class="form-control" placeholder="Descrição (opcional)">
+                        <button class="btn btn-success" onclick="saveProfile()">
+                            <i class="fas fa-save me-1"></i>Salvar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Column Selection Section -->
     <div id="columnSelectionSection" class="card shadow mb-4">
         <div class="card-header bg-info text-white">
@@ -98,6 +133,56 @@
                     <button id="loadColumnsBtn" class="btn btn-info">
                         <i class="fas fa-sync me-2"></i>Carregar Colunas
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Ignored Columns Section -->
+    <div id="ignoredColumnsSection" class="card shadow mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0"><i class="fas fa-eye-slash me-2"></i>Colunas a Ignorar</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Instruções:</strong>
+                <ul class="mb-0 mt-2">
+                    <li>Selecione as colunas que devem ser ignoradas durante a comparação</li>
+                    <li>Essas colunas não serão comparadas entre origem e destino</li>
+                    <li>Útil para ignorar colunas como timestamps, logs, etc.</li>
+                </ul>
+            </div>
+            
+            <div id="loadingIgnoredColumns" class="alert alert-info text-center" style="display: none;">
+                <i class="fas fa-spinner fa-spin me-2"></i>Carregando colunas...
+            </div>
+            
+            <div id="ignoredColumnsContainer" style="display: none;">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="mb-3">
+                            <i class="fas fa-database me-2"></i>Tabela Origem: <code class="table-name-code">{{ project.source_table }}</code>
+                        </h6>
+                        <div id="sourceIgnoredColumnsList" class="border p-3 rounded" style="max-height: 300px; overflow-y: auto;">
+                            <p class="text-muted text-center">Carregando colunas...</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="mb-3">
+                            <i class="fas fa-database me-2"></i>Tabela Destino: <code class="table-name-code">{{ project.target_table }}</code>
+                        </h6>
+                        <div id="targetIgnoredColumnsList" class="border p-3 rounded" style="max-height: 300px; overflow-y: auto;">
+                            <p class="text-muted text-center">Carregando colunas...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="selectedIgnoredColumnsContainer" class="mt-3" style="display: none;">
+                    <h6 class="mb-2"><i class="fas fa-list me-2"></i>Colunas Ignoradas Selecionadas:</h6>
+                    <div id="selectedIgnoredColumnsList" class="alert alert-light">
+                        <p class="text-muted mb-0">Nenhuma coluna selecionada para ignorar</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -307,6 +392,8 @@
     let targetColumns = [];
     // Use a local variable name to avoid conflicts with app.js global variable
     let comparisonPrimaryKeyMappings = [];
+    let ignoredColumns = []; // List of columns to ignore during comparison
+    let profiles = []; // List of saved profiles
     
     // Get auth headers
     function getAuthHeaders() {
@@ -355,7 +442,8 @@
                 headers: headers,
                 body: JSON.stringify({
                     primary_keys: primary_keys,
-                    key_mappings: key_mappings
+                    key_mappings: key_mappings,
+                    ignored_columns: ignoredColumns
                 })
             });
             
@@ -518,16 +606,31 @@
         alert(message);
     }
     
-    function showConfirmationModal(message) {
+    function showConfirmationModal(message, useHtml = false, isDelete = false) {
         return new Promise((resolve) => {
-            $('#confirmationMessage').text(message);
+            // Support both text and HTML
+            if (useHtml) {
+                $('#confirmationMessage').html(message);
+            } else {
+                $('#confirmationMessage').text(message);
+            }
+            
+            // Update button style for delete actions
+            const confirmBtn = $('#confirmationConfirmBtn');
+            if (isDelete) {
+                confirmBtn.removeClass('btn-warning').addClass('btn-danger');
+                confirmBtn.html('<i class="fas fa-trash me-2"></i>Excluir');
+            } else {
+                confirmBtn.removeClass('btn-danger').addClass('btn-warning');
+                confirmBtn.html('Confirmar');
+            }
             
             // Remove previous handlers
-            $('#confirmationConfirmBtn').off('click');
+            confirmBtn.off('click');
             $('#confirmationCancelBtn').off('click');
             
             // Add new handlers
-            $('#confirmationConfirmBtn').on('click', function() {
+            confirmBtn.on('click', function() {
                 $('#confirmationModal').modal('hide');
                 resolve(true);
             });
@@ -645,6 +748,11 @@
                 
                 loadingDiv.hide();
                 columnsContainer.show();
+                
+                // Auto-load ignored columns after columns are loaded
+                loadIgnoredColumns().catch(err => {
+                    console.error('Error loading ignored columns:', err);
+                });
                 
                 resolve();
             })
@@ -831,13 +939,363 @@
         }
     }
     
+    // ============================================================================
+    // PROFILE MANAGEMENT FUNCTIONS
+    // ============================================================================
+    
+    // Load profiles for the project
+    async function loadProfiles() {
+        try {
+            const headers = getAuthHeaders();
+            const response = await fetch(`${API_BASE}/comparisons/profiles/project/${PROJECT_ID}`, {
+                method: 'GET',
+                headers: headers
+            });
+            
+            if (!response.ok) {
+                throw new Error('Erro ao carregar perfis');
+            }
+            
+            const data = await response.json();
+            profiles = data.profiles || [];
+            
+            // Update profile select
+            const select = document.getElementById('profileSelect');
+            select.innerHTML = '<option value="">-- Selecione um perfil --</option>';
+            profiles.forEach(profile => {
+                const option = document.createElement('option');
+                option.value = profile.id;
+                option.textContent = profile.name;
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading profiles:', error);
+        }
+    }
+    
+    // Load a profile
+    async function loadProfile() {
+        const select = document.getElementById('profileSelect');
+        const profileId = parseInt(select.value);
+        
+        if (!profileId) {
+            showErrorModal('Selecione um perfil para carregar');
+            return;
+        }
+        
+        try {
+            const headers = getAuthHeaders();
+            const response = await fetch(`${API_BASE}/comparisons/profiles/${profileId}`, {
+                method: 'GET',
+                headers: headers
+            });
+            
+            if (!response.ok) {
+                throw new Error('Erro ao carregar perfil');
+            }
+            
+            const data = await response.json();
+            const profile = data.profile;
+            
+            // Load columns first if not loaded
+            if (sourceColumns.length === 0 || targetColumns.length === 0) {
+                await loadColumns();
+            }
+            
+            // Apply profile settings
+            comparisonPrimaryKeyMappings = [];
+            ignoredColumns = profile.ignored_columns || [];
+            
+            // Apply primary keys and mappings
+            if (profile.primary_keys && profile.primary_keys.length > 0) {
+                const keyMappings = profile.key_mappings || {};
+                
+                profile.primary_keys.forEach(pk => {
+                    const target = keyMappings[pk] || pk;
+                    comparisonPrimaryKeyMappings.push({
+                        source: pk,
+                        target: target
+                    });
+                    
+                    // Check checkboxes
+                    $(`#source_${pk}`).prop('checked', true);
+                    $(`#target_${target}`).prop('checked', true);
+                });
+            }
+            
+            // Apply ignored columns
+            if (ignoredColumns.length > 0) {
+                ignoredColumns.forEach(col => {
+                    $(`#ignore_source_${col}`).prop('checked', true);
+                    $(`#ignore_target_${col}`).prop('checked', true);
+                });
+                updateIgnoredColumnsDisplay();
+            }
+            
+            updateSelectedKeysDisplay();
+            updateExecuteButton();
+            
+            showSuccessModal('Perfil carregado com sucesso!');
+        } catch (error) {
+            console.error('Error loading profile:', error);
+            showErrorModal(`Erro ao carregar perfil: ${error.message}`);
+        }
+    }
+    
+    // Save a profile
+    async function saveProfile() {
+        const name = document.getElementById('profileName').value.trim();
+        const description = document.getElementById('profileDescription').value.trim();
+        
+        if (!name) {
+            showErrorModal('O nome do perfil é obrigatório');
+            return;
+        }
+        
+        if (comparisonPrimaryKeyMappings.length === 0) {
+            showErrorModal('Selecione pelo menos uma chave primária antes de salvar o perfil');
+            return;
+        }
+        
+        try {
+            const primary_keys = comparisonPrimaryKeyMappings.map(m => m.source);
+            const key_mappings = comparisonPrimaryKeyMappings.reduce((acc, m) => {
+                acc[m.source] = m.target;
+                return acc;
+            }, {});
+            
+            const headers = getAuthHeaders();
+            const response = await fetch(`${API_BASE}/comparisons/profiles`, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({
+                    project_id: PROJECT_ID,
+                    name: name,
+                    description: description,
+                    primary_keys: primary_keys,
+                    key_mappings: key_mappings,
+                    ignored_columns: ignoredColumns
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Erro ao salvar perfil');
+            }
+            
+            // Clear form
+            document.getElementById('profileName').value = '';
+            document.getElementById('profileDescription').value = '';
+            
+            // Reload profiles
+            await loadProfiles();
+            
+            showSuccessModal('Perfil salvo com sucesso!');
+        } catch (error) {
+            console.error('Error saving profile:', error);
+            showErrorModal(`Erro ao salvar perfil: ${error.message}`);
+        }
+    }
+    
+    // Delete a profile
+    async function deleteProfile() {
+        const select = document.getElementById('profileSelect');
+        const profileId = parseInt(select.value);
+        
+        if (!profileId) {
+            showErrorModal('Selecione um perfil para excluir');
+            return;
+        }
+        
+        const profile = profiles.find(p => p.id === profileId);
+        if (!profile) {
+            return;
+        }
+        
+        // Show confirmation modal with HTML support and delete styling
+        showConfirmationModal(`Tem certeza que deseja excluir o perfil "<strong>${profile.name}</strong>"? Esta ação não pode ser desfeita.`, true, true).then(function(confirmed) {
+            if (!confirmed) {
+                return;
+            }
+            
+            // Proceed with deletion
+            (async function() {
+                try {
+                    const headers = getAuthHeaders();
+                    const response = await fetch(`${API_BASE}/comparisons/profiles/${profileId}`, {
+                        method: 'DELETE',
+                        headers: headers
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Erro ao excluir perfil');
+                    }
+                    
+                    // Reload profiles
+                    await loadProfiles();
+                    
+                    showSuccessModal('Perfil excluído com sucesso!');
+                } catch (error) {
+                    console.error('Error deleting profile:', error);
+                    showErrorModal(`Erro ao excluir perfil: ${error.message}`);
+                }
+            })();
+        });
+    }
+    
+    // ============================================================================
+    // IGNORED COLUMNS FUNCTIONS
+    // ============================================================================
+    
+    // Load ignored columns
+    async function loadIgnoredColumns() {
+        if (sourceColumns.length === 0 || targetColumns.length === 0) {
+            await loadColumns();
+        }
+        
+        const loadingDiv = document.getElementById('loadingIgnoredColumns');
+        const container = document.getElementById('ignoredColumnsContainer');
+        
+        loadingDiv.style.display = 'block';
+        container.style.display = 'none';
+        
+        try {
+            // Render source ignored columns
+            const sourceList = document.getElementById('sourceIgnoredColumnsList');
+            sourceList.innerHTML = sourceColumns.map(col => {
+                const isIgnored = ignoredColumns.includes(col.name);
+                return `
+                    <div class="form-check mb-2">
+                        <input class="form-check-input ignore-column-checkbox" 
+                               type="checkbox" 
+                               id="ignore_source_${col.name}" 
+                               data-column="${col.name}" 
+                               data-type="source"
+                               ${isIgnored ? 'checked' : ''}>
+                        <label class="form-check-label" for="ignore_source_${col.name}">
+                            <code>${col.name}</code>
+                            <small class="text-muted">(${col.type})</small>
+                        </label>
+                    </div>
+                `;
+            }).join('');
+            
+            // Render target ignored columns
+            const targetList = document.getElementById('targetIgnoredColumnsList');
+            targetList.innerHTML = targetColumns.map(col => {
+                const isIgnored = ignoredColumns.includes(col.name);
+                return `
+                    <div class="form-check mb-2">
+                        <input class="form-check-input ignore-column-checkbox" 
+                               type="checkbox" 
+                               id="ignore_target_${col.name}" 
+                               data-column="${col.name}" 
+                               data-type="target"
+                               ${isIgnored ? 'checked' : ''}>
+                        <label class="form-check-label" for="ignore_target_${col.name}">
+                            <code>${col.name}</code>
+                            <small class="text-muted">(${col.type})</small>
+                        </label>
+                    </div>
+                `;
+            }).join('');
+            
+            // Add event listeners
+            $('.ignore-column-checkbox').on('change', function() {
+                handleIgnoredColumnSelection($(this));
+            });
+            
+            loadingDiv.style.display = 'none';
+            container.style.display = 'block';
+            updateIgnoredColumnsDisplay();
+        } catch (error) {
+            console.error('Error loading ignored columns:', error);
+            loadingDiv.style.display = 'none';
+            showErrorModal('Erro ao carregar colunas para ignorar');
+        }
+    }
+    
+    // Handle ignored column selection
+    function handleIgnoredColumnSelection($checkbox) {
+        const columnName = $checkbox.data('column');
+        const isChecked = $checkbox.is(':checked');
+        
+        if (isChecked) {
+            if (!ignoredColumns.includes(columnName)) {
+                ignoredColumns.push(columnName);
+            }
+            // Also check the other table's checkbox if column exists
+            const otherCheckbox = $(`#ignore_${$checkbox.data('type') === 'source' ? 'target' : 'source'}_${columnName}`);
+            if (otherCheckbox.length) {
+                otherCheckbox.prop('checked', true);
+            }
+        } else {
+            ignoredColumns = ignoredColumns.filter(col => col !== columnName);
+            // Also uncheck the other table's checkbox
+            const otherCheckbox = $(`#ignore_${$checkbox.data('type') === 'source' ? 'target' : 'source'}_${columnName}`);
+            if (otherCheckbox.length) {
+                otherCheckbox.prop('checked', false);
+            }
+        }
+        
+        updateIgnoredColumnsDisplay();
+    }
+    
+    // Update ignored columns display
+    function updateIgnoredColumnsDisplay() {
+        const container = document.getElementById('selectedIgnoredColumnsContainer');
+        const list = document.getElementById('selectedIgnoredColumnsList');
+        
+        if (ignoredColumns.length === 0) {
+            container.style.display = 'none';
+            return;
+        }
+        
+        container.style.display = 'block';
+        list.innerHTML = ignoredColumns.map(col => {
+            return `<span class="badge bg-warning text-dark me-2 mb-2">
+                <i class="fas fa-eye-slash me-1"></i>
+                <code>${col}</code>
+            </span>`;
+        }).join('');
+    }
+    
+    // ============================================================================
+    // MODAL FUNCTIONS
+    // ============================================================================
+    
+    function showSuccessModal(message) {
+        document.getElementById('successMessage').textContent = message;
+        const modal = new bootstrap.Modal(document.getElementById('successModal'));
+        modal.show();
+    }
+    
+    function showErrorModal(message) {
+        document.getElementById('errorModalMessage').textContent = message;
+        const modal = new bootstrap.Modal(document.getElementById('errorModal'));
+        modal.show();
+    }
+    
+    function showWarningModal(message) {
+        alert(message); // Simple alert for warnings
+    }
+    
     // Setup event listeners
     $(document).ready(function() {
+        // Load profiles on page load
+        loadProfiles();
+        
+        // Load ignored columns when columns are loaded (already handled in loadColumns function)
+        $('#loadColumnsBtn').on('click', async function() {
+            await loadColumns();
+        });
         {% if key_mappings_from_url %}
         // Check if we have key mappings from URL (scheduled task)
         const urlKeyMappings = {{ key_mappings_from_url|tojson }};
         if (Object.keys(urlKeyMappings).length > 0) {
             // Load columns first, then apply mappings
+            // loadIgnoredColumns will be called automatically by loadColumns
             loadColumns().then(() => {
                 // Apply key mappings from URL
                 Object.entries(urlKeyMappings).forEach(([source, target]) => {
@@ -876,17 +1334,16 @@
                 console.error('Error loading columns:', error);
             });
         } else {
+            // loadIgnoredColumns will be called automatically by loadColumns
             loadColumns();
         }
         {% else %}
         // Load columns on page load
+        // loadIgnoredColumns will be called automatically by loadColumns
         loadColumns();
         {% endif %}
         
-        // Load columns button
-        $('#loadColumnsBtn').on('click', function() {
-            loadColumns();
-        });
+        // Load columns button (already handled above)
         
         $('#executeComparisonBtn').on('click', function(e) {
             e.preventDefault();

@@ -41,6 +41,7 @@ class ComparisonResult(db.Model):
     field_name = db.Column(db.String(200), nullable=False)
     source_value = db.Column(db.Text)
     target_value = db.Column(db.Text)
+    target_record_json = db.Column(db.JSON)  # Complete target record data as JSON for webhook namespace
     change_type = db.Column(db.String(50))  # added, deleted, modified
     detected_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -53,11 +54,56 @@ class ComparisonResult(db.Model):
             'field_name': self.field_name,
             'source_value': self.source_value,
             'target_value': self.target_value,
+            'target_record_json': self.target_record_json,
             'change_type': self.change_type,
             'detected_at': self.detected_at.isoformat() if self.detected_at else None
         }
     
     def __repr__(self):
         return f'<ComparisonResult {self.id} - Field {self.field_name}>'
+
+
+class ComparisonProfile(db.Model):
+    """Comparison execution profile model"""
+    __tablename__ = 'comparison_profiles'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'), nullable=False)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    
+    # Execution configuration
+    primary_keys = db.Column(db.JSON, nullable=False)  # List of primary key column names
+    key_mappings = db.Column(db.JSON, default={})  # Mapping from source to target column names
+    ignored_columns = db.Column(db.JSON, default=[])  # List of columns to ignore during comparison
+    
+    # Metadata
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    
+    # Relationships
+    project = db.relationship('Project', backref='comparison_profiles')
+    creator = db.relationship('User', foreign_keys=[created_by])
+    
+    def to_dict(self):
+        """Convert profile to dictionary"""
+        return {
+            'id': self.id,
+            'project_id': self.project_id,
+            'name': self.name,
+            'description': self.description,
+            'primary_keys': self.primary_keys or [],
+            'key_mappings': self.key_mappings or {},
+            'ignored_columns': self.ignored_columns or [],
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'created_by': self.created_by,
+            'is_active': self.is_active
+        }
+    
+    def __repr__(self):
+        return f'<ComparisonProfile {self.id} - {self.name} (Project {self.project_id})>'
 
 

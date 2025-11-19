@@ -2589,6 +2589,12 @@ echo "Colunas destino: " . implode(", ", $columns['target_columns']) . "\n";</co
                         <h5 class="alert-heading"><i class="fas fa-code me-2"></i>Namespaces Disponíveis</h5>
                         <p>Os templates de payload suportam placeholders no formato <code>{{namespace.key}}</code> que são substituídos automaticamente pelos valores reais quando o webhook é enviado.</p>
                         
+                        <div class="alert alert-warning mt-3">
+                            <strong><i class="fas fa-exclamation-triangle me-2"></i>Importante sobre Aspas Duplas:</strong>
+                            <p class="mb-0 mt-2">Quando você usa placeholders em templates JSON, os valores de <strong>string</strong> são automaticamente envolvidos em aspas duplas. Valores numéricos e booleanos não recebem aspas. Isso garante que o JSON gerado seja sempre válido.</p>
+                            <p class="mb-0 mt-2"><strong>Exemplo:</strong> Se <code>{% raw %}{{json_raw.email}}{% endraw %}</code> retornar <code>usuario@exemplo.com</code>, ele será inserido como <code>"usuario@exemplo.com"</code> no JSON final.</p>
+                        </div>
+                        
                         <div class="row mt-3">
                             <div class="col-md-6">
                                 <h6 class="text-primary"><i class="fas fa-exchange-alt me-2"></i>Namespace: <code>comparison</code></h6>
@@ -2612,6 +2618,29 @@ echo "Colunas destino: " . implode(", ", $columns['target_columns']) . "\n";</co
                                     <li><code>{% raw %}{{difference.change_type}}{% endraw %}</code> - Tipo de mudança (added, modified, deleted)</li>
                                     <li><code>{% raw %}{{difference.detected_at}}{% endraw %}</code> - Data/hora de detecção (ISO format)</li>
                                 </ul>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <h6 class="text-warning"><i class="fas fa-project-diagram me-2"></i>Namespace: <code>project</code></h6>
+                                <ul class="small">
+                                    <li><code>{% raw %}{{project.id}}{% endraw %}</code> - ID do projeto</li>
+                                    <li><code>{% raw %}{{project.name}}{% endraw %}</code> - Nome do projeto</li>
+                                    <li><code>{% raw %}{{project.description}}{% endraw %}</code> - Descrição do projeto</li>
+                                    <li><code>{% raw %}{{project.source_table}}{% endraw %}</code> - Nome da tabela origem</li>
+                                    <li><code>{% raw %}{{project.target_table}}{% endraw %}</code> - Nome da tabela destino</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-info"><i class="fas fa-database me-2"></i>Namespace: <code>json_raw</code> <span class="badge bg-success">Novo</span></h6>
+                                <p class="small mb-2">Acessa todos os campos do registro completo da tabela destino, incluindo as chaves primárias usadas para comparação.</p>
+                                <ul class="small">
+                                    <li><code>{% raw %}{{json_raw.email}}{% endraw %}</code> - Acessa o campo <code>email</code> do registro destino</li>
+                                    <li><code>{% raw %}{{json_raw.id}}{% endraw %}</code> - Acessa o campo <code>id</code> do registro destino</li>
+                                    <li><code>{% raw %}{{json_raw.nome}}{% endraw %}</code> - Acessa qualquer campo do registro destino</li>
+                                    <li><code>{% raw %}{{json_raw.campo_qualquer}}{% endraw %}</code> - Substitua <code>campo_qualquer</code> pelo nome real da coluna</li>
+                                </ul>
+                                <p class="small mt-2 text-muted"><strong>Nota:</strong> Use o nome exato da coluna como aparece no banco de dados. O namespace <code>json_raw</code> contém todos os dados do registro completo da tabela destino, incluindo chaves primárias.</p>
                             </div>
                         </div>
                     </div>
@@ -2689,6 +2718,62 @@ echo "Colunas destino: " . implode(", ", $columns['target_columns']) . "\n";</co
     "change_type": "{{difference.change_type}}"
   }
 }{% endraw %}</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#exampleJsonRawWebhook">
+                                        Exemplo com json_raw (Dados Completos)
+                                    </button>
+                                </h2>
+                                <div id="exampleJsonRawWebhook" class="accordion-collapse collapse" data-bs-parent="#webhookExamplesAccordion">
+                                    <div class="accordion-body">
+                                        <p class="mb-3"><strong>Exemplo usando o namespace <code>json_raw</code> para acessar todos os campos do registro destino:</strong></p>
+                                        <pre><code>{% raw %}{
+  "leader": {{json_raw.reportsto}},
+  "cost_center": {{json_raw.customcostcenter}},
+  "action": "update",
+  "leader_email": {{json_raw.supervisoremail}},
+  "employee_email": {{json_raw.workemail}}
+}{% endraw %}</code></pre>
+                                        <p class="mt-3 mb-0"><strong>Resultado processado:</strong></p>
+                                        <pre><code>{
+  "leader": "João Silva (1234)",
+  "cost_center": 999,
+  "action": "update",
+  "leader_email": "joao.silva@exemplo.com",
+  "employee_email": "funcionario@exemplo.com"
+}</code></pre>
+                                        <p class="mt-3 small text-muted"><strong>Nota:</strong> Valores de string são automaticamente envolvidos em aspas duplas. Valores numéricos não recebem aspas.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#exampleJsonRawWebhook">
+                                        Exemplo com json_raw (Dados Completos)
+                                    </button>
+                                </h2>
+                                <div id="exampleJsonRawWebhook" class="accordion-collapse collapse" data-bs-parent="#webhookExamplesAccordion">
+                                    <div class="accordion-body">
+                                        <p class="mb-3"><strong>Exemplo usando o namespace <code>json_raw</code> para acessar todos os campos do registro destino:</strong></p>
+                                        <pre><code>{% raw %}{
+  "leader": {{json_raw.reportsto}},
+  "cost_center": {{json_raw.customcostcenter}},
+  "action": "update",
+  "leader_email": {{json_raw.supervisoremail}},
+  "employee_email": {{json_raw.workemail}}
+}{% endraw %}</code></pre>
+                                        <p class="mt-3 mb-0"><strong>Resultado processado:</strong></p>
+                                        <pre><code>{
+  "leader": "João Silva (1234)",
+  "cost_center": 999,
+  "action": "update",
+  "leader_email": "joao.silva@exemplo.com",
+  "employee_email": "funcionario@exemplo.com"
+}</code></pre>
+                                        <p class="mt-3 small text-muted"><strong>Nota:</strong> Valores de string são automaticamente envolvidos em aspas duplas. Valores numéricos não recebem aspas.</p>
                                     </div>
                                 </div>
                             </div>

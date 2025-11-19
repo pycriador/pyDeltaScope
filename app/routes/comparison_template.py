@@ -26,16 +26,19 @@ def comparison_page(current_user):
 @comparison_template_bp.route('/comparacao/<int:project_id>/execution')
 @login_required_template
 def comparison_execution_page(current_user, project_id):
-    """Render comparison execution page"""
-    # Get project and verify ownership
-    project = Project.query.filter_by(
-        id=project_id,
-        user_id=current_user.id,
-        is_active=True
-    ).first()
+    """Render comparison execution page - admins can access any project"""
+    # Get project and verify ownership - admins can access any project
+    if current_user.is_admin:
+        project = Project.query.filter_by(id=project_id, is_active=True).first()
+    else:
+        project = Project.query.filter_by(
+            id=project_id,
+            user_id=current_user.id,
+            is_active=True
+        ).first()
     
     if not project:
-        return render_template('error.html', message='Projeto não encontrado'), 404
+        return render_template('error.html', message='Projeto não encontrado', current_user=current_user), 404
     
     # Get key mappings from URL parameters (for scheduled tasks)
     key_mappings_from_url = {}

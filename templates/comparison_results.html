@@ -103,6 +103,7 @@
                             <th>Tipo de Mudança</th>
                             <th>Valor Origem</th>
                             <th>Valor Destino</th>
+                            <th>JSON_RAW (Dados Completos do Destino)</th>
                             <th>Data de Detecção</th>
                         </tr>
                     </thead>
@@ -143,6 +144,22 @@
                                     {{ result.target_value }}
                                     {% endif %}
                                 </code>
+                            </td>
+                            <td>
+                                {% if result.target_record_json %}
+                                <button class="btn btn-sm btn-info" type="button" data-bs-toggle="collapse" data-bs-target="#jsonRaw{{ result.id }}" aria-expanded="false" aria-controls="jsonRaw{{ result.id }}">
+                                    <i class="fas fa-code me-1"></i>Ver JSON
+                                </button>
+                                <div class="collapse mt-2" id="jsonRaw{{ result.id }}">
+                                    <pre class="bg-light p-2 rounded" style="max-height: 200px; overflow-y: auto; font-size: 0.85em;"><code>{{ result.target_record_json|tojson(indent=2) }}</code></pre>
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Use <code>json_raw.campo</code> no namespace do webhook para acessar os dados
+                                    </small>
+                                </div>
+                                {% else %}
+                                <em class="text-muted">N/A</em>
+                                {% endif %}
                             </td>
                             <td>
                                 <small class="text-muted">
@@ -228,7 +245,8 @@
                         <strong>Como funciona:</strong> O sistema enviará uma requisição para cada diferença encontrada. 
                         Se você selecionar um campo específico (ex: "username"), serão enviadas todas as diferenças desse campo em loop.
                         O payload será processado com os namespaces <code>{% raw %}{{comparison.*}}{% endraw %}</code>, 
-                        <code>{% raw %}{{difference.*}}{% endraw %}</code> e <code>{% raw %}{{project.*}}{% endraw %}</code>.
+                        <code>{% raw %}{{difference.*}}{% endraw %}</code>, <code>{% raw %}{{project.*}}{% endraw %}</code> 
+                        e <code>{% raw %}{{json_raw.*}}{% endraw %}</code> (dados completos do registro de destino, ex: <code>{% raw %}{{json_raw.email}}{% endraw %}</code>).
                     </div>
                     
                     <!-- Progress -->
@@ -272,6 +290,7 @@
                 field_name: {{ result.field_name|tojson }},
                 source_value: {{ result.source_value|tojson }},
                 target_value: {{ result.target_value|tojson }},
+                target_record_json: {{ result.target_record_json|tojson|safe }},
                 change_type: {{ result.change_type|tojson }},
                 detected_at: '{{ result.detected_at.isoformat() if result.detected_at else "" }}'
             }{% if not loop.last %},{% endif %}
@@ -291,13 +310,14 @@
     
     // Export to CSV
     function exportToCSV() {
-        const headers = ['ID do Registro', 'Campo', 'Tipo de Mudança', 'Valor Origem', 'Valor Destino', 'Data de Detecção'];
+        const headers = ['ID do Registro', 'Campo', 'Tipo de Mudança', 'Valor Origem', 'Valor Destino', 'JSON_RAW', 'Data de Detecção'];
         const rows = COMPARISON_DATA.results.map(r => [
             r.record_id || '',
             r.field_name || '',
             r.change_type || '',
             r.source_value || '',
             r.target_value || '',
+            r.target_record_json ? JSON.stringify(r.target_record_json) : '',
             r.detected_at || ''
         ]);
         
@@ -437,6 +457,15 @@
             return;
         }
         
+        // Debug: log config to see what we have
+        console.log('[WEBHOOK] Selected config:', {
+            id: config.id,
+            name: config.name,
+            has_default_payload: !!config.default_payload,
+            default_payload_length: config.default_payload ? config.default_payload.length : 0,
+            default_payload_preview: config.default_payload ? config.default_payload.substring(0, 100) : 'none'
+        });
+        
         const fieldFilter = $('#bulkFieldFilter').val();
         const sendType = $('input[name="bulkSendType"]:checked').val();
         const valueType = $('input[name="bulkValueType"]:checked').val();
@@ -493,6 +522,7 @@
                     field_name: result.field_name,
                     source_value: result.source_value,
                     target_value: result.target_value,
+                    target_record_json: result.target_record_json || {},
                     change_type: result.change_type,
                     detected_at: result.detected_at
                 };
@@ -502,20 +532,84 @@
                 
                 if (sendType === 'body') {
                     // Use template if available
-                    if (config.default_payload) {
-                        const templateResponse = await fetch(`${WEBHOOKS_API_BASE}/process-template`, {
-                            method: 'POST',
-                            headers: getAuthHeaders(),
-                            body: JSON.stringify({
-                                template: config.default_payload,
-                                comparison: comparisonData,
-                                difference: differenceData,
-                                project: projectData
-                            })
-                        });
-                        const templateResult = await templateResponse.json();
-                        payload = templateResult.processed || {};
+                    console.log('[WEBHOOK] Config default_payload:', config.default_payload ? 'exists' : 'missing');
+                    console.log('[WEBHOOK] Config default_payload value:', config.default_payload);
+                    
+                    if (config.default_payload && config.default_payload.trim()) {
+                        try {
+                            console.log('[WEBHOOK] Processing template:', config.default_payload.substring(0, 200));
+                            const templateResponse = await fetch(`${WEBHOOKS_API_BASE}/process-template`, {
+                                method: 'POST',
+                                headers: getAuthHeaders(),
+                                body: JSON.stringify({
+                                    template: config.default_payload,
+                                    comparison: comparisonData,
+                                    difference: differenceData,
+                                    project: projectData,
+                                    json_raw: result.target_record_json || {}
+                                })
+                            });
+                            
+                            if (!templateResponse.ok) {
+                                const errorText = await templateResponse.text();
+                                console.error('[WEBHOOK] Template processing failed:', templateResponse.status, errorText);
+                                throw new Error(`Template processing failed: ${templateResponse.status}`);
+                            }
+                            
+                            const templateResult = await templateResponse.json();
+                            console.log('[WEBHOOK] Template result:', templateResult);
+                            payload = templateResult.processed;
+                            console.log('[WEBHOOK] Processed payload:', payload);
+                            
+                            // Validate payload - ensure it's a valid object
+                            if (!payload) {
+                                console.warn('[WEBHOOK] Template processed result is null/undefined, using default payload');
+                                payload = {
+                                    record_id: result.record_id,
+                                    field_name: result.field_name,
+                                    change_type: result.change_type,
+                                    detected_at: result.detected_at,
+                                    value: valueType === 'source' ? result.source_value : result.target_value
+                                };
+                            } else if (typeof payload === 'string') {
+                                // If payload is a string, try to parse it
+                                try {
+                                    payload = JSON.parse(payload);
+                                    console.log('[WEBHOOK] Parsed string payload:', payload);
+                                } catch (e) {
+                                    console.warn('[WEBHOOK] Template result is not valid JSON, using as string value');
+                                    payload = {raw: payload};
+                                }
+                            } else if (typeof payload !== 'object' || Array.isArray(payload)) {
+                                // If payload is not an object, wrap it
+                                console.warn('[WEBHOOK] Payload is not an object, wrapping:', typeof payload);
+                                payload = {value: payload};
+                            } else if (Object.keys(payload).length === 0) {
+                                // If payload is empty object, use default
+                                console.warn('[WEBHOOK] Template processed result is empty object, using default payload');
+                                payload = {
+                                    record_id: result.record_id,
+                                    field_name: result.field_name,
+                                    change_type: result.change_type,
+                                    detected_at: result.detected_at,
+                                    value: valueType === 'source' ? result.source_value : result.target_value
+                                };
+                            } else {
+                                console.log('[WEBHOOK] Using processed template payload');
+                            }
+                        } catch (error) {
+                            console.error('[WEBHOOK] Error processing template:', error);
+                            // Fallback to default payload
+                            payload = {
+                                record_id: result.record_id,
+                                field_name: result.field_name,
+                                change_type: result.change_type,
+                                detected_at: result.detected_at,
+                                value: valueType === 'source' ? result.source_value : result.target_value
+                            };
+                        }
                     } else {
+                        console.log('[WEBHOOK] No default_payload configured, using default payload');
                         // Build payload from difference data
                         payload = {
                             record_id: result.record_id,

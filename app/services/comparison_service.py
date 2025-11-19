@@ -8,6 +8,7 @@ from app import db
 import requests
 from flask import current_app
 import sys
+import json
 
 
 class ComparisonService:
@@ -20,7 +21,8 @@ class ComparisonService:
         source_table: str,
         target_table: str,
         primary_keys: List[str],
-        key_mappings: Optional[Dict[str, str]] = None
+        key_mappings: Optional[Dict[str, str]] = None,
+        ignored_columns: Optional[List[str]] = None
     ) -> Tuple[pd.DataFrame, List[Dict]]:
         """
         Compare two tables and return differences
@@ -33,11 +35,13 @@ class ComparisonService:
             primary_keys: List of primary key column names in source table
             key_mappings: Dictionary mapping source column names to target column names
                         e.g., {'user_id': 'id_user', 'name': 'nome'}
+            ignored_columns: List of column names to ignore during comparison
         
         Returns:
             Tuple of (differences DataFrame, list of change dictionaries)
         """
         key_mappings = key_mappings or {}
+        ignored_columns = ignored_columns or []
         
         # Ensure key_mappings is a dict
         if not isinstance(key_mappings, dict):
@@ -145,6 +149,31 @@ class ComparisonService:
                 return '|'.join(str(v) for v in idx)
             return str(idx) if idx is not None else None
         
+        # Helper function to safely get a scalar value from a record (Series or DataFrame row)
+        def get_scalar_value(record, col):
+            """Safely extract a scalar value from a record (Series or DataFrame row)"""
+            try:
+                if isinstance(record, pd.DataFrame):
+                    # If it's a DataFrame, get first row
+                    val = record[col].iloc[0] if len(record) > 0 else None
+                elif isinstance(record, pd.Series):
+                    # If it's a Series, get the value directly
+                    val = record[col]
+                else:
+                    # Fallback: try to access as dict
+                    val = record.get(col) if hasattr(record, 'get') else record[col] if col in record else None
+                
+                # Convert to scalar if it's a Series
+                if isinstance(val, pd.Series):
+                    val = val.iloc[0] if len(val) > 0 else None
+                
+                # Handle NaN
+                if val is not None and pd.isna(val):
+                    return None
+                return val
+            except (KeyError, IndexError, AttributeError):
+                return None
+        
         # Find differences
         differences = []
         
@@ -154,11 +183,12 @@ class ComparisonService:
         for idx in source_only:
             record = source_df_indexed.loc[idx]
             for col in source_df.columns:
-                if col not in primary_keys:
+                if col not in primary_keys and col not in ignored_columns:
+                    val = get_scalar_value(record, col)
                     differences.append({
                         'record_id': format_record_id(idx),
                         'field_name': col,
-                        'source_value': str(record[col]) if pd.notna(record[col]) else None,
+                        'source_value': str(val) if val is not None else None,
                         'target_value': None,
                         'change_type': 'added'
                     })
@@ -170,12 +200,13 @@ class ComparisonService:
             record = target_df_indexed.loc[idx]
             # Use columns from mapped target dataframe
             for col in target_df_indexed.columns:
-                if col not in primary_keys:
+                if col not in primary_keys and col not in ignored_columns:
+                    val = get_scalar_value(record, col)
                     differences.append({
                         'record_id': format_record_id(idx),
                         'field_name': col,
                         'source_value': None,
-                        'target_value': str(record[col]) if pd.notna(record[col]) else None,
+                        'target_value': str(val) if val is not None else None,
                         'change_type': 'deleted'
                     })
         
@@ -183,30 +214,36 @@ class ComparisonService:
         common_index = source_df_indexed.index.intersection(target_df_indexed.index)
         print(f"[COMPARISON] Common records: {len(common_index)}", flush=True)
         modified_count = 0
+        
         for idx in common_index:
             source_record = source_df_indexed.loc[idx]
             target_record = target_df_indexed.loc[idx]
             
             # Compare all columns that exist in both dataframes
             for col in source_df.columns:
-                if col not in primary_keys:
+                if col not in primary_keys and col not in ignored_columns:
                     # Check if column exists in target (after mapping)
                     if col in target_df_indexed.columns:
-                        source_val = source_record[col] if pd.notna(source_record[col]) else None
-                        target_val = target_record[col] if pd.notna(target_record[col]) else None
+                        # Get values safely as scalars
+                        source_val = get_scalar_value(source_record, col)
+                        target_val = get_scalar_value(target_record, col)
                         
-                        if str(source_val) != str(target_val):
+                        # Compare values as strings
+                        source_str = str(source_val) if source_val is not None else None
+                        target_str = str(target_val) if target_val is not None else None
+                        
+                        if source_str != target_str:
                             modified_count += 1
                             differences.append({
                                 'record_id': format_record_id(idx),
                                 'field_name': col,
-                                'source_value': str(source_val) if source_val is not None else None,
-                                'target_value': str(target_val) if target_val is not None else None,
+                                'source_value': source_str,
+                                'target_value': target_str,
                                 'change_type': 'modified'
                             })
                     else:
                         # Column exists in source but not in target (after mapping)
-                        source_val = source_record[col] if pd.notna(source_record[col]) else None
+                        source_val = get_scalar_value(source_record, col)
                         differences.append({
                             'record_id': format_record_id(idx),
                             'field_name': col,
@@ -217,11 +254,183 @@ class ComparisonService:
         
         print(f"[COMPARISON] Modified fields found: {modified_count}", flush=True)
         
-        differences_df = pd.DataFrame(differences)
+        # Enrich differences with complete target record data
+        print(f"[COMPARISON] Enriching differences with target record data...", flush=True)
+        differences_with_target_data = []
         
-        print(f"[COMPARISON] Total differences found: {len(differences)}", flush=True)
+        # Group differences by record_id to fetch complete records
+        differences_by_record = {}
+        for diff in differences:
+            record_id = diff.get('record_id')
+            if record_id:
+                if record_id not in differences_by_record:
+                    differences_by_record[record_id] = []
+                differences_by_record[record_id].append(diff)
         
-        return differences_df, differences
+        # Fetch complete target records for each record_id
+        for record_id, record_diffs in differences_by_record.items():
+            try:
+                # Parse record_id to get index values
+                if '|' in str(record_id):
+                    # Multi-column primary key
+                    idx_values = tuple(str(record_id).split('|'))
+                else:
+                    idx_values = str(record_id)
+                
+                # Try to get complete target record
+                target_record_dict = None
+                try:
+                    # Get record from target dataframe (already mapped to source column names)
+                    if isinstance(idx_values, tuple):
+                        target_record = target_df_indexed.loc[idx_values]
+                    else:
+                        target_record = target_df_indexed.loc[idx_values]
+                    
+                    # Convert to dict, handling both Series and DataFrame
+                    if isinstance(target_record, pd.Series):
+                        target_record_dict = target_record.to_dict()
+                    elif isinstance(target_record, pd.DataFrame):
+                        if len(target_record) > 0:
+                            target_record_dict = target_record.iloc[0].to_dict()
+                    
+                    # Add primary keys from index to the dict (they're not in the Series/DataFrame columns)
+                    # When we use set_index(), primary keys become the index, so they're not in .to_dict()
+                    if target_record_dict is not None:
+                        try:
+                            # Get the actual index from the record (could be Series index or DataFrame index)
+                            if isinstance(target_record, pd.Series):
+                                record_index = target_record.name  # Series has .name for single index
+                            elif isinstance(target_record, pd.DataFrame):
+                                record_index = target_record.index[0] if len(target_record) > 0 else None
+                            else:
+                                record_index = idx_values
+                            
+                            # Helper function to convert index value to JSON-serializable format
+                            def convert_index_value(val):
+                                if pd.isna(val):
+                                    return None
+                                elif isinstance(val, pd.Timestamp):
+                                    return val.isoformat()
+                                elif isinstance(val, datetime):
+                                    return val.isoformat()
+                                elif isinstance(val, (int, float, str, bool)) or val is None:
+                                    return val
+                                else:
+                                    return str(val)
+                            
+                            # Add primary keys to dict
+                            if isinstance(record_index, tuple):
+                                # Multi-column primary key
+                                for i, pk_col in enumerate(primary_keys):
+                                    if i < len(record_index):
+                                        target_record_dict[pk_col] = convert_index_value(record_index[i])
+                            else:
+                                # Single-column primary key
+                                if len(primary_keys) > 0:
+                                    target_record_dict[primary_keys[0]] = convert_index_value(record_index)
+                        except Exception as e:
+                            print(f"[COMPARISON] Warning: Could not add primary keys to target_record_json: {e}", flush=True)
+                            # Fallback: use idx_values directly (already strings from record_id parsing)
+                            if isinstance(idx_values, tuple):
+                                for i, pk_col in enumerate(primary_keys):
+                                    if i < len(idx_values):
+                                        target_record_dict[pk_col] = idx_values[i]
+                            else:
+                                if len(primary_keys) > 0:
+                                    target_record_dict[primary_keys[0]] = idx_values
+                    
+                    # Convert numpy/pandas types to Python native types for JSON serialization
+                    if target_record_dict:
+                        try:
+                            import numpy as np
+                            has_numpy = True
+                        except ImportError:
+                            has_numpy = False
+                        
+                        def convert_value_for_json(val):
+                            """Recursively convert value to JSON-serializable format"""
+                            # Check for NaN/None first
+                            if pd.isna(val):
+                                return None
+                            
+                            # Check for pandas Timestamp (most common case)
+                            if isinstance(val, pd.Timestamp):
+                                return val.isoformat()
+                            
+                            # Check for other pandas time types
+                            if isinstance(val, (pd.Timedelta, pd.Period)):
+                                return str(val)
+                            
+                            # Check for datetime objects
+                            if isinstance(val, datetime):
+                                return val.isoformat()
+                            
+                            # Check if it's a Timestamp-like object by checking type name or methods
+                            if hasattr(val, 'isoformat') and hasattr(val, 'year') and hasattr(val, 'month'):
+                                # Likely a datetime-like object
+                                try:
+                                    return val.isoformat()
+                                except:
+                                    return str(val)
+                            
+                            # Check for numpy types
+                            if has_numpy:
+                                if isinstance(val, (np.integer, np.int64)):
+                                    return int(val)
+                                elif isinstance(val, (np.floating, np.float64)):
+                                    return float(val)
+                                elif isinstance(val, np.bool_):
+                                    return bool(val)
+                                elif isinstance(val, np.ndarray):
+                                    return [convert_value_for_json(item) for item in val.tolist()]
+                                elif isinstance(val, (np.datetime64, np.timedelta64)):
+                                    return str(val)
+                            
+                            # Check for pandas Series
+                            if isinstance(val, pd.Series):
+                                return [convert_value_for_json(item) for item in val.tolist()]
+                            
+                            # Check for lists and dicts (recursive)
+                            if isinstance(val, list):
+                                return [convert_value_for_json(item) for item in val]
+                            if isinstance(val, dict):
+                                return {k: convert_value_for_json(v) for k, v in val.items()}
+                            
+                            # Default: return as-is (should be JSON-serializable)
+                            return val
+                        
+                        cleaned_dict = {}
+                        for k, v in target_record_dict.items():
+                            try:
+                                cleaned_dict[k] = convert_value_for_json(v)
+                            except Exception as e:
+                                # If conversion fails, convert to string as fallback
+                                print(f"[COMPARISON] Warning: Could not convert {k}={v} (type: {type(v)}): {e}", flush=True)
+                                cleaned_dict[k] = str(v)
+                        target_record_dict = cleaned_dict
+                except (KeyError, IndexError, TypeError) as e:
+                    # Record not found in target (deleted or added) or error accessing
+                    print(f"[COMPARISON] Could not fetch target record for {record_id}: {e}", flush=True)
+                    target_record_dict = None
+                
+                # Add target_record_json to each difference for this record
+                for diff in record_diffs:
+                    diff_copy = diff.copy()
+                    diff_copy['target_record_json'] = target_record_dict
+                    differences_with_target_data.append(diff_copy)
+            except Exception as e:
+                print(f"[COMPARISON] Error fetching target record for {record_id}: {e}", flush=True)
+                # Add differences without target_record_json
+                for diff in record_diffs:
+                    diff_copy = diff.copy()
+                    diff_copy['target_record_json'] = None
+                    differences_with_target_data.append(diff_copy)
+        
+        differences_df = pd.DataFrame(differences_with_target_data)
+        
+        print(f"[COMPARISON] Total differences found: {len(differences_with_target_data)}", flush=True)
+        
+        return differences_df, differences_with_target_data
     
     @staticmethod
     def save_comparison_results(
@@ -258,6 +467,7 @@ class ComparisonService:
                     field_name = diff.get('field_name')
                     source_value = str(diff.get('source_value')) if diff.get('source_value') is not None else None
                     target_value = str(diff.get('target_value')) if diff.get('target_value') is not None else None
+                    target_record_json = diff.get('target_record_json')  # Complete target record as JSON
                     change_type = diff.get('change_type')
                     
                     if i < 3:  # Log first 3 differences for debugging
@@ -269,6 +479,7 @@ class ComparisonService:
                         field_name=field_name,
                         source_value=source_value,
                         target_value=target_value,
+                        target_record_json=target_record_json,
                         change_type=change_type
                     )
                     db.session.add(result)

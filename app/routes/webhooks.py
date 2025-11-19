@@ -451,13 +451,37 @@ def send_webhook(user):
                 # If processing fails, use as-is
                 pass
         
+        # Ensure payload is a valid dict (not None, not empty string, not empty dict if method requires body)
+        import json
+        method = data['method'].upper()
+        if method in ['POST', 'PUT', 'PATCH']:
+            if payload is None:
+                payload = {}
+            elif isinstance(payload, str):
+                # Try to parse as JSON
+                payload = payload.strip()
+                if not payload:
+                    payload = {}
+                else:
+                    try:
+                        payload = json.loads(payload)
+                        # Ensure it's a dict
+                        if not isinstance(payload, dict):
+                            payload = {'value': payload}
+                    except json.JSONDecodeError:
+                        # If not valid JSON, return empty dict instead of wrapping in 'raw'
+                        # This prevents sending stringified JSON
+                        payload = {}
+            elif not isinstance(payload, dict):
+                payload = {'value': payload}
+        
         # Send request
         response = requests.request(
-            method=data['method'].upper(),
+            method=method,
             url=data['url'],
             headers=headers,
-            json=payload if data['method'].upper() in ['POST', 'PUT', 'PATCH'] else None,
-            params=payload if data['method'].upper() in ['GET', 'DELETE'] else None,
+            json=payload if method in ['POST', 'PUT', 'PATCH'] and payload else None,
+            params=payload if method in ['GET', 'DELETE'] else None,
             timeout=30
         )
         
@@ -490,13 +514,27 @@ def process_template(user):
         comparison = data.get('comparison')
         difference = data.get('difference')
         project = data.get('project')
+        json_raw = data.get('json_raw')
         
         processed = process_payload_template(
             template=template,
             comparison=comparison,
             difference=difference,
-            project=project
+            project=project,
+            json_raw=json_raw
         )
+        
+        # Ensure processed is a valid dict (not None, not empty string)
+        if processed is None:
+            processed = {}
+        elif isinstance(processed, str):
+            # Try to parse as JSON
+            try:
+                processed = json.loads(processed) if processed.strip() else {}
+            except json.JSONDecodeError:
+                processed = {'raw': processed} if processed else {}
+        elif not isinstance(processed, dict):
+            processed = {'value': processed}
         
         return jsonify({
             'processed': processed

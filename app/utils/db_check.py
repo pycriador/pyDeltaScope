@@ -203,6 +203,32 @@ def _ensure_columns_exist():
                     # Column might already exist or table structure issue
                     # This is not critical, continue silently
                     pass
+        
+        # Check comparison_results table for target_record_json column
+        if 'comparison_results' in inspector.get_table_names():
+            columns = [col['name'] for col in inspector.get_columns('comparison_results')]
+            if 'target_record_json' not in columns:
+                try:
+                    print("Adding 'target_record_json' column to 'comparison_results' table...")
+                    # Get database type
+                    db_uri = str(db.engine.url)
+                    db_type = db_uri.split('://')[0].split('+')[0] if '://' in db_uri else 'sqlite'
+                    
+                    # Use appropriate column type based on database
+                    if db_type in ('mysql', 'mariadb'):
+                        db.session.execute(text("ALTER TABLE comparison_results ADD COLUMN target_record_json JSON"))
+                    elif db_type in ('postgresql', 'postgres'):
+                        db.session.execute(text("ALTER TABLE comparison_results ADD COLUMN target_record_json JSONB"))
+                    else:  # SQLite
+                        db.session.execute(text("ALTER TABLE comparison_results ADD COLUMN target_record_json TEXT"))
+                    
+                    db.session.commit()
+                    print("✓ Successfully added 'target_record_json' column.")
+                except Exception as e:
+                    db.session.rollback()
+                    # Column might already exist or table structure issue
+                    # This is not critical, continue silently
+                    pass
     except Exception as e:
         # Non-critical, continue silently
         pass

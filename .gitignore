@@ -54,4 +54,8 @@ Thumbs.db
 app/models/generated/*.py
 !app/models/generated/__init__.py
 
+# BambooHR folder (ignore .env but keep the rest)
+bamboohr/.env
+bamboohr/**/.env
+
 

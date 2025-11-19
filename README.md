@@ -318,6 +318,18 @@ python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
 
 **ENCRYPTION_KEY:**
+
+Recomendado: Use o script fornecido para gerar uma chave forte e segura:
+```bash
+python3 generate_encryption_key.py
+```
+
+O script irá:
+- Gerar uma chave de criptografia forte usando Fernet
+- Exibir a chave de forma segura
+- Opcionalmente salvar no arquivo `.env`
+
+Alternativa manual:
 ```bash
 python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
@@ -349,11 +361,23 @@ Este script irá:
 **Opção A: Via Interface Web (Recomendado)**
 
 1. Inicie o servidor Flask:
+
+**Recomendado:** Use o script `start.py` que resolve automaticamente conflitos de porta:
 ```bash
-python run.py
+python3 start.py
 ```
 
-2. Acesse `http://localhost:5000`
+Ou use o script shell:
+```bash
+./start.sh
+```
+
+**Alternativa:** Inicie diretamente (pode dar erro se porta 5000 estiver em uso):
+```bash
+python3 run.py
+```
+
+2. Acesse `http://localhost:5000` (ou a porta indicada pelo script)
 3. O sistema detectará que é a primeira execução e mostrará um modal para criar o primeiro admin
 4. Preencha os dados e crie o usuário
 
@@ -382,13 +406,64 @@ python change_password.py admin senha123 --create-admin
 
 ### 3. Iniciar o Servidor
 
+**Recomendado:** Use o script `start.py` que resolve automaticamente conflitos de porta:
 ```bash
-python run.py
+python3 start.py
 ```
 
-O servidor estará disponível em `http://localhost:5000`
+Ou use o script shell:
+```bash
+./start.sh
+```
+
+**Alternativa:** Inicie diretamente (pode dar erro se porta 5000 estiver em uso):
+```bash
+python3 run.py
+```
+
+O servidor estará disponível em `http://localhost:5000` (ou na porta indicada pelo script)
 
 ## 📜 Scripts Disponíveis
+
+### `start.py` / `start.sh`
+
+Scripts para iniciar o servidor Flask resolvendo automaticamente conflitos de porta.
+
+```bash
+# Python (recomendado)
+python3 start.py
+
+# Shell script (alternativa)
+./start.sh
+```
+
+**Características:**
+- ✅ Detecta se a porta 5000 está em uso
+- ✅ Identifica processos Flask/Python usando a porta
+- ✅ Oferece opção de encerrar processo conflitante
+- ✅ Encontra automaticamente porta alternativa se necessário
+- ✅ Detecta AirPlay Receiver do macOS e oferece soluções
+- ✅ Exibe informações claras sobre o processo encontrado
+
+**Comportamento:**
+- Se a porta 5000 estiver livre, inicia normalmente
+- Se estiver em uso por outro Flask/Python, oferece encerrar o processo
+- Se estiver em uso por outro serviço (ex: AirPlay), sugere usar outra porta
+- Busca automaticamente portas livres de 5001 a 5009 se necessário
+
+### `generate_encryption_key.py`
+
+Script para gerar uma chave de criptografia forte e segura.
+
+```bash
+python3 generate_encryption_key.py
+```
+
+**Características:**
+- ✅ Gera chave Fernet compatível com a aplicação
+- ✅ Exibe a chave de forma segura
+- ✅ Opcionalmente salva no arquivo `.env`
+- ✅ Inclui avisos de segurança importantes
 
 ### `init_db.py`
 
@@ -1242,6 +1317,18 @@ Dados de uma diferença individual:
 - `{{difference.change_type}}` - Tipo de mudança (added, modified, deleted)
 - `{{difference.detected_at}}` - Data/hora de detecção (ISO format)
 
+##### Namespace: `json_raw` (Novo)
+Acessa todos os campos do registro completo da tabela destino, incluindo as chaves primárias usadas para comparação:
+- `{{json_raw.email}}` - Acessa o campo `email` do registro destino
+- `{{json_raw.id}}` - Acessa o campo `id` do registro destino
+- `{{json_raw.campo_qualquer}}` - Substitua `campo_qualquer` pelo nome real da coluna no banco de dados
+
+**Nota:** Use o nome exato da coluna como aparece no banco de dados. O namespace `json_raw` contém todos os dados do registro completo da tabela destino, incluindo chaves primárias.
+
+**Importante sobre Aspas Duplas:** Quando você usa placeholders em templates JSON, os valores de **string** são automaticamente envolvidos em aspas duplas. Valores numéricos e booleanos não recebem aspas. Isso garante que o JSON gerado seja sempre válido.
+
+**Exemplo:** Se `{{json_raw.email}}` retornar `usuario@exemplo.com`, ele será inserido como `"usuario@exemplo.com"` no JSON final.
+
 ##### Namespace: `project` (quando disponível)
 Dados do projeto:
 - `{{project.id}}` - ID do projeto
@@ -1299,6 +1386,30 @@ Dados do projeto:
   }
 }
 ```
+
+**Exemplo com json_raw (Dados Completos do Registro Destino):**
+```json
+{
+  "leader": {{json_raw.reportsto}},
+  "cost_center": {{json_raw.customcostcenter}},
+  "action": "update",
+  "leader_email": {{json_raw.supervisoremail}},
+  "employee_email": {{json_raw.workemail}}
+}
+```
+
+**Resultado processado:**
+```json
+{
+  "leader": "João Silva (1234)",
+  "cost_center": 999,
+  "action": "update",
+  "leader_email": "joao.silva@exemplo.com",
+  "employee_email": "funcionario@exemplo.com"
+}
+```
+
+**Nota:** Valores de string são automaticamente envolvidos em aspas duplas. Valores numéricos não recebem aspas.
 
 #### `GET /api/webhooks/configs`
 Listar todas as configurações de webhook do usuário.
